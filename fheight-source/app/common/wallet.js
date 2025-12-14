@@ -322,6 +322,14 @@ WalletManager.prototype.formatAddress = function(address) {
 };
 
 /**
+ * Get wallet address
+ * @returns {string} wallet address or null
+ */
+WalletManager.prototype.getAddress = function() {
+  return this.address;
+};
+
+/**
  * Get formatted address for username
  * @returns {string}
  */
@@ -463,6 +471,64 @@ WalletManager.prototype.getBalanceViaRPC = function(address) {
     .catch(function(err) {
       Logger.module('WALLET').error('Failed to get balance via RPC:', err.message);
       return '0';
+    });
+};
+
+/**
+ * Send ETH transaction directly via connected wallet (EIP-1193)
+ * Works with any wallet: MetaMask, Rabby, Coinbase, WalletConnect, etc.
+ * @param {string} to - Recipient address
+ * @param {string} valueEth - Amount in ETH (e.g. "0.1")
+ * @returns {Promise<string>} Transaction hash
+ */
+WalletManager.prototype.sendTransaction = function(to, valueEth) {
+  var self = this;
+
+  if (!this.provider || !this.address) {
+    return Promise.reject(new Error('Wallet not connected'));
+  }
+
+  // Convert ETH to wei hex
+  var valueWei = ethers.utils.parseEther(valueEth);
+  var valueHex = '0x' + valueWei.toBigInt().toString(16);
+
+  Logger.module('WALLET').log('Sending TX:', valueEth, 'ETH to', to);
+
+  // Use eth_sendTransaction - wallet handles everything (signing + broadcasting + gas estimation)
+  return this.provider.request({
+    method: 'eth_sendTransaction',
+    params: [{
+      from: this.address,
+      to: to,
+      value: valueHex
+      // Gas estimation handled by wallet
+    }]
+  })
+  .then(function(txHash) {
+    Logger.module('WALLET').log('TX sent:', txHash);
+    return txHash;
+  });
+};
+
+/**
+ * Send ETH and wait for confirmation (uses Alchemy RPC for waiting)
+ * @param {string} to - Recipient address
+ * @param {string} valueEth - Amount in ETH
+ * @returns {Promise<object>} Transaction receipt
+ */
+WalletManager.prototype.sendTransactionAndWait = function(to, valueEth) {
+  var self = this;
+
+  return this.sendTransaction(to, valueEth)
+    .then(function(txHash) {
+      Logger.module('WALLET').log('Waiting for TX confirmation via Alchemy...');
+      // Use Alchemy RPC to wait for confirmation (fast, reliable)
+      var rpcProvider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
+      return rpcProvider.waitForTransaction(txHash);
+    })
+    .then(function(receipt) {
+      Logger.module('WALLET').log('TX confirmed:', receipt.transactionHash);
+      return receipt;
     });
 };
 

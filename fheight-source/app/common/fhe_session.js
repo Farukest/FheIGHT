@@ -26,13 +26,13 @@ var DEPLOYED_CONTRACTS = {
     WalletVault: '0x053E51a173b863E6495Dd1AeDCB0F9766e03f4A0'
   },
   hardhat: {
-    GameGold: '0x9E545E3C0baAB3E08CdfD552C960A1050f373042',
-    CardNFT: '0xa82fF9aFd8f496c3d6ac40E2a0F282E47488CFc9',
-    SpiritOrb: '0x1613beB3B2C4f22Ee086B2b38C1476A3cE7f78E8',
-    CardRegistry: '0x998abeb3E57409262aE5b751f60747921B33613E',
-    FHECounter: '0x809d550fca64d94Bd9F66E60752A544199cfAC3D',
-    GameSession: '0xb7278A61aa25c888815aFC32Ad3cC52fF24fE575', // v7 - single player mode support
-    WalletVault: null // TODO: Deploy WalletVault contract to Hardhat
+    GameGold: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+    CardNFT: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+    SpiritOrb: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
+    CardRegistry: '0x0165878A594ca255338adfa4d48449f69242Eb8F',
+    FHECounter: '0x0B306BF915C4d645ff596e518fAf3F9669b97016',
+    GameSession: '0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1',
+    WalletVault: '0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE'
   }
 };
 
@@ -487,11 +487,12 @@ FHESessionManager.prototype._initFhevmInstance = function() {
 
     Logger.module('FHE_SESSION').log('Initializing FHEVM SDK instance...');
 
-    // Guncel network'u wallet'tan al
-    Wallet.refreshNetworkFromWallet()
-      .then(function(network) {
-        Logger.module('FHE_SESSION').log('SDK init - current network:', network);
+    // Guncel network'u wallet'tan al (sync metod)
+    var network = Wallet.getCurrentNetwork();
+    Logger.module('FHE_SESSION').log('SDK init - current network:', network);
 
+    Promise.resolve()
+      .then(function() {
         // initSDK varsa cagir (WASM yukler)
         var initPromise = (typeof sdk.initSDK === 'function')
           ? sdk.initSDK()

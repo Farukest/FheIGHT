@@ -105,6 +105,7 @@
     "del": "^2.2.0",
     "envify": "^3.4.0",
     "esbuild": "^0.27.1",
+    "esbuild-plugin-handlebars": "^1.0.3",
     "eslint": "^8.23.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.26.0",
@@ -170,7 +171,10 @@
     "watchify": "^3.2.2"
   },
   "scripts": {
-    "dev": "node dev-server.js",
+    "dev": "node dev-server-fast.mjs",
+    "dev:old": "node dev-server.js",
+    "build:js": "node gulp/esbuild-bundler.mjs",
+    "build:js:minify": "node gulp/esbuild-bundler.mjs --minify",
     "api": "node ./bin/api",
     "game": "node ./bin/game",
     "sp": "node ./bin/single_player",

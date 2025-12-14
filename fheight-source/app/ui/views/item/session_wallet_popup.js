@@ -219,8 +219,8 @@ var SessionWalletPopupView = Backbone.Marionette.ItemView.extend({
     this.$el.find('.confirm-deposit-btn').prop('disabled', false);
     this.ui.$mainWalletBalance.text('Loading...');
 
-    // Get balance from Wallet module
-    Wallet.getBalance()
+    // Get balance from Wallet module (use Alchemy RPC - fast, no timeout)
+    Wallet.getBalanceViaRPC()
       .then(function(balance) {
         if (self.isDestroyed) return;
         var formatted = parseFloat(balance).toFixed(4);
@@ -248,7 +248,9 @@ var SessionWalletPopupView = Backbone.Marionette.ItemView.extend({
       return;
     }
 
-    if (!window.ethereum || !window.ethereum.selectedAddress) {
+    // Use wallet.js module for connection check
+    var walletState = Wallet.getState();
+    if (!walletState.connected || !walletState.address) {
       Logger.module('SESSION_WALLET').error('Main wallet not connected');
       return;
     }
@@ -257,19 +259,9 @@ var SessionWalletPopupView = Backbone.Marionette.ItemView.extend({
     this.ui.$depositForm.addClass('hide');
     this.ui.$depositStatus.removeClass('hide');
 
-    // Send ETH directly via window.ethereum
-    var provider = new window.ethers.providers.Web3Provider(window.ethereum);
-    var signer = provider.getSigner();
-    var valueWei = window.ethers.utils.parseEther(amount);
-
-    signer.sendTransaction({
-      to: toAddress,
-      value: valueWei,
-    })
-      .then(function(tx) {
-        Logger.module('SESSION_WALLET').log('Deposit TX sent:', tx.hash);
-        return tx.wait();
-      })
+    // Use wallet.js sendTransactionAndWait - handles everything via EIP-1193
+    // Works with any wallet (MetaMask, Rabby, Coinbase, WalletConnect, etc.)
+    this.mainWallet.sendTransactionAndWait(toAddress, amount)
       .then(function(receipt) {
         Logger.module('SESSION_WALLET').log('Deposit confirmed:', receipt.transactionHash);
         // Refresh balance immediately after TX confirms

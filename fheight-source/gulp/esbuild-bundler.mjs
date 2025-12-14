@@ -113,10 +113,185 @@ const nodePolyfillPlugin = {
           contents: `
             module.exports = {
               platform: function() { return 'browser'; },
-              arch: function() { return 'browser'; },
+              arch: function() { return 'x64'; },
               homedir: function() { return '/'; },
               tmpdir: function() { return '/tmp'; },
+              endianness: function() { return 'LE'; },
+              hostname: function() { return 'localhost'; },
+              type: function() { return 'Browser'; },
+              release: function() { return '1.0.0'; },
+              cpus: function() { return []; },
+              totalmem: function() { return 0; },
+              freemem: function() { return 0; },
+              uptime: function() { return 0; },
+              loadavg: function() { return [0, 0, 0]; },
+              networkInterfaces: function() { return {}; },
               EOL: '\\n'
+            };
+          `,
+          loader: 'js'
+        };
+      }
+      if (args.path === 'events') {
+        return {
+          contents: `
+            function EventEmitter() {
+              this._events = {};
+              this._maxListeners = 10;
+            }
+            EventEmitter.prototype.on = function(type, listener) {
+              if (!this._events[type]) this._events[type] = [];
+              this._events[type].push(listener);
+              return this;
+            };
+            EventEmitter.prototype.addListener = EventEmitter.prototype.on;
+            EventEmitter.prototype.once = function(type, listener) {
+              var self = this;
+              function g() {
+                self.removeListener(type, g);
+                listener.apply(this, arguments);
+              }
+              g.listener = listener;
+              this.on(type, g);
+              return this;
+            };
+            EventEmitter.prototype.off = function(type, listener) {
+              if (!this._events[type]) return this;
+              var list = this._events[type];
+              var idx = list.indexOf(listener);
+              if (idx === -1) {
+                for (var i = 0; i < list.length; i++) {
+                  if (list[i].listener === listener) { idx = i; break; }
+                }
+              }
+              if (idx !== -1) list.splice(idx, 1);
+              if (list.length === 0) delete this._events[type];
+              return this;
+            };
+            EventEmitter.prototype.removeListener = EventEmitter.prototype.off;
+            EventEmitter.prototype.removeAllListeners = function(type) {
+              if (type) delete this._events[type];
+              else this._events = {};
+              return this;
+            };
+            EventEmitter.prototype.emit = function(type) {
+              if (!this._events[type]) return false;
+              var args = Array.prototype.slice.call(arguments, 1);
+              var listeners = this._events[type].slice();
+              for (var i = 0; i < listeners.length; i++) {
+                listeners[i].apply(this, args);
+              }
+              return true;
+            };
+            EventEmitter.prototype.listeners = function(type) {
+              return this._events[type] ? this._events[type].slice() : [];
+            };
+            EventEmitter.prototype.listenerCount = function(type) {
+              return this._events[type] ? this._events[type].length : 0;
+            };
+            EventEmitter.prototype.setMaxListeners = function(n) {
+              this._maxListeners = n;
+              return this;
+            };
+            EventEmitter.prototype.getMaxListeners = function() {
+              return this._maxListeners;
+            };
+            EventEmitter.prototype.eventNames = function() {
+              return Object.keys(this._events);
+            };
+            EventEmitter.prototype.prependListener = function(type, listener) {
+              if (!this._events[type]) this._events[type] = [];
+              this._events[type].unshift(listener);
+              return this;
+            };
+            EventEmitter.prototype.prependOnceListener = function(type, listener) {
+              var self = this;
+              function g() {
+                self.removeListener(type, g);
+                listener.apply(this, arguments);
+              }
+              g.listener = listener;
+              this.prependListener(type, g);
+              return this;
+            };
+            EventEmitter.listenerCount = function(emitter, type) {
+              return emitter.listenerCount(type);
+            };
+            EventEmitter.EventEmitter = EventEmitter;
+            module.exports = EventEmitter;
+            module.exports.EventEmitter = EventEmitter;
+          `,
+          loader: 'js'
+        };
+      }
+      if (args.path === 'url') {
+        return {
+          contents: `
+            module.exports = {
+              parse: function(urlStr) {
+                try {
+                  var u = new URL(urlStr, 'http://localhost');
+                  return {
+                    protocol: u.protocol,
+                    slashes: u.protocol.endsWith(':'),
+                    auth: u.username ? (u.password ? u.username + ':' + u.password : u.username) : null,
+                    host: u.host,
+                    port: u.port || null,
+                    hostname: u.hostname,
+                    hash: u.hash || null,
+                    search: u.search || null,
+                    query: u.search ? u.search.slice(1) : null,
+                    pathname: u.pathname,
+                    path: u.pathname + (u.search || ''),
+                    href: u.href
+                  };
+                } catch(e) {
+                  return { pathname: urlStr, path: urlStr, href: urlStr };
+                }
+              },
+              format: function(obj) {
+                var auth = obj.auth ? obj.auth + '@' : '';
+                var protocol = obj.protocol || '';
+                var host = obj.host || (obj.hostname || '') + (obj.port ? ':' + obj.port : '');
+                var pathname = obj.pathname || '/';
+                var search = obj.search || (obj.query ? '?' + obj.query : '');
+                var hash = obj.hash || '';
+                return protocol + '//' + auth + host + pathname + search + hash;
+              },
+              resolve: function(from, to) {
+                try { return new URL(to, from).href; } catch(e) { return to; }
+              },
+              URL: typeof URL !== 'undefined' ? URL : function() {},
+              URLSearchParams: typeof URLSearchParams !== 'undefined' ? URLSearchParams : function() {}
+            };
+          `,
+          loader: 'js'
+        };
+      }
+      if (args.path === 'util') {
+        return {
+          contents: `
+            module.exports = {
+              inherits: function(ctor, superCtor) {
+                ctor.super_ = superCtor;
+                ctor.prototype = Object.create(superCtor.prototype, {
+                  constructor: { value: ctor, enumerable: false, writable: true, configurable: true }
+                });
+              },
+              isArray: Array.isArray,
+              isFunction: function(arg) { return typeof arg === 'function'; },
+              isString: function(arg) { return typeof arg === 'string'; },
+              isNumber: function(arg) { return typeof arg === 'number'; },
+              isObject: function(arg) { return typeof arg === 'object' && arg !== null; },
+              isUndefined: function(arg) { return arg === void 0; },
+              isNull: function(arg) { return arg === null; },
+              isNullOrUndefined: function(arg) { return arg == null; },
+              isBoolean: function(arg) { return typeof arg === 'boolean'; },
+              isPrimitive: function(arg) { return arg === null || typeof arg !== 'object' && typeof arg !== 'function'; },
+              isBuffer: function(arg) { return false; },
+              deprecate: function(fn, msg) { return fn; },
+              debuglog: function() { return function() {}; },
+              format: function() { return Array.prototype.slice.call(arguments).join(' '); }
             };
           `,
           loader: 'js'
@@ -189,11 +364,31 @@ function getBuildOptions(options = {}) {
     // Log level
     logLevel: 'info',
 
-    // Banner - polyfills for old Firebase navigator issue
+    // Banner - polyfills for browser compatibility
     banner: {
-      js: `// Polyfills for old Firebase
+      js: `// Browser polyfills
 if (typeof navigator === 'undefined') { window.navigator = { userAgent: 'Mozilla/5.0' }; }
 if (typeof global === 'undefined') { window.global = window; }
+if (typeof process === 'undefined') {
+  window.process = {
+    env: {},
+    argv: [],
+    version: '',
+    platform: 'browser',
+    browser: true,
+    stdout: { isTTY: false, write: function() {} },
+    stderr: { isTTY: false, write: function() {} },
+    stdin: { isTTY: false },
+    cwd: function() { return '/'; },
+    nextTick: function(fn) { setTimeout(fn, 0); },
+    on: function() { return this; },
+    once: function() { return this; },
+    off: function() { return this; },
+    emit: function() { return this; },
+    removeListener: function() { return this; },
+    listeners: function() { return []; }
+  };
+}
 `,
     },
   };
