@@ -72,10 +72,12 @@ class PlayCardFromHandAction extends PlayCardAction {
 
   getCard() {
     if ((this._private.cachedCard == null)) {
-      if (this.getGameSession().getIsRunningAsAuthoritative()) {
+      const gameSession = this.getGameSession();
+
+      if (gameSession.getIsRunningAsAuthoritative()) {
         // playing a card from hand should never use existing card data
         this.cardDataOrIndex = this.getOwner().getDeck().getCardIndexInHandAtIndex(this.indexOfCardInHand);
-      } else if ((this.getOwnerId() === this.getGameSession().getMyPlayerId()) && (this.cardDataOrIndex == null)) {
+      } else if ((this.getOwnerId() === gameSession.getMyPlayerId()) && (this.cardDataOrIndex == null)) {
         // when my action, try to grab card from hand unless we have card data provided by server
         this._private.cachedCard = this.getOwner().getDeck().getCardInHandAtIndex(this.indexOfCardInHand);
       }
@@ -85,7 +87,9 @@ class PlayCardFromHandAction extends PlayCardAction {
   }
 
   _execute() {
-    if (this.getGameSession().getIsRunningAsAuthoritative()) {
+    const gameSession = this.getGameSession();
+
+    if (gameSession.getIsRunningAsAuthoritative()) {
       if (!this.overrideCardData) {
         // playing a card from hand should never use existing card data (unless explicitly being overridden)
         this.cardDataOrIndex = this.getOwner().getDeck().getCardIndexInHandAtIndex(this.indexOfCardInHand);

@@ -30,6 +30,7 @@ var PlayLayout = require('app/ui/views/layouts/play');
 var CosmeticsFactory = require('app/sdk/cosmetics/cosmeticsFactory');
 var ShopManager = require('app/ui/managers/shop_manager');
 var ShopData = require('app/data/shop.json');
+var SessionWalletManager = require('app/common/session_wallet');
 
 var moment = require('moment');
 
@@ -60,6 +61,9 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
     $bossEventPromoTimer: '.boss-toast-promo-timer',
     $purchasePromoBtn: '.purchase-promo-btn',
     $premiumPurchasePromoBtn: '.premium-purchase-promo-btn',
+    $guideOverlay: '.session-wallet-guide-overlay',
+    $lockIcons: '.menu-lock-icon',
+    $lockableMenus: '.menu-lockable',
   },
 
   events: {
@@ -77,6 +81,7 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
     'click .purchase-promo': 'onClickPurchasePromo',
     'click .premium-purchase-promo': 'onClickPremiumPurchasePromo',
     'click .boss-toast-promo': 'onClickBossPromo',
+    'click .guide-close-btn': 'onCloseGuideOverlay',
   },
 
   animateIn: Animations.fadeIn,
@@ -116,6 +121,16 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
     this.listenTo(EventBus.getInstance(), EVENTS.gift_crate_collection_change, this.bindUnreadCrateCount);
     this.listenTo(EventBus.getInstance(), EVENTS.change_scene, this.onChangeScene);
     this.listenTo(ProfileManager.getInstance().profile, 'change:showLoreNotifications', this.bindUnreadLoreCount);
+
+    // Listen for session wallet created event
+    this.listenTo(EventBus.getInstance(), EVENTS.session_wallet_created, this.onSessionWalletCreated);
+
+    // Listen for network change - re-check session wallet status
+    this._onChainChangedBound = this._onChainChanged.bind(this);
+    window.addEventListener('wallet:chainChanged', this._onChainChangedBound);
+
+    // Check session wallet status and show overlay/locks if needed
+    this._checkSessionWalletStatus();
 
     this.animateReveal();
 
@@ -232,6 +247,11 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
 
   onDestroy: function () {
     Logger.module('UI').log('MainMenu.onDestroy');
+
+    // Remove chain change listener
+    if (this._onChainChangedBound) {
+      window.removeEventListener('wallet:chainChanged', this._onChainChangedBound);
+    }
 
     this.stopUpdateCrateExpiration();
 
@@ -715,6 +735,126 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
     if (this._bossEventUpdateInterval != null) {
       clearInterval(this._bossEventUpdateInterval);
       this._bossEventUpdateInterval = null;
+    }
+  },
+
+  // =====================================================
+  // Session Wallet Guide Overlay & Menu Lock System
+  // =====================================================
+
+  /**
+   * Handle network/chain change - sync with blockchain and re-check wallet status
+   */
+  _onChainChanged: function (event) {
+    var self = this;
+    var chainId = event && event.detail ? event.detail.chainId : null;
+    Logger.module('UI').log('MainMenu: Chain changed to ' + chainId + ', syncing wallet status');
+
+    var sessionWallet = SessionWalletManager.getInstance();
+
+    // Sync with blockchain for the new network, then re-check status
+    sessionWallet.syncWithBlockchain()
+      .then(function (address) {
+        if (self.isDestroyed) return;
+        Logger.module('UI').log('MainMenu: Sync complete, wallet address: ' + address);
+        self._checkSessionWalletStatus();
+      })
+      .catch(function (err) {
+        if (self.isDestroyed) return;
+        Logger.module('UI').warn('MainMenu: Sync failed, re-checking status anyway', err);
+        self._checkSessionWalletStatus();
+      });
+  },
+
+  /**
+   * Check if user has session wallet and lock/unlock menus accordingly
+   */
+  _checkSessionWalletStatus: function () {
+    var sessionWallet = SessionWalletManager.getInstance();
+
+    if (!sessionWallet.hasWallet()) {
+      // No session wallet - lock menus and show guide
+      this._lockMenus();
+      this._showGuideOverlay();
+    } else {
+      // Has session wallet - unlock everything
+      this._unlockMenus();
+      this._hideGuideOverlay();
+    }
+  },
+
+  /**
+   * Handle session wallet created event - unlock menus and hide guide
+   */
+  onSessionWalletCreated: function (address) {
+    Logger.module('UI').log('MainMenu: Session wallet created, unlocking menus');
+    this._unlockMenus();
+    this._hideGuideOverlay();
+  },
+
+  /**
+   * Handle close button click on guide overlay
+   */
+  onCloseGuideOverlay: function () {
+    this._hideGuideOverlay();
+  },
+
+  /**
+   * Show the guide overlay pointing to wallet button
+   */
+  _showGuideOverlay: function () {
+    var self = this;
+    if (this.ui.$guideOverlay instanceof $) {
+      this.ui.$guideOverlay.removeClass('hide');
+      // Add class to body to dim utility buttons
+      $('body').addClass('session-wallet-guide-active');
+      // Add click handler on wallet button to hide overlay
+      this._walletClickHandler = function () {
+        self._hideGuideOverlay();
+      };
+      $('button.session-wallet').on('click', this._walletClickHandler);
+    }
+  },
+
+  /**
+   * Hide the guide overlay
+   */
+  _hideGuideOverlay: function () {
+    if (this.ui.$guideOverlay instanceof $) {
+      this.ui.$guideOverlay.addClass('hide');
+      // Remove class from body
+      $('body').removeClass('session-wallet-guide-active');
+      // Remove click handler
+      if (this._walletClickHandler) {
+        $('button.session-wallet').off('click', this._walletClickHandler);
+        this._walletClickHandler = null;
+      }
+    }
+  },
+
+  /**
+   * Lock all lockable menus - show lock icons and disable buttons
+   */
+  _lockMenus: function () {
+    if (this.ui.$lockableMenus instanceof $) {
+      this.ui.$lockableMenus.addClass('locked');
+      this.ui.$lockableMenus.prop('disabled', true);
+    }
+    if (this.ui.$lockIcons instanceof $) {
+      this.ui.$lockIcons.removeClass('hide');
+    }
+  },
+
+  /**
+   * Unlock all lockable menus - hide lock icons and enable buttons
+   */
+  _unlockMenus: function () {
+    if (this.ui.$lockableMenus instanceof $) {
+      this.ui.$lockableMenus.removeClass('locked');
+      this.ui.$lockableMenus.prop('disabled', false);
+    }
+    if (this.ui.$lockIcons instanceof $) {
+      this.ui.$lockIcons.addClass('hide');
     }
   },
 

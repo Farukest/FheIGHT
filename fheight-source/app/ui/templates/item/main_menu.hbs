@@ -11,35 +11,57 @@
 			<button class="btn btn-clean next-scene"><i class="fa fa-chevron-circle-right"></i></button>
 	</div>
 
-	<button class="btn play animate-reveal">
+	<button class="btn play animate-reveal menu-lockable">
 		<canvas class="zodiac-symbol-canvas"></canvas>
 		<span class="play-label">{{localize 'main_menu.menu_item_play'}}</span>
 		<div class="badges"><span class="badge"></span></div>
+		<i class="fa fa-lock menu-lock-icon hide"></i>
 	</button>
-	<button class="btn watch animate-reveal" data-toggle="tooltip" data-placement="left" title="{{localize 'main_menu.menu_item_watch_tooltip'}}">
+	<button class="btn watch animate-reveal menu-lockable" data-toggle="tooltip" data-placement="left" title="{{localize 'main_menu.menu_item_watch_tooltip'}}">
 		<canvas class="zodiac-symbol-canvas"></canvas>
 		<span class="watch-label">{{localize 'main_menu.menu_item_watch'}}</span>
 		<div class="badges"><i class="badge badge-live fa fa-circle"></i></div>
+		<i class="fa fa-lock menu-lock-icon hide"></i>
 	</button>
-	<button class="btn collection animate-reveal" data-toggle="tooltip" data-placement="left" title="{{localize 'main_menu.menu_item_collection_tooltip'}}">
+	<button class="btn collection animate-reveal menu-lockable" data-toggle="tooltip" data-placement="left" title="{{localize 'main_menu.menu_item_collection_tooltip'}}">
 		<canvas class="zodiac-symbol-canvas"></canvas>
 		{{localize 'main_menu.menu_item_collection'}}
 		<div class="badges">
         <span class="badge badge-unread-cards"></span>
         <i class="badge badge-unread-lore fa fa-book"></i>
 		</div>
+		<i class="fa fa-lock menu-lock-icon hide"></i>
 	</button>
-	<button class="btn crate-inventory animate-reveal" data-toggle="tooltip" data-placement="left" title="{{localize 'main_menu.menu_item_crates_tooltip'}}">
+	<button class="btn crate-inventory animate-reveal menu-lockable" data-toggle="tooltip" data-placement="left" title="{{localize 'main_menu.menu_item_crates_tooltip'}}">
 		<canvas class="zodiac-symbol-canvas"></canvas>
 		{{localize 'main_menu.menu_item_crates'}}
 		<div class="badges"><span class="badge"></span></div>
+		<i class="fa fa-lock menu-lock-icon hide"></i>
 	</button>
-	<button class="btn codex animate-reveal" data-toggle="tooltip" data-placement="left" title="{{localize 'main_menu.menu_item_codex_tooltip'}}">
+	<button class="btn codex animate-reveal menu-lockable" data-toggle="tooltip" data-placement="left" title="{{localize 'main_menu.menu_item_codex_tooltip'}}">
 		<canvas class="zodiac-symbol-canvas"></canvas>
 		{{localize 'main_menu.menu_item_codex'}}
 		<div class="badges"><span class="badge"></span></div>
+		<i class="fa fa-lock menu-lock-icon hide"></i>
 	</button>
 
+</div>
+
+<!-- Session Wallet Guide Overlay -->
+<div class="session-wallet-guide-overlay hide">
+	<div class="guide-backdrop"></div>
+	<div class="guide-content">
+		<button type="button" class="guide-close-btn">
+			<img src="resources/ui/button_close.png" alt="Close" />
+		</button>
+		<div class="guide-message">
+			<h3>Create Your FHE Wallet</h3>
+			<p>To start playing, you need to create an FHE session wallet first.</p>
+		</div>
+		<div class="guide-arrow">
+			<i class="fa fa-arrow-right fa-2x"></i>
+		</div>
+	</div>
 </div>
 
 <div class="symbol-main-menu">

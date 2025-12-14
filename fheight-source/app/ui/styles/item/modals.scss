@@ -80,6 +80,19 @@
 					padding: 0;
 				}
 			}
+		}
+	}
+
+	// Confirm dialog için min-height kaldır
+	&#app-confirm-dialog {
+		.modal-dialog .modal-content .modal-body {
+			min-height: auto;
+			padding: 3rem;
+		}
+	}
+
+	.modal-dialog {
+		.modal-content {
 			.modal-footer {
 				text-align:center;
 				border-top:none;

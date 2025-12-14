@@ -1,9 +1,11 @@
 const store = require('store2');
 
 function createNamespace() {
-  return `fheight-${process.env.NODE_ENV}`;
+  // In browser, process.env.NODE_ENV might be undefined
+  var env = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV) ? process.env.NODE_ENV : 'development';
+  return 'fheight-' + env;
 }
 
-const namespace = createNamespace();
-const storage = store.namespace(namespace);
+var namespace = createNamespace();
+var storage = store.namespace(namespace);
 module.exports = storage;

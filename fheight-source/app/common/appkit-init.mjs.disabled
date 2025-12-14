@@ -1,0 +1,221 @@
+/**
+ * Reown AppKit Initialization
+ * Provides reactive wallet state (like wagmi hooks but for vanilla JS)
+ *
+ * Features:
+ * - Automatic chain detection
+ * - Easy chain switching (switchChain)
+ * - No manual event listeners needed
+ * - <w3m-button /> web component
+ */
+
+import { createAppKit } from '@reown/appkit';
+import { Ethers5Adapter } from '@reown/appkit-adapter-ethers5';
+import { mainnet, sepolia, hardhat } from '@reown/appkit/networks';
+
+// Force-import the modal web component to ensure it gets registered
+import '@reown/appkit-scaffold-ui/w3m-modal';
+
+// === CONFIGURATION ===
+// Get your FREE projectId from: https://cloud.reown.com
+const projectId = '9a7ee1e2c913040bd665a19fcf852120'; // TODO: Replace with your project ID
+
+// Custom network for local hardhat
+const localHardhat = {
+  id: 31337,
+  name: 'Hardhat Local',
+  network: 'hardhat',
+  nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['http://127.0.0.1:8545'] },
+    public: { http: ['http://127.0.0.1:8545'] },
+  },
+};
+
+// Networks we support
+const networks = [sepolia, localHardhat, mainnet];
+
+// Metadata for wallet display
+const metadata = {
+  name: 'FHEIGHT',
+  description: 'FHE-powered tactical card game',
+  url: 'https://fheight.xyz',
+  icons: ['https://fheight.xyz/favicon.ico']
+};
+
+// === CREATE ADAPTER ===
+const ethers5Adapter = new Ethers5Adapter();
+
+// === CREATE APPKIT INSTANCE ===
+let modal = null;
+
+try {
+  modal = createAppKit({
+    adapters: [ethers5Adapter],
+    networks: networks,
+    projectId,
+    metadata,
+    features: {
+      analytics: false,
+      email: false,
+      socials: false,
+      // Only show injected wallets (MetaMask, Rabby, etc.)
+      // Disable WalletConnect QR code if you don't want it
+    },
+    // Disable WalletConnect if you only want injected wallets
+    // enableWalletConnect: false, // Uncomment to disable
+  });
+
+  console.log('[AppKit] Initialized successfully');
+} catch (error) {
+  console.error('[AppKit] Initialization failed:', error);
+}
+
+// === REACTIVE STATE (like wagmi hooks) ===
+
+// Current state
+let currentState = {
+  address: null,
+  chainId: null,
+  isConnected: false,
+  connector: null,
+};
+
+// Subscribe to state changes (this is like useAccount + useNetwork combined)
+if (modal) {
+  modal.subscribeState(async (state) => {
+    console.log('[AppKit] State changed:', state);
+
+    // Update current state
+    currentState = {
+      address: state.address,
+      chainId: state.selectedNetworkId,
+      isConnected: state.open === false && !!state.address,
+      connector: state.connector,
+    };
+
+    // Dispatch custom events for the app to listen
+    if (state.selectedNetworkId) {
+      const chainEvent = new CustomEvent('appkit:chainChanged', {
+        detail: { chainId: state.selectedNetworkId }
+      });
+      window.dispatchEvent(chainEvent);
+    }
+
+    const accountEvent = new CustomEvent('appkit:accountsChanged', {
+      detail: {
+        address: state.address,
+        isConnected: !!state.address
+      }
+    });
+    window.dispatchEvent(accountEvent);
+
+    // When connected, try to get the provider
+    if (state.address && !state.open) {
+      try {
+        // Get provider from the adapter
+        const provider = await ethers5Adapter.getWalletProvider();
+        if (provider) {
+          window.appKitProvider = provider;
+          console.log('[AppKit] Provider obtained:', provider);
+
+          const providerEvent = new CustomEvent('appkit:providerChanged', {
+            detail: { provider }
+          });
+          window.dispatchEvent(providerEvent);
+        }
+      } catch (err) {
+        console.warn('[AppKit] Could not get provider:', err);
+      }
+    }
+  });
+}
+
+// === ENSURE MODAL ELEMENT EXISTS ===
+function ensureModalElement() {
+  let modalEl = document.querySelector('w3m-modal');
+  if (!modalEl) {
+    console.log('[AppKit] Creating w3m-modal element');
+    modalEl = document.createElement('w3m-modal');
+    document.body.appendChild(modalEl);
+  }
+  return modalEl;
+}
+
+// Create modal element on initialization
+if (typeof document !== 'undefined' && document.body) {
+  ensureModalElement();
+} else if (typeof document !== 'undefined') {
+  // Wait for DOM to be ready
+  document.addEventListener('DOMContentLoaded', ensureModalElement);
+}
+
+// === GLOBAL API (for use in non-React code) ===
+
+window.AppKit = {
+  // Get current state (like useAccount + useNetwork)
+  getState: () => currentState,
+
+  // Open the modal
+  open: () => {
+    console.log('[AppKit] Open called, modal:', modal);
+    ensureModalElement();
+    if (modal) {
+      console.log('[AppKit] Calling modal.open()');
+      return modal.open();
+    } else {
+      console.error('[AppKit] Modal not initialized');
+    }
+  },
+
+  // Close the modal
+  close: () => modal?.close(),
+
+  // Switch chain (like useSwitchChain)
+  switchChain: async (chainId) => {
+    if (!modal) {
+      console.error('[AppKit] Modal not initialized');
+      return;
+    }
+
+    try {
+      await modal.switchNetwork(chainId);
+      console.log('[AppKit] Switched to chain:', chainId);
+    } catch (error) {
+      console.error('[AppKit] Failed to switch chain:', error);
+      throw error;
+    }
+  },
+
+  // Disconnect
+  disconnect: async () => {
+    if (modal) {
+      await modal.disconnect();
+    }
+  },
+
+  // Get provider (ethers5)
+  getProvider: () => {
+    return window.appKitProvider;
+  },
+
+  // Subscribe to state changes
+  subscribe: (callback) => {
+    if (modal) {
+      return modal.subscribeState(callback);
+    }
+  },
+
+  // Check if connected
+  isConnected: () => currentState.isConnected,
+
+  // Get current address
+  getAddress: () => currentState.address,
+
+  // Get current chain ID
+  getChainId: () => currentState.chainId,
+};
+
+// Export for ES modules
+export { modal, currentState };
+export default window.AppKit;

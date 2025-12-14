@@ -371,6 +371,64 @@ WalletManager.prototype.isFHESupported = function() {
   });
 };
 
+/**
+ * Get ETH balance for connected address
+ * Uses window.ethereum directly to avoid RPC timeout issues
+ * @returns {Promise<string>} Balance in ETH
+ */
+WalletManager.prototype.getBalance = function() {
+  var self = this;
+
+  if (!this.address || !this.provider) {
+    return Promise.resolve('0');
+  }
+
+  Logger.module('WALLET').log('Fetching balance for:', this.address);
+
+  // Use eth_getBalance directly through window.ethereum (wallet's own RPC)
+  return this.provider.request({
+    method: 'eth_getBalance',
+    params: [this.address, 'latest']
+  })
+  .then(function(balanceHex) {
+    // Convert hex wei to decimal ETH
+    var balanceWei = parseInt(balanceHex, 16);
+    var balanceEth = balanceWei / 1e18;
+    var formattedBalance = balanceEth.toFixed(6);
+    Logger.module('WALLET').log('Balance:', formattedBalance, 'ETH');
+    return formattedBalance;
+  })
+  .catch(function(err) {
+    Logger.module('WALLET').error('Failed to get balance:', err.message);
+    return '0';
+  });
+};
+
+/**
+ * Get ETH balance using ethers.js (alternative method)
+ * @returns {Promise<string>} Balance in ETH
+ */
+WalletManager.prototype.getBalanceEthers = function() {
+  var self = this;
+
+  if (!this.address || !this.ethersProvider) {
+    return Promise.resolve('0');
+  }
+
+  Logger.module('WALLET').log('Fetching balance via ethers for:', this.address);
+
+  return this.ethersProvider.getBalance(this.address)
+    .then(function(balanceWei) {
+      var formattedBalance = ethers.utils.formatEther(balanceWei);
+      Logger.module('WALLET').log('Balance (ethers):', formattedBalance, 'ETH');
+      return formattedBalance;
+    })
+    .catch(function(err) {
+      Logger.module('WALLET').error('Failed to get balance (ethers):', err.message);
+      return '0';
+    });
+};
+
 // Singleton instance
 var instance = null;
 
@@ -384,6 +442,9 @@ module.exports = {
     }
     return instance;
   },
+  isProviderAvailable: function() {
+    return typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+  },
   NETWORKS: NETWORKS,
   TARGET_NETWORK: TARGET_NETWORK,
   getCurrentNetwork: function() {
@@ -391,5 +452,9 @@ module.exports = {
   },
   setCurrentNetwork: function(network) {
     currentNetwork = network;
+  },
+  getBalance: function() {
+    if (!instance) return Promise.resolve('0');
+    return instance.getBalance();
   }
 };

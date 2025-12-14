@@ -23,6 +23,9 @@ var i18next = require('i18next');
 var BosterPackUnlockView = require('../layouts/booster_pack_collection');
 var UtilityMenuItemView = require('./utility_menu');
 var Wallet = require('app/common/wallet');
+// Session wallet imports are done lazily to avoid load-time issues
+var SessionWalletManager = null;
+var SessionWalletPopupView = null;
 
 /**
  * Out of game utility menu that shows basic utilities plus buttons for quests, profile, shop, and gold/boosters.
@@ -52,6 +55,8 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
     $profileButton: '.profile',
     $armoryButton: '.armory-button',
     $shopButton: '.shop',
+    $sessionWalletButton: '.session-wallet',
+    $walletBtnText: '.wallet-btn-text',
   },
 
   events: {
@@ -59,12 +64,14 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
     'click button.shop': 'toggleShop',
     'click button.quest-log': 'toggleQuestLog',
     'click button.profile': 'toggleProfile',
+    'click button.session-wallet': 'toggleSessionWallet',
     'click .gold': 'onGoldClicked',
     'click .diamond': 'onDiamondClicked',
     'click .armory-button': 'toggleShop',
     'click .booster-pack-collection': 'onClickBoosterPackCollection',
     'mouseenter .booster-pack-collection': 'activateSymbolBoosterPack',
     'mouseleave .booster-pack-collection': 'deactivateSymbolBoosterPack',
+    'click .network-indicator': 'onNetworkIndicatorClicked',
   },
 
   templateHelpers: {
@@ -90,6 +97,12 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
       clearTimeout(this._showNewPlayerUITimeoutId);
       this._showNewPlayerUITimeoutId = null;
     }
+
+    // Clean up session wallet popup
+    if (this._sessionWalletPopup) {
+      this._sessionWalletPopup.destroy();
+      this._sessionWalletPopup = null;
+    }
   },
 
   onLoggedInShow: function () {
@@ -110,6 +123,9 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
     this.onPremiumCurrencyChange();
     this.onUpdateNetworkIndicator();
 
+    // Listen for session wallet sync events
+    this._setupSessionWalletSyncListeners();
+
     // Listen for chain changes from wallet
     var self = this;
     var walletManager = Wallet.getInstance();
@@ -127,27 +143,25 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
     walletManager.on('chainChanged', this._onChainChanged);
     walletManager.on('disconnected', this._onWalletDisconnected);
 
-    // Also listen directly to provider for chain changes and account changes (more reliable)
-    if (walletManager.isProviderAvailable()) {
-      var provider = walletManager.getProvider();
-      if (provider) {
-        this._onProviderChainChanged = function(chainId) {
-          Logger.module('UI').log('Provider chainChanged event:', chainId);
-          self.onUpdateNetworkIndicator();
-        };
-        provider.on('chainChanged', this._onProviderChainChanged);
+    // Listen to wallet custom events for chain and account changes
+    this._onWalletChainChanged = function(event) {
+      var chainId = event.detail.chainId;
+      Logger.module('UI').log('Wallet chainChanged event:', chainId);
+      self.onUpdateNetworkIndicator();
+    };
+    window.addEventListener('wallet:chainChanged', this._onWalletChainChanged);
 
-        // Listen for accounts changed - empty array means disconnected
-        this._onProviderAccountsChanged = function(accounts) {
-          Logger.module('UI').log('Provider accountsChanged event:', accounts);
-          if (!accounts || accounts.length === 0) {
-            Logger.module('UI').log('No accounts - wallet disconnected, logging out...');
-            Session.logout();
-          }
-        };
-        provider.on('accountsChanged', this._onProviderAccountsChanged);
+    this._onWalletAccountsChanged = function(event) {
+      var address = event.detail.address;
+      var isConnected = event.detail.isConnected;
+      Logger.module('UI').log('Wallet accountsChanged event:', address, 'connected:', isConnected);
+
+      if (!isConnected || !address) {
+        Logger.module('UI').log('Wallet disconnected, logging out...');
+        Session.logout();
       }
-    }
+    };
+    window.addEventListener('wallet:accountsChanged', this._onWalletAccountsChanged);
   },
 
   onLoggedOutShow: function () {
@@ -157,6 +171,9 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
     this.stopListening(InventoryManager.getInstance().boosterPacksCollection, 'add remove', this.onUpdateBoosters);
     this.stopListening(InventoryManager.getInstance().walletModel, 'change:premium_amount', this.onPremiumCurrencyChange);
 
+    // Cleanup session wallet sync listeners
+    this._cleanupSessionWalletSyncListeners();
+
     // Cleanup wallet event listeners
     var walletManager = Wallet.getInstance();
     if (this._onChainChanged) {
@@ -165,16 +182,13 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
     if (this._onWalletDisconnected) {
       walletManager.off('disconnected', this._onWalletDisconnected);
     }
-    if (walletManager.isProviderAvailable()) {
-      var provider = walletManager.getProvider();
-      if (provider && provider.removeListener) {
-        if (this._onProviderChainChanged) {
-          provider.removeListener('chainChanged', this._onProviderChainChanged);
-        }
-        if (this._onProviderAccountsChanged) {
-          provider.removeListener('accountsChanged', this._onProviderAccountsChanged);
-        }
-      }
+
+    // Cleanup wallet event listeners
+    if (this._onWalletChainChanged) {
+      window.removeEventListener('wallet:chainChanged', this._onWalletChainChanged);
+    }
+    if (this._onWalletAccountsChanged) {
+      window.removeEventListener('wallet:accountsChanged', this._onWalletAccountsChanged);
     }
   },
 
@@ -311,58 +325,38 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
   },
 
   onUpdateNetworkIndicator: function () {
-    var self = this;
-    var walletManager = Wallet.getInstance();
+    if (!(this.ui.$networkIndicator instanceof $)) return;
 
-    // Check if we have a provider (wallet extension available)
-    if (!walletManager.isProviderAvailable()) {
-      if (self.ui.$networkIndicator instanceof $) {
-        self.ui.$networkIndicator.removeClass('sepolia hardhat').addClass('unknown');
-        self.ui.$networkName.text('No Wallet');
-      }
+    // Check if wallet provider is available
+    if (!Wallet.isProviderAvailable()) {
+      this.ui.$networkIndicator.removeClass('sepolia hardhat').addClass('unknown');
+      this.ui.$networkName.text('No Wallet');
       return;
     }
 
-    // Get current network directly from provider
-    var provider = walletManager.getProvider();
-    if (!provider) {
-      if (self.ui.$networkIndicator instanceof $) {
-        self.ui.$networkIndicator.removeClass('sepolia hardhat').addClass('unknown');
-        self.ui.$networkName.text('No Provider');
-      }
-      return;
+    // Get state from wallet module (kept fresh by polling engine)
+    var state = Wallet.getState();
+    var network = state.networkName;
+    var chainId = state.chainId;
+
+    // Remove all network classes first
+    this.ui.$networkIndicator.removeClass('sepolia hardhat unknown');
+
+    if (network === 'sepolia') {
+      this.ui.$networkIndicator.addClass('sepolia');
+      this.ui.$networkName.text('Sepolia');
+    } else if (network === 'hardhat') {
+      this.ui.$networkIndicator.addClass('hardhat');
+      this.ui.$networkName.text('Local H.');
+    } else if (chainId) {
+      this.ui.$networkIndicator.addClass('unknown');
+      this.ui.$networkName.text('Chain ' + parseInt(chainId, 16));
+    } else {
+      this.ui.$networkIndicator.addClass('unknown');
+      this.ui.$networkName.text('Connecting...');
     }
 
-    // Query chainId directly from provider
-    provider.request({ method: 'eth_chainId' })
-      .then(function(chainId) {
-        if (!(self.ui.$networkIndicator instanceof $)) return;
-
-        var network = walletManager.getNetworkName(chainId);
-
-        // Remove all network classes first
-        self.ui.$networkIndicator.removeClass('sepolia hardhat unknown');
-
-        if (network === 'sepolia') {
-          self.ui.$networkIndicator.addClass('sepolia');
-          self.ui.$networkName.text('Sepolia');
-        } else if (network === 'hardhat') {
-          self.ui.$networkIndicator.addClass('hardhat');
-          self.ui.$networkName.text('Local H.');
-        } else {
-          self.ui.$networkIndicator.addClass('unknown');
-          self.ui.$networkName.text('Chain ' + parseInt(chainId, 16));
-        }
-
-        Logger.module('UI').log('Network indicator updated:', network, chainId);
-      })
-      .catch(function(err) {
-        Logger.module('UI').error('Failed to get chainId:', err);
-        if (self.ui.$networkIndicator instanceof $) {
-          self.ui.$networkIndicator.removeClass('sepolia hardhat').addClass('unknown');
-          self.ui.$networkName.text('Error');
-        }
-      });
+    Logger.module('UI').log('Network indicator updated:', network, 'chainId:', chainId);
   },
 
   onUpdateBoosters: function () {
@@ -435,6 +429,137 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
     EventBus.getInstance().trigger(EVENTS.show_shop);
   },
 
+  toggleSessionWallet: function () {
+    // Hide guide overlay when wallet button is clicked
+    $('body').removeClass('session-wallet-guide-active');
+    $('.session-wallet-guide-overlay').addClass('hide');
+
+    // Lazy load session wallet modules on first use
+    if (!SessionWalletPopupView) {
+      SessionWalletManager = require('app/common/session_wallet');
+      SessionWalletPopupView = require('./session_wallet_popup');
+    }
+
+    // Check if sync is in progress - don't open popup if syncing
+    var sessionWalletManager = SessionWalletManager.getInstance();
+    if (sessionWalletManager.isSyncing()) {
+      Logger.module('UI').log('Session wallet sync in progress, cannot open popup');
+      return;
+    }
+
+    // Toggle session wallet popup
+    if (this._sessionWalletPopup && this._sessionWalletPopup.$el.is(':visible')) {
+      // Close the popup
+      this._sessionWalletPopup.destroy();
+      this._sessionWalletPopup = null;
+    } else {
+      // Create and show the popup
+      if (this._sessionWalletPopup) {
+        this._sessionWalletPopup.destroy();
+      }
+      this._sessionWalletPopup = new SessionWalletPopupView();
+      this._sessionWalletPopup.render();
+      // Append to body so it's above everything
+      $('body').append(this._sessionWalletPopup.$el);
+      // Listen for close event
+      this.listenTo(this._sessionWalletPopup, 'close', function() {
+        if (this._sessionWalletPopup) {
+          this._sessionWalletPopup.destroy();
+          this._sessionWalletPopup = null;
+        }
+      }.bind(this));
+    }
+  },
+
+  /**
+   * Setup session wallet sync event listeners
+   * Handles sync state changes to enable/disable wallet button
+   */
+  _setupSessionWalletSyncListeners: function() {
+    var self = this;
+
+    // Lazy load SessionWalletManager
+    if (!SessionWalletManager) {
+      SessionWalletManager = require('app/common/session_wallet');
+    }
+
+    var sessionWalletManager = SessionWalletManager.getInstance();
+
+    // Store handlers for cleanup
+    this._onSyncStarted = function() {
+      self._setWalletButtonLoading(true);
+    };
+
+    this._onSyncCompleted = function() {
+      self._setWalletButtonLoading(false);
+    };
+
+    sessionWalletManager.on('syncStarted', this._onSyncStarted);
+    sessionWalletManager.on('syncCompleted', this._onSyncCompleted);
+
+    // Check current sync state - if already syncing, show loading state
+    if (sessionWalletManager.isSyncing()) {
+      this._setWalletButtonLoading(true);
+    } else if (!sessionWalletManager.isSynced()) {
+      // If not synced yet and not syncing, show loading state until sync happens
+      this._setWalletButtonLoading(true);
+    }
+  },
+
+  /**
+   * Set wallet button loading/disabled state
+   */
+  _setWalletButtonLoading: function(isLoading) {
+    if (!(this.ui.$sessionWalletButton instanceof $)) return;
+
+    if (isLoading) {
+      // Disable button
+      this.ui.$sessionWalletButton.addClass('disabled loading');
+      this.ui.$sessionWalletButton.prop('disabled', true);
+
+      // Update tooltip to "Loading wallet..."
+      this.ui.$sessionWalletButton.attr('data-original-title', 'Loading wallet...');
+      this.ui.$sessionWalletButton.tooltip('fixTitle');
+
+      // Update button text
+      if (this.ui.$walletBtnText instanceof $) {
+        this.ui.$walletBtnText.text('Loading...');
+      }
+    } else {
+      // Enable button
+      this.ui.$sessionWalletButton.removeClass('disabled loading');
+      this.ui.$sessionWalletButton.prop('disabled', false);
+
+      // Reset tooltip
+      this.ui.$sessionWalletButton.attr('data-original-title', 'FHE Session Wallet');
+      this.ui.$sessionWalletButton.tooltip('fixTitle');
+
+      // Reset button text
+      if (this.ui.$walletBtnText instanceof $) {
+        this.ui.$walletBtnText.text('Wallet');
+      }
+    }
+  },
+
+  /**
+   * Clean up session wallet sync listeners
+   */
+  _cleanupSessionWalletSyncListeners: function() {
+    if (!SessionWalletManager) return;
+
+    var sessionWalletManager = SessionWalletManager.getInstance();
+
+    if (this._onSyncStarted) {
+      sessionWalletManager.off('syncStarted', this._onSyncStarted);
+      this._onSyncStarted = null;
+    }
+
+    if (this._onSyncCompleted) {
+      sessionWalletManager.off('syncCompleted', this._onSyncCompleted);
+      this._onSyncCompleted = null;
+    }
+  },
+
   onGoldClicked: function () {
     if (ServerStatusManager.getInstance().isShopEnabled()) {
       this.toggleShop();
@@ -449,6 +574,31 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
 
   onClickBoosterPackCollection: function () {
     EventBus.getInstance().trigger(EVENTS.show_booster_pack_unlock);
+  },
+
+  /**
+   * Switch to network directly (no popup needed)
+   */
+  onNetworkIndicatorClicked: function (e) {
+    var self = this;
+
+    // Get current network and toggle to other
+    var state = Wallet.getState();
+    var currentNetwork = state.networkName;
+    var targetNetwork = (currentNetwork === 'sepolia') ? 'hardhat' : 'sepolia';
+
+    Logger.module('UI').log('Switching from', currentNetwork, 'to', targetNetwork);
+
+    if (Wallet.isProviderAvailable()) {
+      Wallet.switchNetwork(targetNetwork)
+        .then(function() {
+          Logger.module('UI').log('Switched to', targetNetwork);
+          self.onUpdateNetworkIndicator();
+        })
+        .catch(function(err) {
+          Logger.module('UI').error('Switch failed:', err);
+        });
+    }
   },
 
 });

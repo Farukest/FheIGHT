@@ -12,8 +12,8 @@ var NavigationManager = require('app/ui/managers/navigation_manager');
 var LoginMenuTmpl = require('app/ui/templates/item/login_menu.hbs');
 var openUrl = require('app/common/openUrl');
 var i18next = require('i18next');
-var WalletConnectDialogItemView = require('./wallet_connect_dialog');
 var ErrorDialogItemView = require('./error_dialog');
+var Wallet = require('app/common/wallet');
 
 var LoginMenuItemView = Backbone.Marionette.ItemView.extend({
 
@@ -27,8 +27,6 @@ var LoginMenuItemView = Backbone.Marionette.ItemView.extend({
     $brandDynamic: '.brand-dynamic',
     $loginForm: '.login-form',
     $connectWallet: '.connect-wallet',
-    $walletStatus: '.wallet-status',
-    $walletAddressDisplay: '.wallet-address-display',
   },
 
   /* Ui events hash */
@@ -44,8 +42,7 @@ var LoginMenuItemView = Backbone.Marionette.ItemView.extend({
   /* region INITIALIZE */
 
   initialize: function () {
-    // Bind wallet dialog success handler
-    this._onWalletSuccess = this._onWalletSuccess.bind(this);
+    // TODO: Implement wallet connection
   },
 
   /* endregion INITIALIZE */
@@ -143,17 +140,71 @@ var LoginMenuItemView = Backbone.Marionette.ItemView.extend({
   /* region WALLET CONNECT */
 
   onConnectWallet: function () {
+    var self = this;
     audio_engine.current().play_effect_for_interaction(RSX.sfx_ui_confirm.audio, CONFIG.CONFIRM_SFX_PRIORITY);
 
-    var walletDialog = new WalletConnectDialogItemView();
-    this.listenToOnce(walletDialog, 'success', this._onWalletSuccess);
-    NavigationManager.getInstance().showDialogView(walletDialog);
+    // Check if wallet provider is available
+    if (!Wallet.isProviderAvailable()) {
+      this.onError('No wallet found. Please install MetaMask or another Web3 wallet.');
+      return;
+    }
+
+    Logger.module('UI').log('Connecting wallet...');
+
+    // Disable button while connecting
+    this.ui.$connectWallet.prop('disabled', true).text('Connecting...');
+
+    // Connect using wallet module
+    var walletManager = Wallet.getInstance();
+    walletManager.connect()
+      .then(function(address) {
+        Logger.module('UI').log('===========================================');
+        Logger.module('UI').log('WALLET CONNECTED SUCCESSFULLY');
+        Logger.module('UI').log('===========================================');
+        Logger.module('UI').log('Address:', address);
+
+        // Get network info
+        return walletManager.getChainId().then(function(chainId) {
+          var networkName = walletManager.getNetworkName(chainId);
+          Logger.module('UI').log('Chain ID:', chainId, '(' + parseInt(chainId, 16) + ')');
+          Logger.module('UI').log('Network:', networkName);
+
+          // Get balance
+          return walletManager.getBalance().then(function(balance) {
+            Logger.module('UI').log('Balance:', balance, 'ETH');
+            Logger.module('UI').log('===========================================');
+
+            // Authenticate with backend using wallet address
+            return self._authenticateWithBackend(address);
+          });
+        });
+      })
+      .catch(function(err) {
+        Logger.module('UI').error('Wallet connection failed:', err);
+        self.ui.$connectWallet.prop('disabled', false).text('CONNECT WALLET');
+        self.onError(err.message || 'Failed to connect wallet');
+      });
   },
 
-  _onWalletSuccess: function (data) {
-    // Wallet authentication successful
-    // Session will emit 'login' event which is handled by the application
-    Logger.module('UI').log('Wallet authentication successful');
+  _authenticateWithBackend: function(address) {
+    var self = this;
+
+    Logger.module('UI').log('Authenticating with backend for address:', address);
+
+    // For now, use Session.login with wallet address
+    // This creates a session based on wallet address
+    return Session.login(address)
+      .then(function() {
+        Logger.module('UI').log('Backend authentication successful');
+        Logger.module('UI').log('===========================================');
+        Logger.module('UI').log('LOGIN COMPLETE');
+        Logger.module('UI').log('===========================================');
+      })
+      .catch(function(err) {
+        Logger.module('UI').error('Backend authentication failed:', err);
+        self.ui.$connectWallet.prop('disabled', false).text('CONNECT WALLET');
+        self.onError(err.message || 'Authentication failed');
+      });
   },
 
   onError: function (errorMessage) {

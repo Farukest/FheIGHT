@@ -84,6 +84,7 @@ const StreamManager = (window.StreamManager = require('app/ui/managers/stream_ma
 const FHE = require('app/sdk/fhe');
 const FHESession = require('app/common/fhe_session');
 const Wallet = require('app/common/wallet');
+const SessionWalletManager = require('app/common/session_wallet');
 
 // Views
 const Helpers = require('app/ui/views/helpers');
@@ -649,8 +650,9 @@ App.main = function() {
               Logger.module("UI").log("Last active game was on ", new Date(lastGameModel.get("created_at")), "with data", lastGameModel);
               return App._resumeGame(lastGameModel);
             } else if (!NewPlayerManager.getInstance().isDoneWithTutorial()) {
-              // show tutorial layout
-              return App._showTutorialLessons();
+              // FHEIGHT: Skip tutorial - go directly to main menu
+              // Original: return App._showTutorialLessons();
+              return App._showMainMenu();
             } else if (QuestsManager.getInstance().hasUnreadQuests()) {
               // show main menu
               return App._showMainMenu();
@@ -1092,6 +1094,17 @@ App.onLogin = function(data) {
 
   // Trigger the eventbus login event for the utilty menus
   EventBus.getInstance().trigger(EVENTS.session_logged_in);
+
+  // Sync session wallet with blockchain (automatic recovery)
+  SessionWalletManager.getInstance().syncWithBlockchain()
+    .then(function(address) {
+      if (address) {
+        Logger.module('APP').log('Session wallet synced from blockchain:', address);
+      }
+    })
+    .catch(function(err) {
+      Logger.module('APP').warn('Session wallet sync error:', err.message);
+    });
 
   // connect all managers
   ProfileManager.getInstance().connect({userId: data.userId});

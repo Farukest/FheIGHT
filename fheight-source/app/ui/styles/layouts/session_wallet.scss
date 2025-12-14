@@ -1,0 +1,985 @@
+/* ---------- SESSION WALLET POPUP ---------- */
+
+.session-wallet-popup-container {
+	position: fixed;
+	bottom: 15.5rem;
+	right: 4.5rem;
+	z-index: 1000;
+}
+
+.session-wallet-popup {
+	width: 48rem;
+	background: linear-gradient(180deg, rgba(25, 20, 40, 0.98) 0%, rgba(15, 12, 28, 0.98) 100%);
+	border: 1px solid rgba(255, 200, 100, 0.25);
+	border-radius: 1rem;
+	box-shadow: 0 0.8rem 3rem rgba(0, 0, 0, 0.6), 0 0 2rem rgba(255, 200, 100, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+	overflow: hidden;
+	font-family: inherit;
+
+	// Header
+	.wallet-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1.4rem 1.8rem;
+		background: linear-gradient(90deg, rgba(255, 200, 100, 0.12) 0%, rgba(255, 200, 100, 0.03) 100%);
+		border-bottom: 1px solid rgba(255, 200, 100, 0.15);
+
+		.wallet-title-row {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+		}
+
+		.wallet-header-right {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+		}
+
+		.wallet-icon {
+			width: 2.4rem;
+			height: 2.4rem;
+			@include backgroundImage("resources/ui/utility_menu/wallet.png");
+			background-size: contain;
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+
+		.wallet-title {
+			font-size: 1.5rem;
+			font-weight: 600;
+			color: $gold-color;
+			text-transform: uppercase;
+			letter-spacing: 0.08rem;
+		}
+
+		// Network Badge
+		.wallet-network-badge {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			padding: 0.4rem 0.8rem;
+			border-radius: 0.4rem;
+			font-size: 1rem;
+			font-weight: 500;
+			text-transform: uppercase;
+			letter-spacing: 0.05rem;
+
+			.network-dot {
+				width: 0.6rem;
+				height: 0.6rem;
+				border-radius: 50%;
+			}
+
+			.network-label {
+				white-space: nowrap;
+			}
+
+			// Sepolia - Gold theme
+			&.sepolia {
+				background: rgba(255, 215, 0, 0.15);
+				border: 1px solid rgba(255, 215, 0, 0.3);
+
+				.network-dot {
+					background: linear-gradient(135deg, #ffd700, #b8860b);
+					box-shadow: 0 0 4px rgba(255, 215, 0, 0.5);
+				}
+
+				.network-label {
+					color: $gold-color;
+				}
+			}
+
+			// Hardhat - Blue theme
+			&.hardhat {
+				background: rgba(142, 207, 255, 0.15);
+				border: 1px solid rgba(142, 207, 255, 0.3);
+
+				.network-dot {
+					background: linear-gradient(135deg, #8ecfff, #4a90d9);
+					box-shadow: 0 0 4px rgba(142, 207, 255, 0.5);
+				}
+
+				.network-label {
+					color: #8ecfff;
+				}
+			}
+
+			// Unknown - Gray theme
+			&.unknown {
+				background: rgba(150, 150, 150, 0.15);
+				border: 1px solid rgba(150, 150, 150, 0.3);
+
+				.network-dot {
+					background: linear-gradient(135deg, #999, #666);
+					box-shadow: 0 0 4px rgba(150, 150, 150, 0.5);
+				}
+
+				.network-label {
+					color: #999;
+				}
+			}
+		}
+
+		.wallet-close-btn {
+			background: none;
+			border: none;
+			color: rgba(255, 255, 255, 0.4);
+			font-size: 1.4rem;
+			cursor: pointer;
+			padding: 0.5rem;
+			transition: all 0.2s;
+			border-radius: 0.4rem;
+
+			&:hover {
+				color: #fff;
+				background: rgba(255, 255, 255, 0.1);
+			}
+		}
+	}
+
+	// Content
+	.wallet-content {
+		padding: 1.8rem;
+	}
+
+	// States
+	.wallet-state {
+		&.hide {
+			display: none;
+		}
+	}
+
+	// ==================
+	// NOT CREATED STATE
+	// ==================
+	.wallet-not-created {
+		.wallet-intro {
+			text-align: center;
+			margin-bottom: 2rem;
+		}
+
+		.wallet-icon-large {
+			width: 6rem;
+			height: 6rem;
+			margin: 0 auto 1.5rem;
+			@include backgroundImage("resources/ui/utility_menu/wallet.png");
+			background-size: contain;
+			background-repeat: no-repeat;
+			background-position: center;
+			opacity: 0.9;
+		}
+
+		.intro-title {
+			font-size: 1.6rem;
+			font-weight: 600;
+			color: #fff;
+			margin: 0 0 0.8rem;
+		}
+
+		.intro-description {
+			font-size: 1.2rem;
+			color: rgba(255, 255, 255, 0.6);
+			line-height: 1.5;
+			margin: 0;
+		}
+
+		.wallet-features {
+			display: flex;
+			justify-content: space-between;
+			margin-bottom: 2rem;
+			padding: 1.2rem 2rem;
+			background: rgba(0, 0, 0, 0.2);
+			border-radius: 0.6rem;
+
+			.feature-item {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 0.5rem;
+				flex: 1;
+
+				i {
+					font-size: 1.4rem;
+					color: $gold-color;
+				}
+
+				span {
+					font-size: 1rem;
+					color: rgba(255, 255, 255, 0.5);
+					white-space: nowrap;
+				}
+			}
+		}
+
+		.wallet-create-btn {
+			display: block;
+			margin: 0 auto;
+			min-width: 19.5rem; // 13.0rem * 1.5
+			min-height: 6rem; // 4.0rem * 1.5
+		}
+	}
+
+	// ==================
+	// CREATED STATE
+	// ==================
+	.wallet-created {
+		// Balance Card
+		.balance-card {
+			background: linear-gradient(135deg, rgba(255, 200, 100, 0.1) 0%, rgba(255, 200, 100, 0.05) 100%);
+			border: 1px solid rgba(255, 200, 100, 0.2);
+			border-radius: 0.8rem;
+			padding: 1.4rem;
+			margin-bottom: 1.2rem;
+
+			.balance-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 0.6rem;
+			}
+
+			.balance-label {
+				font-size: 1.1rem;
+				color: rgba(255, 255, 255, 0.5);
+				text-transform: uppercase;
+				letter-spacing: 0.05rem;
+			}
+
+			.btn-refresh {
+				background: none;
+				border: none;
+				color: rgba(255, 255, 255, 0.4);
+				font-size: 1.2rem;
+				cursor: pointer;
+				padding: 0.3rem;
+				transition: all 0.2s;
+
+				&:hover {
+					color: $gold-color;
+					transform: rotate(180deg);
+				}
+			}
+
+			.balance-amount {
+				display: flex;
+				align-items: baseline;
+				gap: 0.5rem;
+
+				.balance-value {
+					font-size: 2.4rem;
+					font-weight: 700;
+					color: $gold-color;
+				}
+
+				.balance-currency {
+					font-size: 1.2rem;
+					color: rgba(255, 255, 255, 0.5);
+				}
+			}
+		}
+
+		// Address Card
+		.address-card {
+			background: rgba(0, 0, 0, 0.25);
+			border-radius: 0.6rem;
+			padding: 1.2rem;
+			margin-bottom: 1.2rem;
+
+			.address-label {
+				font-size: 1rem;
+				color: rgba(255, 255, 255, 0.4);
+				text-transform: uppercase;
+				letter-spacing: 0.05rem;
+				margin-bottom: 0.6rem;
+			}
+
+			.address-row {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.address-value {
+				font-family: monospace;
+				font-size: 1.3rem;
+				color: #fff;
+			}
+
+			.address-actions {
+				display: flex;
+				gap: 0.5rem;
+			}
+
+			.btn-icon {
+				background: rgba(255, 255, 255, 0.05);
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				color: rgba(255, 255, 255, 0.5);
+				font-size: 1.2rem;
+				padding: 0.6rem;
+				border-radius: 0.4rem;
+				cursor: pointer;
+				transition: all 0.2s;
+
+				&:hover {
+					background: rgba(255, 200, 100, 0.15);
+					border-color: rgba(255, 200, 100, 0.3);
+					color: $gold-color;
+				}
+			}
+		}
+
+		// QR Section
+		.wallet-qr-section {
+			text-align: center;
+			margin-bottom: 1.2rem;
+			padding: 1.5rem;
+			background: rgba(255, 255, 255, 0.95);
+			border-radius: 0.8rem;
+
+			&.hide {
+				display: none;
+			}
+
+			.qr-canvas {
+				max-width: 12rem;
+			}
+
+			.qr-hint {
+				color: #333;
+				font-size: 1rem;
+				margin: 1rem 0 0;
+			}
+		}
+
+		// Action Buttons - uses game's button_primary.png
+		.wallet-actions {
+			display: flex;
+			gap: 1rem;
+			margin-bottom: 1.4rem;
+
+			.action-btn {
+				flex: 1;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 0.6rem;
+				@include backgroundImage("resources/ui/button_primary.png");
+				background-size: 100% 100%;
+				background-color: transparent;
+				border: none;
+				color: #fff;
+				font-size: 1.2rem;
+				font-weight: 500;
+				padding: 1.2rem;
+				cursor: pointer;
+				transition: all 0.2s;
+				text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+
+				i {
+					font-size: 1.1rem;
+				}
+
+				&:hover {
+					filter: brightness(1.15);
+				}
+
+				&:active {
+					transform: scale(0.98);
+					filter: brightness(0.95);
+				}
+			}
+		}
+
+		// Advanced Section
+		.wallet-advanced {
+			border-top: 1px solid rgba(255, 255, 255, 0.08);
+			padding-top: 1.2rem;
+
+			.toggle-advanced-btn {
+				width: 100%;
+				display: flex;
+				align-items: center;
+				gap: 0.8rem;
+				background: none;
+				border: none;
+				color: rgba(255, 255, 255, 0.4);
+				font-size: 1.1rem;
+				cursor: pointer;
+				padding: 0.5rem 0;
+				transition: color 0.2s;
+
+				.chevron {
+					margin-left: auto;
+					transition: transform 0.2s;
+				}
+
+				&:hover {
+					color: rgba(255, 255, 255, 0.7);
+				}
+			}
+
+			.advanced-options {
+				display: flex;
+				flex-direction: column;
+				gap: 0.8rem;
+				margin-top: 1rem;
+				width: 80%;
+				margin: 1rem auto 0;
+
+				&.hide {
+					display: none;
+				}
+			}
+
+			.advanced-btn {
+				display: flex;
+				align-items: center;
+				gap: 0.8rem;
+				background-size: 100% 100%;
+				background-color: transparent;
+				border: none;
+				color: #fff;
+				font-size: 1.2rem;
+				padding: 1.5rem 4rem;
+				cursor: pointer;
+				transition: all 0.2s;
+				text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+
+				&:hover {
+					filter: brightness(1.15);
+				}
+
+				&:active {
+					transform: scale(0.98);
+					filter: brightness(0.95);
+				}
+
+				// Export Key button - button_end_turn_mine
+				&.btn-export {
+					@include backgroundImage("resources/ui/button_end_turn_mine.png");
+				}
+
+				// Clear Wallet button - button_cancel
+				&.btn-clear {
+					@include backgroundImage("resources/ui/button_cancel.png");
+				}
+			}
+		}
+	}
+
+	// ==================
+	// SHARED STATE STYLES
+	// ==================
+	.state-header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+		padding-bottom: 1rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+		.back-btn {
+			background: rgba(255, 255, 255, 0.05);
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			color: rgba(255, 255, 255, 0.6);
+			font-size: 1.2rem;
+			padding: 0.6rem 0.8rem;
+			border-radius: 0.4rem;
+			cursor: pointer;
+			transition: all 0.2s;
+
+			&:hover {
+				background: rgba(255, 255, 255, 0.1);
+				color: #fff;
+			}
+		}
+
+		.state-title {
+			font-size: 1.3rem;
+			font-weight: 600;
+			color: #fff;
+		}
+	}
+
+	// Action Button Primary - uses game's button_primary.png
+	.action-btn.primary {
+		@include backgroundImage("resources/ui/button_primary.png");
+		background-size: 100% 100%;
+		background-color: transparent;
+		border: none;
+		color: #fff;
+		font-weight: 600;
+		text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+
+		&:hover {
+			filter: brightness(1.15);
+		}
+
+		&:active {
+			transform: scale(0.98);
+			filter: brightness(0.95);
+		}
+	}
+
+	// ==================
+	// EXPORT KEY STATE
+	// ==================
+	.wallet-export-key {
+		.export-warning {
+			display: flex;
+			align-items: flex-start;
+			gap: 1rem;
+			padding: 1.2rem;
+			background: rgba(220, 80, 80, 0.1);
+			border: 1px solid rgba(220, 80, 80, 0.25);
+			border-radius: 0.6rem;
+			margin-bottom: 1.5rem;
+
+			i {
+				font-size: 1.8rem;
+				color: #dc5050;
+				flex-shrink: 0;
+			}
+
+			p {
+				font-size: 1.15rem;
+				color: rgba(255, 150, 150, 0.9);
+				line-height: 1.4;
+				margin: 0;
+			}
+		}
+
+		.export-info {
+			padding: 1.2rem;
+			background: rgba(255, 200, 100, 0.08);
+			border: 1px solid rgba(255, 200, 100, 0.15);
+			border-radius: 0.6rem;
+			margin-bottom: 1.5rem;
+
+			p {
+				font-size: 1.15rem;
+				color: rgba(255, 255, 255, 0.7);
+				line-height: 1.4;
+				margin: 0;
+			}
+		}
+
+		.reveal-key-btn {
+			width: 100%;
+			margin-bottom: 1.5rem;
+			padding: 1.8rem 1rem;
+		}
+
+		.private-key-display {
+			margin-bottom: 1rem;
+
+			&.hide {
+				display: none;
+			}
+
+			.private-key-text {
+				width: 100%;
+				height: 7rem;
+				background: rgba(0, 0, 0, 0.4);
+				border: 1px solid rgba(255, 200, 100, 0.2);
+				color: $gold-color;
+				font-family: monospace;
+				font-size: 1rem;
+				padding: 1rem;
+				border-radius: 0.5rem;
+				resize: none;
+				margin-bottom: 1rem;
+			}
+
+			.copy-key-btn {
+				width: 100%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 0.6rem;
+				@include backgroundImage("resources/ui/button_primary.png");
+				background-size: 100% 100%;
+				background-color: transparent;
+				border: none;
+				color: #fff;
+				font-size: 1.1rem;
+				font-weight: 500;
+				padding: 1rem;
+				cursor: pointer;
+				transition: all 0.2s;
+				text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+
+				&:hover {
+					filter: brightness(1.15);
+				}
+
+				&:active {
+					transform: scale(0.98);
+				}
+
+				&.copied {
+					@include backgroundImage("resources/ui/button_confirm_glow.png");
+				}
+			}
+		}
+	}
+
+	// ==================
+	// DEPOSIT STATE
+	// ==================
+	.wallet-deposit {
+		.deposit-info {
+			padding: 1.2rem;
+			background: rgba(255, 200, 100, 0.08);
+			border: 1px solid rgba(255, 200, 100, 0.15);
+			border-radius: 0.6rem;
+			margin-bottom: 1.5rem;
+
+			p {
+				font-size: 1.15rem;
+				color: rgba(255, 255, 255, 0.7);
+				line-height: 1.4;
+				margin: 0;
+			}
+		}
+
+		.deposit-form {
+			width: 100%;
+			display: block;
+
+			.input-group {
+				width: 100% !important;
+				margin-bottom: 2rem;
+				display: block !important;
+
+				label {
+					display: block;
+					font-size: 1.2rem;
+					color: rgba(255, 255, 255, 0.5);
+					margin-bottom: 1rem;
+					text-transform: uppercase;
+					letter-spacing: 0.05rem;
+				}
+
+				.amount-input-row {
+					display: flex !important;
+					flex-direction: row !important;
+					align-items: center;
+					background: rgba(0, 0, 0, 0.3);
+					border: 1px solid rgba(255, 255, 255, 0.15);
+					border-radius: 0.6rem;
+					padding: 0.8rem 1rem;
+					margin-bottom: 1.2rem;
+					width: 100%;
+					box-sizing: border-box;
+
+					.deposit-amount-input {
+						flex: 1;
+						background: none;
+						border: none;
+						color: #fff;
+						font-size: 2rem;
+						padding: 0.8rem;
+						min-width: 0;
+						width: auto !important;
+
+						&:focus {
+							outline: none;
+						}
+
+						&::placeholder {
+							color: rgba(255, 255, 255, 0.2);
+						}
+					}
+
+					.currency-label {
+						color: rgba(255, 255, 255, 0.5);
+						font-size: 1.3rem;
+						font-weight: 500;
+						padding: 0 1rem;
+						border-left: 1px solid rgba(255, 255, 255, 0.1);
+						margin-left: 0.5rem;
+						flex-shrink: 0;
+					}
+				}
+
+				.main-wallet-balance-row {
+					display: flex !important;
+					flex-direction: row !important;
+					align-items: center;
+					justify-content: space-between;
+					padding: 1rem 1.2rem;
+					background: rgba(255, 200, 100, 0.08);
+					border: 1px solid rgba(255, 200, 100, 0.15);
+					border-radius: 0.5rem;
+					width: 100%;
+					box-sizing: border-box;
+
+					.balance-label {
+						color: rgba(255, 255, 255, 0.5);
+						font-size: 1.1rem;
+					}
+
+					.main-wallet-balance {
+						color: $gold-color;
+						font-size: 1.3rem;
+						font-weight: 600;
+					}
+				}
+			}
+		}
+
+		.confirm-deposit-btn {
+			width: 70%;
+			padding: 1.6rem 1rem;
+			font-size: 1.3rem;
+			margin: 0 auto;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 0.8rem;
+		}
+
+		.deposit-status {
+			text-align: center;
+			padding: 2rem;
+
+			&.hide {
+				display: none;
+			}
+
+			.status-spinner {
+				margin-bottom: 1rem;
+
+				i {
+					font-size: 2.5rem;
+					color: $gold-color;
+				}
+			}
+
+			.status-text {
+				font-size: 1.2rem;
+				color: rgba(255, 255, 255, 0.7);
+				margin: 0;
+			}
+		}
+	}
+
+	// ==================
+	// WITHDRAW STATE
+	// ==================
+	.wallet-withdraw {
+		.withdraw-form {
+			width: 100%;
+			display: block;
+
+			.input-group {
+				width: 100% !important;
+				margin-bottom: 2rem;
+				display: block !important;
+				flex-wrap: nowrap !important;
+
+				label {
+					display: block;
+					font-size: 1.2rem;
+					color: rgba(255, 255, 255, 0.5);
+					margin-bottom: 1rem;
+					text-transform: uppercase;
+					letter-spacing: 0.05rem;
+				}
+
+				.amount-input-row {
+					display: flex !important;
+					flex-direction: row !important;
+					align-items: center;
+					background: rgba(0, 0, 0, 0.3);
+					border: 1px solid rgba(255, 255, 255, 0.15);
+					border-radius: 0.6rem;
+					padding: 0.8rem 1rem;
+					margin-bottom: 1.2rem;
+					width: 100%;
+					box-sizing: border-box;
+
+					.withdraw-amount-input {
+						flex: 1;
+						background: none;
+						border: none;
+						color: #fff;
+						font-size: 2rem;
+						padding: 0.8rem;
+						min-width: 0;
+						width: auto !important;
+
+						&:focus {
+							outline: none;
+						}
+
+						&::placeholder {
+							color: rgba(255, 255, 255, 0.2);
+						}
+					}
+
+					.currency-label {
+						color: rgba(255, 255, 255, 0.5);
+						font-size: 1.3rem;
+						font-weight: 500;
+						padding: 0 1rem;
+						border-left: 1px solid rgba(255, 255, 255, 0.1);
+						margin-left: 0.5rem;
+						flex-shrink: 0;
+					}
+
+					.max-btn {
+						@include backgroundImage("resources/ui/button_primary.png");
+						background-size: 100% 100%;
+						background-color: transparent;
+						border: none;
+						color: #fff;
+						font-size: 1.1rem;
+						font-weight: 600;
+						padding: 0.8rem 1.6rem;
+						cursor: pointer;
+						transition: all 0.2s;
+						text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+						margin-left: 0.8rem;
+						flex-shrink: 0;
+
+						&:hover {
+							filter: brightness(1.15);
+						}
+
+						&:active {
+							transform: scale(0.98);
+						}
+					}
+				}
+
+				.available-row {
+					display: flex !important;
+					flex-direction: row !important;
+					align-items: center;
+					justify-content: space-between;
+					padding: 1rem 1.2rem;
+					background: rgba(255, 200, 100, 0.08);
+					border: 1px solid rgba(255, 200, 100, 0.15);
+					border-radius: 0.5rem;
+					width: 100%;
+					box-sizing: border-box;
+					margin-top: 0;
+
+					.available-label {
+						color: rgba(255, 255, 255, 0.5);
+						font-size: 1.1rem;
+					}
+
+					.available-amount {
+						color: $gold-color;
+						font-size: 1.3rem;
+						font-weight: 600;
+					}
+				}
+			}
+		}
+
+		.confirm-withdraw-btn {
+			width: 70%;
+			padding: 1.6rem 1rem;
+			font-size: 1.3rem;
+			margin: 0 auto;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 0.6rem;
+		}
+
+		.withdraw-status {
+			text-align: center;
+			padding: 2rem;
+
+			&.hide {
+				display: none;
+			}
+
+			.status-spinner {
+				margin-bottom: 1rem;
+
+				i {
+					font-size: 2.5rem;
+					color: $gold-color;
+				}
+			}
+
+			.status-text {
+				font-size: 1.2rem;
+				color: rgba(255, 255, 255, 0.7);
+				margin: 0;
+			}
+		}
+	}
+
+	// ==================
+	// CREATING STATE
+	// ==================
+	.wallet-creating {
+		.creating-container {
+			text-align: center;
+			padding: 3rem 1rem;
+
+			.creating-spinner {
+				width: 5rem;
+				height: 5rem;
+				margin: 0 auto 1.5rem;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+
+				i {
+					font-size: 3rem;
+					color: $gold-color;
+				}
+			}
+
+			.creating-title {
+				font-size: 1.5rem;
+				font-weight: 600;
+				color: #fff;
+				margin: 0 0 2rem;
+			}
+
+			.creating-description {
+				font-size: 1.15rem;
+				color: rgba(255, 255, 255, 0.5);
+				line-height: 1.4;
+				margin: 0;
+				margin-bottom: 1rem;
+			}
+
+			.creating-steps {
+				.step {
+					margin-bottom: 0.3rem;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					gap: 0.6rem;
+					color: rgba(255, 255, 255, 0.5);
+					font-size: 1.1rem;
+
+					i {
+						width: 1.4rem;
+						text-align: center;
+					}
+
+					&.active {
+						color: $gold-color;
+					}
+
+					&.done {
+						color: #4CAF50;
+					}
+				}
+			}
+		}
+	}
+}

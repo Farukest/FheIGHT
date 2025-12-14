@@ -213,6 +213,34 @@
 		}
 	}
 
+	.session-wallet {
+		.symbol {
+			width: 8.1rem;
+			height: 8.9rem;
+			@include backgroundImage("resources/ui/utility_menu/wallet.png");
+		}
+
+		// Loading/disabled state while syncing with blockchain
+		&.disabled.loading {
+			opacity: 0.5;
+			cursor: not-allowed;
+			pointer-events: none;
+
+			.symbol {
+				animation: walletPulse 1.5s ease-in-out infinite;
+			}
+
+			.wallet-btn-text {
+				color: #888;
+			}
+		}
+	}
+
+	@keyframes walletPulse {
+		0%, 100% { opacity: 0.4; }
+		50% { opacity: 0.8; }
+	}
+
 	.gold {
 		position: relative;
 		bottom: 2rem;
@@ -283,8 +311,13 @@
 		}
 	}
 
+	// Network selector wrapper - contains button and popup
+	.network-selector-wrapper {
+		position: relative;
+		display: inline-block;
+	}
+
 	// Network indicator button - shows current blockchain network
-	// Copied exactly from .gold button styling
 	.network-indicator {
 		position: relative;
 		bottom: 2rem;
@@ -295,21 +328,32 @@
 		background-size: 100%;
 		border-radius:1.2rem;
 		height: 4.8rem;
-		width:12.0rem;
+		width:13.0rem;
+		cursor: pointer;
 		* {
 			color: lighten($gold-color,25);
 			pointer-events:auto;
 		}
 		.network-name {
-			// Same as .gold-count
 			display: inline-block;
-			font-size:1.5rem;
+			vertical-align: middle;
+			font-size:1.4rem;
 			height: 1.8rem;
-			line-height: 2.4rem;
-			padding-top:0.5rem;
-			margin:0 0.5rem;
+			line-height: 1.8rem;
+			margin:0 0.3rem;
 			text-transform: uppercase;
 			letter-spacing: 0.05rem;
+		}
+		.network-caret {
+			display: inline-block;
+			vertical-align: middle;
+			font-size: 0.8rem;
+			margin-left: 0.2rem;
+			opacity: 0.7;
+			transition: transform 0.2s;
+		}
+		&.active .network-caret {
+			transform: rotate(180deg);
 		}
 		&:hover, &:focus, &:active {
 			filter:brightness(1.5);
@@ -334,6 +378,68 @@
 			opacity: 0.6;
 			* {
 				color: #999;
+			}
+		}
+	}
+
+	// Network selector popup - opens upward
+	.network-selector-popup {
+		position: absolute;
+		bottom: calc(100% + 0.5rem);
+		left: 50%;
+		transform: translateX(-50%);
+		background: rgba(20, 20, 30, 0.95);
+		border: 1px solid rgba(255, 215, 0, 0.3);
+		border-radius: 0.8rem;
+		padding: 0.5rem 0;
+		min-width: 16rem;
+		box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+		z-index: 1000;
+
+		&.hide {
+			display: none;
+		}
+
+		// Arrow pointing down
+		&:after {
+			content: '';
+			position: absolute;
+			bottom: -0.6rem;
+			left: 50%;
+			transform: translateX(-50%);
+			border-left: 0.6rem solid transparent;
+			border-right: 0.6rem solid transparent;
+			border-top: 0.6rem solid rgba(20, 20, 30, 0.95);
+		}
+	}
+
+	.network-option {
+		display: flex;
+		align-items: center;
+		padding: 0.8rem 1.2rem;
+		cursor: pointer;
+		transition: background 0.15s;
+		color: #fff;
+		font-size: 1.3rem;
+
+		&:hover {
+			background: rgba(255, 215, 0, 0.15);
+		}
+
+		.network-dot {
+			width: 1rem;
+			height: 1rem;
+			border-radius: 50%;
+			margin-right: 0.8rem;
+
+			&.sepolia {
+				background: linear-gradient(135deg, #ffd700, #b8860b);
+				box-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+			}
+
+			&.hardhat {
+				background: linear-gradient(135deg, #8ecfff, #4a90d9);
+				box-shadow: 0 0 6px rgba(142, 207, 255, 0.5);
 			}
 		}
 	}

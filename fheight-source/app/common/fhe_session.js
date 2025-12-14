@@ -18,11 +18,12 @@ var ethers = require('ethers');
 // FHEVM Contract adresleri (Sepolia)
 var DEPLOYED_CONTRACTS = {
   sepolia: {
-    GameSession: '0xeDAbEB1A3540e7A6b319d2BA38B7d6598E33675a', // v12 - ACL fix: FHE.allow for all deck cards (TX-free card draw)
-    CardRegistry: '0x1BD8190C546D58518E438eCC65E7aE01fEd4c169', // with 18 generals + 17 minions
+    GameSession: '0x953E4749A9324e0d270d3713bbb64AA66F840e08', // v14 - renamed sessionKey to fheWallet
+    CardRegistry: '0xf9EB68605c1df066fC944c28770fFF8476ADE8fc', // with 18 generals + 17 minions
     SpiritOrb: '0xD0C7a512BAEaCe7a52E9BEe47A1B13868A0345B3',
     CardNFT: '0xD200776dE5A8472382F5b8b902a676E2117d7A31',
-    GameGold: '0xdB1274A736812A28b782879128f237f35fed7B81'
+    GameGold: '0xdB1274A736812A28b782879128f237f35fed7B81',
+    WalletVault: '0x053E51a173b863E6495Dd1AeDCB0F9766e03f4A0'
   },
   hardhat: {
     GameGold: '0x9E545E3C0baAB3E08CdfD552C960A1050f373042',
@@ -30,7 +31,8 @@ var DEPLOYED_CONTRACTS = {
     SpiritOrb: '0x1613beB3B2C4f22Ee086B2b38C1476A3cE7f78E8',
     CardRegistry: '0x998abeb3E57409262aE5b751f60747921B33613E',
     FHECounter: '0x809d550fca64d94Bd9F66E60752A544199cfAC3D',
-    GameSession: '0xb7278A61aa25c888815aFC32Ad3cC52fF24fE575' // v7 - single player mode support
+    GameSession: '0xb7278A61aa25c888815aFC32Ad3cC52fF24fE575', // v7 - single player mode support
+    WalletVault: null // TODO: Deploy WalletVault contract to Hardhat
   }
 };
 
@@ -275,7 +277,18 @@ FHESessionManager.prototype._simpleHash = function(input) {
  */
 FHESessionManager.prototype.createEIP712TypedData = function(contractAddresses, userAddress) {
   var self = this;
-  var chainId = Wallet.TARGET_NETWORK === 'sepolia' ? 11155111 : 31337;
+  // Dinamik olarak chainId al
+  var currentNetwork = Wallet.getCurrentNetwork();
+  var chainId;
+  if (currentNetwork === 'sepolia') {
+    chainId = 11155111;
+  } else if (currentNetwork === 'hardhat' || currentNetwork === 'localhost') {
+    chainId = 31337;
+  } else {
+    // Fallback to TARGET_NETWORK
+    chainId = Wallet.TARGET_NETWORK === 'sepolia' ? 11155111 : 31337;
+  }
+  Logger.module('FHE_SESSION').log('createEIP712TypedData - using chainId:', chainId, 'network:', currentNetwork);
   var startTime = Math.floor(Date.now() / 1000);
   var duration = SESSION_DURATION_DAYS * 24 * 60 * 60; // saniye cinsinden
 
@@ -325,14 +338,8 @@ FHESessionManager.prototype.createEIP712TypedData = function(contractAddresses, 
  */
 FHESessionManager.prototype.createSessionSignature = function(contractAddresses) {
   var self = this;
-  var walletManager = Wallet.getInstance();
 
   return new Promise(function(resolve, reject) {
-    if (!walletManager.connected) {
-      reject(new Error('Wallet not connected'));
-      return;
-    }
-
     if (!self.keypair) {
       reject(new Error('Keypair not generated. Call generateKeypair() first'));
       return;
@@ -343,55 +350,74 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
       return;
     }
 
-    var userAddress = walletManager.address;
+    if (!window.ethereum) {
+      reject(new Error('MetaMask not found'));
+      return;
+    }
+
+    var userAddress = null;
+    var signer = null;
     var contracts = Array.isArray(contractAddresses) ? contractAddresses : [contractAddresses];
 
-    // Timestamp ve duration - bunlar signature ile eslesmeli!
-    var startTimeStamp = Math.floor(Date.now() / 1000).toString();
-    var durationDays = SESSION_DURATION_DAYS.toString();
+    // Doğrudan window.ethereum'dan hesap al
+    window.ethereum.request({ method: 'eth_accounts' })
+      .then(function(accounts) {
+        if (!accounts || accounts.length === 0) {
+          throw new Error('No wallet connected');
+        }
 
-    // SDK'nin createEIP712 fonksiyonunu kullan - DOKUMANTASYONA GORE
-    var eip712 = self._fhevmInstance.createEIP712(
-      self.keypair.publicKey,
-      contracts,
-      startTimeStamp,
-      durationDays
-    );
+        userAddress = accounts[0];
 
-    Logger.module('FHE_SESSION').log('Requesting session signature via SDK createEIP712...');
-    Logger.module('FHE_SESSION').log('EIP712 params:', { startTimeStamp: startTimeStamp, durationDays: durationDays });
+        // ethers provider ve signer oluştur
+        var ethersProvider = new window.ethers.providers.Web3Provider(window.ethereum);
+        signer = ethersProvider.getSigner();
 
-    // Signature parametrelerini sakla - userDecrypt'te AYNI degerleri kullanmamiz lazim!
-    self.sessionStartTime = parseInt(startTimeStamp) * 1000; // ms cinsinden
-    self.sessionDurationDays = durationDays;
-    self.sessionStartTimeStamp = startTimeStamp; // String olarak sakla
-    self.contractAddresses = contracts;
+        // Timestamp ve duration - bunlar signature ile eslesmeli!
+        var startTimeStamp = Math.floor(Date.now() / 1000).toString();
+        var durationDays = SESSION_DURATION_DAYS.toString();
 
-    // ethers.js v5 signer ile imzala - v5'te _signTypedData kullanilir
-    var signer = walletManager.getSigner();
-    signer._signTypedData(
-      eip712.domain,
-      { UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification },
-      eip712.message
-    )
-    .then(function(signature) {
-      self.signature = signature;
-      self.initialized = true;
+        // SDK'nin createEIP712 fonksiyonunu kullan - DOKUMANTASYONA GORE
+        var eip712 = self._fhevmInstance.createEIP712(
+          self.keypair.publicKey,
+          contracts,
+          startTimeStamp,
+          durationDays
+        );
 
-      // localStorage'a kaydet
-      self.saveSession();
+        Logger.module('FHE_SESSION').log('Requesting session signature via SDK createEIP712...');
+        Logger.module('FHE_SESSION').log('EIP712 params:', { startTimeStamp: startTimeStamp, durationDays: durationDays });
 
-      Logger.module('FHE_SESSION').log('Session signature obtained via SDK');
-      resolve(signature);
-    })
-    .catch(function(error) {
-      Logger.module('FHE_SESSION').error('Signature request failed:', error);
-      if (error.code === 4001) {
-        reject(new Error('User rejected session signature'));
-      } else {
-        reject(error);
-      }
-    });
+        // Signature parametrelerini sakla - userDecrypt'te AYNI degerleri kullanmamiz lazim!
+        self.sessionStartTime = parseInt(startTimeStamp) * 1000; // ms cinsinden
+        self.sessionDurationDays = durationDays;
+        self.sessionStartTimeStamp = startTimeStamp; // String olarak sakla
+        self.contractAddresses = contracts;
+
+        // ethers.js v5 signer ile imzala - v5'te _signTypedData kullanilir
+        return signer._signTypedData(
+          eip712.domain,
+          { UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification },
+          eip712.message
+        );
+      })
+      .then(function(signature) {
+        self.signature = signature;
+        self.initialized = true;
+
+        // localStorage'a kaydet
+        self.saveSession();
+
+        Logger.module('FHE_SESSION').log('Session signature obtained via SDK');
+        resolve(signature);
+      })
+      .catch(function(error) {
+        Logger.module('FHE_SESSION').error('Signature request failed:', error);
+        if (error.code === 4001) {
+          reject(new Error('User rejected session signature'));
+        } else {
+          reject(error);
+        }
+      });
   });
 };
 
@@ -461,21 +487,43 @@ FHESessionManager.prototype._initFhevmInstance = function() {
 
     Logger.module('FHE_SESSION').log('Initializing FHEVM SDK instance...');
 
-    // initSDK varsa cagir (WASM yukler)
-    var initPromise = (typeof sdk.initSDK === 'function')
-      ? sdk.initSDK()
-      : Promise.resolve();
+    // Guncel network'u wallet'tan al
+    Wallet.refreshNetworkFromWallet()
+      .then(function(network) {
+        Logger.module('FHE_SESSION').log('SDK init - current network:', network);
 
-    initPromise
-      .then(function() {
-        // Sepolia config
+        // initSDK varsa cagir (WASM yukler)
+        var initPromise = (typeof sdk.initSDK === 'function')
+          ? sdk.initSDK()
+          : Promise.resolve();
+
+        return initPromise.then(function() {
+          return network;
+        });
+      })
+      .then(function(network) {
+        // Network'e gore chainId belirle
+        var chainId;
+        if (network === 'sepolia') {
+          chainId = 11155111;
+        } else if (network === 'hardhat' || network === 'localhost') {
+          chainId = 31337;
+        } else {
+          // Bilinmeyen network - Sepolia olarak varsay
+          Logger.module('FHE_SESSION').warn('Unknown network "' + network + '", falling back to Sepolia config');
+          chainId = 11155111;
+        }
+
+        Logger.module('FHE_SESSION').log('SDK config chainId:', chainId);
+
+        // Sepolia config (Hardhat icin de ayni config kullanilir, mock olur)
         var config = {
           aclContractAddress: '0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D',
           kmsContractAddress: '0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A',
           inputVerifierContractAddress: '0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0',
           verifyingContractAddressDecryption: '0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478',
           verifyingContractAddressInputVerification: '0x483b9dE06E4E4C7D35CCf5837A1668487406D955',
-          chainId: 11155111,
+          chainId: chainId,
           gatewayChainId: 10901,
           network: window.ethereum,
           relayerUrl: 'https://relayer.testnet.zama.org'
@@ -547,10 +595,6 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
       return { handle: h, contractAddress: contractAddress };
     });
 
-    // SDK checksum'li adres bekliyor - ethers.utils.getAddress ile normalize et
-    var rawAddress = Wallet.getInstance().address;
-    var userAddress = ethers.utils.getAddress(rawAddress);
-
     // KRITIK: Signature olusturulurken kullanilan AYNI degerleri kullanmaliyiz!
     // Yoksa signature dogrulamasi basarisiz olur ve 500 hatasi aliriz
     var startTimestamp = self.sessionStartTimeStamp;
@@ -570,56 +614,68 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
       signatureWithoutPrefix = signatureWithoutPrefix.slice(2);
     }
 
-    Logger.module('FHE_SESSION').log('Calling SDK userDecrypt...', {
-      handles: handles.length,
-      contractAddress: contractAddress,
-      userAddress: userAddress,
-      startTimestamp: startTimestamp,
-      durationDays: durationDays,
-      signaturePrefix: signatureWithoutPrefix ? signatureWithoutPrefix.substring(0, 10) + '...' : 'null'
-    });
+    // Doğrudan window.ethereum'dan hesap al
+    window.ethereum.request({ method: 'eth_accounts' })
+      .then(function(accounts) {
+        if (!accounts || accounts.length === 0) {
+          throw new Error('No wallet connected');
+        }
 
-    self._fhevmInstance.userDecrypt(
-      handlePairs,
-      self.keypair.privateKey,
-      self.keypair.publicKey,
-      signatureWithoutPrefix,
-      [contractAddress],
-      userAddress,
-      startTimestamp,
-      durationDays
-    )
-    .then(function(result) {
-      // SDK response formati: result = { [handle]: value, [handle]: value, ... }
-      // Dokumantasyona gore: const decryptedValue = result[ciphertextHandle];
-      Logger.module('FHE_SESSION').log('=== SDK userDecrypt RESPONSE ===');
-      Logger.module('FHE_SESSION').log('Result type:', typeof result);
-      Logger.module('FHE_SESSION').log('Result keys:', result ? Object.keys(result) : 'null');
+        // SDK checksum'li adres bekliyor - ethers.utils.getAddress ile normalize et
+        var rawAddress = accounts[0];
+        var userAddress = ethers.utils.getAddress(rawAddress);
 
-      // Handle string'lerini kullanarak degerleri cikar
-      var decrypted = [];
-      if (result && typeof result === 'object') {
-        // handlePairs sirasina gore degerleri al
-        for (var i = 0; i < handlePairs.length; i++) {
-          var handle = handlePairs[i].handle;
-          var value = result[handle];
-          Logger.module('FHE_SESSION').log('  Handle[' + i + ']:', handle.substring(0, 20) + '... =', value);
-          if (value !== undefined) {
-            decrypted.push(value);
+        Logger.module('FHE_SESSION').log('Calling SDK userDecrypt...', {
+          handles: handles.length,
+          contractAddress: contractAddress,
+          userAddress: userAddress,
+          startTimestamp: startTimestamp,
+          durationDays: durationDays,
+          signaturePrefix: signatureWithoutPrefix ? signatureWithoutPrefix.substring(0, 10) + '...' : 'null'
+        });
+
+        return self._fhevmInstance.userDecrypt(
+          handlePairs,
+          self.keypair.privateKey,
+          self.keypair.publicKey,
+          signatureWithoutPrefix,
+          [contractAddress],
+          userAddress,
+          startTimestamp,
+          durationDays
+        );
+      })
+      .then(function(result) {
+        // SDK response formati: result = { [handle]: value, [handle]: value, ... }
+        // Dokumantasyona gore: const decryptedValue = result[ciphertextHandle];
+        Logger.module('FHE_SESSION').log('=== SDK userDecrypt RESPONSE ===');
+        Logger.module('FHE_SESSION').log('Result type:', typeof result);
+        Logger.module('FHE_SESSION').log('Result keys:', result ? Object.keys(result) : 'null');
+
+        // Handle string'lerini kullanarak degerleri cikar
+        var decrypted = [];
+        if (result && typeof result === 'object') {
+          // handlePairs sirasina gore degerleri al
+          for (var i = 0; i < handlePairs.length; i++) {
+            var handle = handlePairs[i].handle;
+            var value = result[handle];
+            Logger.module('FHE_SESSION').log('  Handle[' + i + ']:', handle.substring(0, 20) + '... =', value);
+            if (value !== undefined) {
+              decrypted.push(value);
+            }
           }
         }
-      }
 
-      Logger.module('FHE_SESSION').log('Decrypt successful', {
-        count: decrypted.length,
-        values: decrypted
+        Logger.module('FHE_SESSION').log('Decrypt successful', {
+          count: decrypted.length,
+          values: decrypted
+        });
+        resolve(decrypted);
+      })
+      .catch(function(error) {
+        Logger.module('FHE_SESSION').error('Decrypt failed:', error);
+        reject(error);
       });
-      resolve(decrypted);
-    })
-    .catch(function(error) {
-      Logger.module('FHE_SESSION').error('Decrypt failed:', error);
-      reject(error);
-    });
   });
 };
 

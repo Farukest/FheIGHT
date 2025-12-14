@@ -99,6 +99,7 @@ const EVENTS = {
   // FHE events
   fhe_card_drawn: 'fhe_card_drawn',
   fhe_starting_hand_ready: 'fhe_starting_hand_ready',
+  session_wallet_created: 'session_wallet_created',
 
   // show ui
   show_login: 'show_login',

@@ -1,0 +1,236 @@
+<div class="session-wallet-popup">
+	<div class="wallet-header">
+		<div class="wallet-title-row">
+			<div class="wallet-icon"></div>
+			<span class="wallet-title">FHEIGHT Wallet</span>
+		</div>
+		<div class="wallet-header-right">
+			<div class="wallet-network-badge {{networkClass}}">
+				<span class="network-dot"></span>
+				<span class="network-label">{{networkName}}</span>
+			</div>
+			<button type="button" class="wallet-close-btn">
+				<i class="fa fa-times"></i>
+			</button>
+		</div>
+	</div>
+
+	<div class="wallet-content">
+		<!-- Wallet Not Created State -->
+		<div class="wallet-state wallet-not-created {{#if hasWallet}}hide{{/if}}">
+			<div class="wallet-intro">
+				<div class="wallet-icon-large"></div>
+				<h3 class="intro-title">Popupless Secure Gameplay</h3>
+				<p class="intro-description">Create a session wallet to play without transaction popups. Your main wallet stays secure.</p>
+			</div>
+			<div class="wallet-features">
+				<div class="feature-item">
+					<i class="fa fa-bolt"></i>
+					<span>Instant transactions</span>
+				</div>
+				<div class="feature-item">
+					<i class="fa fa-shield"></i>
+					<span>FHE encrypted</span>
+				</div>
+				<div class="feature-item">
+					<i class="fa fa-lock"></i>
+					<span>Blockchain secured</span>
+				</div>
+			</div>
+			<button type="button" class="btn btn-clean btn-clean-secondary wallet-create-btn">Create FHE Wallet</button>
+		</div>
+
+		<!-- Wallet Created State -->
+		<div class="wallet-state wallet-created {{#unless hasWallet}}hide{{/unless}}">
+			<!-- Balance Card -->
+			<div class="balance-card">
+				<div class="balance-header">
+					<span class="balance-label">Balance</span>
+					<button type="button" class="btn-refresh" data-toggle="tooltip" title="Refresh">
+						<i class="fa fa-refresh"></i>
+					</button>
+				</div>
+				<div class="balance-amount">
+					<span class="balance-value">{{balance}}</span>
+					<span class="balance-currency">ETH</span>
+				</div>
+			</div>
+
+			<!-- Address Card -->
+			<div class="address-card">
+				<div class="address-label">Wallet Address</div>
+				<div class="address-row">
+					<span class="address-value">{{shortAddress}}</span>
+					<div class="address-actions">
+						<button type="button" class="btn-icon copy-address-btn" data-toggle="tooltip" title="Copy">
+							<i class="fa fa-copy"></i>
+						</button>
+						<button type="button" class="btn-icon show-qr-btn" data-toggle="tooltip" title="QR Code">
+							<i class="fa fa-qrcode"></i>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- QR Code Section (hidden by default) -->
+			<div class="wallet-qr-section hide">
+				<div class="qr-code-container">
+					<canvas class="qr-canvas"></canvas>
+				</div>
+				<p class="qr-hint">Scan to deposit ETH</p>
+			</div>
+
+			<!-- Action Buttons -->
+			<div class="wallet-actions">
+				<button type="button" class="action-btn deposit-btn">
+					<i class="fa fa-arrow-down"></i>
+					<span>Deposit</span>
+				</button>
+				<button type="button" class="action-btn withdraw-btn">
+					<i class="fa fa-arrow-up"></i>
+					<span>Withdraw</span>
+				</button>
+			</div>
+
+			<!-- Advanced Section -->
+			<div class="wallet-advanced">
+				<button type="button" class="toggle-advanced-btn">
+					<i class="fa fa-cog"></i>
+					<span>Advanced Options</span>
+					<i class="fa fa-chevron-down chevron"></i>
+				</button>
+				<div class="advanced-options hide">
+					<button type="button" class="advanced-btn btn-export export-key-btn">
+						<i class="fa fa-key"></i>
+						<span>Export Private Key</span>
+					</button>
+					<button type="button" class="advanced-btn btn-clear clear-wallet-btn">
+						<i class="fa fa-trash"></i>
+						<span>Clear Wallet</span>
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Export Key State (FHE decrypt) -->
+		<div class="wallet-state wallet-export-key hide">
+			<div class="state-header">
+				<button type="button" class="back-btn back-to-wallet-btn">
+					<i class="fa fa-arrow-left"></i>
+				</button>
+				<span class="state-title">Export Private Key</span>
+			</div>
+			<div class="export-warning">
+				<i class="fa fa-exclamation-triangle"></i>
+				<p>Never share your private key with anyone. Anyone with this key can access your funds.</p>
+			</div>
+			<div class="export-info">
+				<p>Your private key is encrypted with FHE. Click below to decrypt and reveal it.</p>
+			</div>
+			<button type="button" class="action-btn primary reveal-key-btn">
+				<span>Decrypt & Reveal Key</span>
+			</button>
+			<div class="private-key-display hide">
+				<textarea class="private-key-text" readonly></textarea>
+				<button type="button" class="action-btn copy-key-btn">
+					<i class="fa fa-copy"></i>
+					<span class="copy-text">Copy</span>
+				</button>
+			</div>
+		</div>
+
+		<!-- Deposit State -->
+		<div class="wallet-state wallet-deposit hide">
+			<div class="state-header">
+				<button type="button" class="back-btn back-to-wallet-btn">
+					<i class="fa fa-arrow-left"></i>
+				</button>
+				<span class="state-title">Deposit from Main Wallet</span>
+			</div>
+			<div class="deposit-info">
+				<p>Transfer ETH from your main wallet to this FHE wallet for popupless gameplay.</p>
+			</div>
+			<div class="deposit-form">
+				<div class="input-group">
+					<label>Amount</label>
+					<div class="amount-input-row">
+						<input type="text" class="deposit-amount-input" placeholder="0.00">
+						<span class="currency-label">ETH</span>
+					</div>
+					<div class="main-wallet-balance-row">
+						<span class="balance-label">Main Wallet:</span>
+						<span class="main-wallet-balance">Loading...</span>
+					</div>
+				</div>
+				<button type="button" class="action-btn primary confirm-deposit-btn">
+					<span>Confirm Deposit</span>
+				</button>
+			</div>
+			<div class="deposit-status hide">
+				<div class="status-spinner">
+					<i class="fa fa-spinner fa-spin"></i>
+				</div>
+				<p class="status-text">Processing deposit...</p>
+			</div>
+		</div>
+
+		<!-- Withdraw State -->
+		<div class="wallet-state wallet-withdraw hide">
+			<div class="state-header">
+				<button type="button" class="back-btn back-to-wallet-btn">
+					<i class="fa fa-arrow-left"></i>
+				</button>
+				<span class="state-title">Withdraw to Main Wallet</span>
+			</div>
+			<div class="withdraw-form">
+				<div class="input-group">
+					<label>Amount</label>
+					<div class="amount-input-row">
+						<input type="text" class="withdraw-amount-input" placeholder="0.00">
+						<span class="currency-label">ETH</span>
+						<button type="button" class="max-btn">MAX</button>
+					</div>
+					<div class="available-row">
+						<span class="available-label">Available:</span>
+						<span class="available-amount">{{balance}} ETH</span>
+					</div>
+				</div>
+				<button type="button" class="action-btn primary confirm-withdraw-btn">
+					<i class="fa fa-arrow-up"></i>
+					<span>Confirm Withdraw</span>
+				</button>
+			</div>
+			<div class="withdraw-status hide">
+				<div class="status-spinner">
+					<i class="fa fa-spinner fa-spin"></i>
+				</div>
+				<p class="status-text">Processing withdrawal...</p>
+			</div>
+		</div>
+
+		<!-- Creating Wallet State (loading with FHE steps) -->
+		<div class="wallet-state wallet-creating hide">
+			<div class="creating-container">
+				<div class="creating-spinner">
+					<i class="fa fa-spinner fa-spin"></i>
+				</div>
+				<h3 class="creating-title">Creating FHE Wallet</h3>
+				<p class="creating-description">Please wait while we create and secure your wallet on blockchain...</p>
+				<div class="creating-steps">
+					<div class="step step-generate">
+						<i class="fa fa-key"></i>
+						<span>Generating wallet...</span>
+					</div>
+					<div class="step step-encrypt">
+						<i class="fa fa-lock"></i>
+						<span>Encrypting with FHE...</span>
+					</div>
+					<div class="step step-tx">
+						<i class="fa fa-cube"></i>
+						<span>Storing on blockchain...</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

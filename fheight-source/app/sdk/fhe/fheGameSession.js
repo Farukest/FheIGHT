@@ -25,9 +25,9 @@ var ethers = require('ethers');
 // Frontend shuffle yapar -> encrypt yapar -> contract'a gonderir
 var GAME_SESSION_ABI = [
   // Write fonksiyonlari (v10 - encrypted deck)
-  'function createGame(address sessionKey, uint32 generalCardId, bytes32[40] calldata encryptedDeck, bytes calldata inputProof) external returns (uint256 gameId)',
-  'function createSinglePlayerGame(address sessionKey, uint32 generalCardId, bytes32[40] calldata encryptedDeck, bytes calldata inputProof) external returns (uint256 gameId)',
-  'function joinGame(uint256 gameId, address sessionKey, uint32 generalCardId, bytes32[40] calldata encryptedDeck, bytes calldata inputProof) external',
+  'function createGame(address fheWallet, uint32 generalCardId, bytes32[40] calldata encryptedDeck, bytes calldata inputProof) external returns (uint256 gameId)',
+  'function createSinglePlayerGame(address fheWallet, uint32 generalCardId, bytes32[40] calldata encryptedDeck, bytes calldata inputProof) external returns (uint256 gameId)',
+  'function joinGame(uint256 gameId, address fheWallet, uint32 generalCardId, bytes32[40] calldata encryptedDeck, bytes calldata inputProof) external',
   'function completeMulligan(uint256 gameId, bool[5] calldata mulliganSlots) external',
   'function drawCard(uint256 gameId) external',
   'function playCard(uint256 gameId, uint8 handSlot, uint8 x, uint8 y, bytes calldata clearCardId, bytes calldata decryptionProof) external',
@@ -46,8 +46,8 @@ var GAME_SESSION_ABI = [
   'function getBoardUnit(uint256 gameId, uint8 x, uint8 y) external view returns (uint16 cardId, uint8 ownerIndex, uint8 currentHp, uint8 currentAtk, bool exhausted, bool isGeneral)',
 
   // Events
-  'event GameCreated(uint256 indexed gameId, address indexed player1, address sessionKey1)',
-  'event PlayerJoined(uint256 indexed gameId, address indexed player2, address sessionKey2)',
+  'event GameCreated(uint256 indexed gameId, address indexed player1, address fheWallet1)',
+  'event PlayerJoined(uint256 indexed gameId, address indexed player2, address fheWallet2)',
   'event GameStarted(uint256 indexed gameId)',
   'event TurnStarted(uint256 indexed gameId, uint8 playerIndex, uint8 turnNumber)',
   'event CardDrawn(uint256 indexed gameId, uint8 playerIndex)',
@@ -138,7 +138,7 @@ FHEGameSession.prototype.createGame = function(generalCardId, deckCardIds) {
 
     Logger.module('FHE_GAME').log('Creating multiplayer game with general:', generalCardId, 'deck size:', deckCardIds.length);
 
-    var sessionKey = walletManager.address;
+    var fheWallet = walletManager.address;
 
     // 1. Deck'i 40 karta tamamla
     var deck = self._padDeckTo40(deckCardIds);
@@ -157,7 +157,7 @@ FHEGameSession.prototype.createGame = function(generalCardId, deckCardIds) {
         // 4. ABI encode with ethers Interface
         var iface = new ethers.utils.Interface(GAME_SESSION_ABI);
         var data = iface.encodeFunctionData('createGame', [
-          sessionKey,
+          fheWallet,
           generalCardId,
           encryptedResult.handles,
           encryptedResult.inputProof
@@ -243,7 +243,7 @@ FHEGameSession.prototype.createSinglePlayerGame = function(generalCardId, deckCa
 
     Logger.module('FHE_GAME').log('Creating SINGLE PLAYER game with general:', generalCardId, 'deck size:', deckCardIds.length);
 
-    var sessionKey = walletManager.address;
+    var fheWallet = walletManager.address;
 
     // 1. Deck'i 40 karta tamamla
     var deck = self._padDeckTo40(deckCardIds);
@@ -262,7 +262,7 @@ FHEGameSession.prototype.createSinglePlayerGame = function(generalCardId, deckCa
         // 4. ABI encode with ethers Interface
         var iface = new ethers.utils.Interface(GAME_SESSION_ABI);
         var data = iface.encodeFunctionData('createSinglePlayerGame', [
-          sessionKey,
+          fheWallet,
           generalCardId,
           encryptedResult.handles,
           encryptedResult.inputProof
@@ -360,7 +360,7 @@ FHEGameSession.prototype.joinGame = function(gameId, generalCardId, deckCardIds)
 
     Logger.module('FHE_GAME').log('Joining game:', gameId, 'deck size:', deckCardIds.length);
 
-    var sessionKey = walletManager.address;
+    var fheWallet = walletManager.address;
 
     // 1. Deck'i 40 karta tamamla
     var deck = self._padDeckTo40(deckCardIds);
@@ -380,7 +380,7 @@ FHEGameSession.prototype.joinGame = function(gameId, generalCardId, deckCardIds)
         var iface = new ethers.utils.Interface(GAME_SESSION_ABI);
         var data = iface.encodeFunctionData('joinGame', [
           gameId,
-          sessionKey,
+          fheWallet,
           generalCardId,
           encryptedResult.handles,
           encryptedResult.inputProof

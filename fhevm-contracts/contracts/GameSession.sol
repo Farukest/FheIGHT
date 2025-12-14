@@ -43,13 +43,14 @@ contract GameSession is ZamaEthereumConfig, Ownable {
 
     struct Player {
         address wallet;           // Ana cüzdan adresi
-        address sessionKey;       // Oyun için geçici session key
+        address fheWallet;       // Oyun için geçici session key
         euint16[MAX_HAND_SIZE] hand;  // Şifreli el kartları (kart ID 0-730 arası)
         euint16[MAX_HAND_SIZE] spellHand; // Şifreli el kartları (havuzdan - spellMulligan için)
         uint8 handSize;           // Eldeki kart sayısı (açık)
         bool isSpellHand;         // true = spellHand kullanılıyor, false = normal hand
         euint16[DECK_SIZE] deck;  // Şifreli deste (kart ID 0-730 arası, frontend'de shuffle edilmiş)
-        uint8 deckIndex;          // Sonraki çekilecek kart indexi
+        bool[DECK_SIZE] deckUsed; // Hangi deck indexleri kullanıldı (random draw için)
+        uint8 deckRemaining;      // Destede kalan kart sayısı
         uint8 currentMana;        // Mevcut mana
         uint8 maxMana;            // Maximum mana (her tur +1)
         uint32 generalCardId;     // General kart ID'si (registry'den doğrulanmış)
@@ -99,11 +100,11 @@ contract GameSession is ZamaEthereumConfig, Ownable {
 
     // ============ Events ============
 
-    event GameCreated(uint256 indexed gameId, address indexed player1, address sessionKey1);
-    event PlayerJoined(uint256 indexed gameId, address indexed player2, address sessionKey2);
+    event GameCreated(uint256 indexed gameId, address indexed player1, address fheWallet1);
+    event PlayerJoined(uint256 indexed gameId, address indexed player2, address fheWallet2);
     event GameStarted(uint256 indexed gameId);
     event TurnStarted(uint256 indexed gameId, uint8 playerIndex, uint8 turnNumber);
-    event CardDrawn(uint256 indexed gameId, uint8 playerIndex);
+    event CardDrawn(uint256 indexed gameId, uint8 playerIndex, uint8 deckIndex);
     event CardPlayed(uint256 indexed gameId, uint8 playerIndex, uint16 cardId, uint8 x, uint8 y);
     event UnitMoved(uint256 indexed gameId, uint8 fromX, uint8 fromY, uint8 toX, uint8 toY);
     event UnitAttacked(uint256 indexed gameId, uint8 attackerX, uint8 attackerY, uint8 targetX, uint8 targetY);
@@ -134,16 +135,16 @@ contract GameSession is ZamaEthereumConfig, Ownable {
             // Single player mod: sadece player 0'ı kontrol et
             require(
                 msg.sender == game.players[0].wallet ||
-                msg.sender == game.players[0].sessionKey,
+                msg.sender == game.players[0].fheWallet,
                 "Not a player"
             );
         } else {
             // Multiplayer mod: her iki oyuncuyu da kontrol et
             require(
                 msg.sender == game.players[0].wallet ||
-                msg.sender == game.players[0].sessionKey ||
+                msg.sender == game.players[0].fheWallet ||
                 msg.sender == game.players[1].wallet ||
-                msg.sender == game.players[1].sessionKey,
+                msg.sender == game.players[1].fheWallet,
                 "Not a player"
             );
         }
@@ -158,7 +159,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
             // Single player mod: her zaman player 0 oynayabilir
             require(
                 msg.sender == game.players[0].wallet ||
-                msg.sender == game.players[0].sessionKey,
+                msg.sender == game.players[0].fheWallet,
                 "Not your turn"
             );
         } else {
@@ -166,7 +167,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
             uint8 current = game.currentTurn;
             require(
                 msg.sender == game.players[current].wallet ||
-                msg.sender == game.players[current].sessionKey,
+                msg.sender == game.players[current].fheWallet,
                 "Not your turn"
             );
         }
@@ -195,12 +196,12 @@ contract GameSession is ZamaEthereumConfig, Ownable {
     // ============ Game Creation ============
 
     /// @notice Yeni oyun oluştur (şifreli deck ile)
-    /// @param sessionKey Player 1'in session key'i
+    /// @param fheWallet Player 1'in session key'i
     /// @param generalCardId Oyuncunun seçtiği General kart ID'si
     /// @param encryptedDeck Frontend'de şifrelenmiş ve shuffle edilmiş 40 kart (externalEuint16[40])
     /// @param inputProof Şifreli input'ların doğrulama proof'u
     function createGame(
-        address sessionKey,
+        address fheWallet,
         uint32 generalCardId,
         externalEuint16[DECK_SIZE] calldata encryptedDeck,
         bytes calldata inputProof
@@ -220,7 +221,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         Game storage game = games[gameId];
 
         game.players[0].wallet = msg.sender;
-        game.players[0].sessionKey = sessionKey;
+        game.players[0].fheWallet = fheWallet;
         game.players[0].generalCardId = generalCardId;
         game.state = GameState.WaitingForPlayer2;
         game.startTime = block.timestamp;
@@ -235,17 +236,17 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         game.players[0].generalHp = generalHp;
         game.players[0].generalAtk = generalAtk;
 
-        emit GameCreated(gameId, msg.sender, sessionKey);
+        emit GameCreated(gameId, msg.sender, fheWallet);
     }
 
     /// @notice Single player oyun oluştur (AI modu, şifreli deck ile)
     /// @dev joinGame gerektirmez, oyun direkt başlar
-    /// @param sessionKey Player'ın session key'i
+    /// @param fheWallet Player'ın session key'i
     /// @param generalCardId Oyuncunun seçtiği General kart ID'si
     /// @param encryptedDeck Frontend'de şifrelenmiş ve shuffle edilmiş 40 kart
     /// @param inputProof Şifreli input'ların doğrulama proof'u
     function createSinglePlayerGame(
-        address sessionKey,
+        address fheWallet,
         uint32 generalCardId,
         externalEuint16[DECK_SIZE] calldata encryptedDeck,
         bytes calldata inputProof
@@ -268,7 +269,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         game.isSinglePlayer = true;
 
         game.players[0].wallet = msg.sender;
-        game.players[0].sessionKey = sessionKey;
+        game.players[0].fheWallet = fheWallet;
         game.players[0].generalCardId = generalCardId;
 
         // Şifreli desteyi doğrula ve sakla
@@ -302,20 +303,20 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         game.startTime = block.timestamp;
         game.lastActionTime = block.timestamp;
 
-        emit GameCreated(gameId, msg.sender, sessionKey);
+        emit GameCreated(gameId, msg.sender, fheWallet);
         emit GameStarted(gameId);
         emit TurnStarted(gameId, 0, 1);
     }
 
     /// @notice Oyuna katıl (şifreli deck ile)
     /// @param gameId Katılınacak oyun
-    /// @param sessionKey Player 2'nin session key'i
+    /// @param fheWallet Player 2'nin session key'i
     /// @param generalCardId Player 2'nin General kart ID'si
     /// @param encryptedDeck Frontend'de şifrelenmiş ve shuffle edilmiş 40 kart
     /// @param inputProof Şifreli input'ların doğrulama proof'u
     function joinGame(
         uint256 gameId,
-        address sessionKey,
+        address fheWallet,
         uint32 generalCardId,
         externalEuint16[DECK_SIZE] calldata encryptedDeck,
         bytes calldata inputProof
@@ -336,7 +337,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         ) = cardRegistry.getBasicStats(generalCardId);
 
         game.players[1].wallet = msg.sender;
-        game.players[1].sessionKey = sessionKey;
+        game.players[1].fheWallet = fheWallet;
         game.players[1].generalCardId = generalCardId;
 
         // Şifreli desteyi doğrula ve sakla
@@ -370,7 +371,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         game.state = GameState.Mulligan;
         game.lastActionTime = block.timestamp;
 
-        emit PlayerJoined(gameId, msg.sender, sessionKey);
+        emit PlayerJoined(gameId, msg.sender, fheWallet);
 
         // Başlangıç eli çek (her iki oyuncu)
         _drawStartingHand(game, 0, gameId);
@@ -397,17 +398,18 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         }
         require(mulliganCount <= MAX_MULLIGAN_COUNT, "Mulligan limit exceeded (max 2)");
 
-        // Seçilen kartları değiştir
+        // Seçilen kartları değiştir (random index ile)
         for (uint8 i = 0; i < STARTING_HAND_SIZE; i++) {
-            if (mulliganSlots[i] && player.deckIndex < DECK_SIZE) {
-                // Eski kartı desteye geri koy (basitleştirilmiş - sadece yeni kart çek)
-                player.hand[i] = player.deck[player.deckIndex];
+            if (mulliganSlots[i] && player.deckRemaining > 0) {
+                // Random index ile yeni kart çek
+                uint8 randomIndex = _getRandomUnusedDeckIndex(player, gameId, playerIndex);
+                player.hand[i] = player.deck[randomIndex];
+                player.deckUsed[randomIndex] = true;
+                player.deckRemaining--;
 
                 // ACL ayarla
                 FHE.allowThis(player.hand[i]);
                 FHE.allow(player.hand[i], player.wallet);
-
-                player.deckIndex++;
             }
         }
 
@@ -429,7 +431,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
 
     // ============ Turn Actions ============
 
-    /// @notice Kart çek (tur başı otomatik veya spell efekti)
+    /// @notice Kart çek (tur başı otomatik veya spell efekti) - random index ile
     /// @param gameId Oyun ID
     function drawCard(uint256 gameId) external onlyCurrentPlayer(gameId) gameInProgress(gameId) {
         Game storage game = games[gameId];
@@ -437,21 +439,23 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         Player storage player = game.players[playerIndex];
 
         require(player.handSize < MAX_HAND_SIZE, "Hand full");
-        require(player.deckIndex < DECK_SIZE, "Deck empty");
+        require(player.deckRemaining > 0, "Deck empty");
 
-        // Desteden şifreli kart çek (euint16 - kart ID 0-730)
-        euint16 drawnCard = player.deck[player.deckIndex];
+        // Random index ile desteden şifreli kart çek
+        uint8 randomIndex = _getRandomUnusedDeckIndex(player, gameId, playerIndex);
+        euint16 drawnCard = player.deck[randomIndex];
         player.hand[player.handSize] = drawnCard;
+        player.deckUsed[randomIndex] = true;
+        player.deckRemaining--;
 
         // ACL: Sadece kart sahibi görebilir
         FHE.allowThis(drawnCard);
         FHE.allow(drawnCard, player.wallet);
 
         player.handSize++;
-        player.deckIndex++;
         game.lastActionTime = block.timestamp;
 
-        emit CardDrawn(gameId, playerIndex);
+        emit CardDrawn(gameId, playerIndex, randomIndex);
     }
 
     /// @notice Kart oyna (elden board'a)
@@ -591,7 +595,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         emit UnitAttacked(gameId, attackerX, attackerY, targetX, targetY);
     }
 
-    /// @notice Kart değiştir (replace)
+    /// @notice Kart değiştir (replace) - random index ile
     /// @param gameId Oyun ID
     /// @param handSlot Değiştirilecek kart indexi
     function replaceCard(
@@ -604,17 +608,19 @@ contract GameSession is ZamaEthereumConfig, Ownable {
 
         require(!player.hasReplacedThisTurn, "Already replaced");
         require(handSlot < player.handSize, "Invalid slot");
-        require(player.deckIndex < DECK_SIZE, "Deck empty");
+        require(player.deckRemaining > 0, "Deck empty");
 
-        // Yeni kart çek (euint16 - kart ID 0-730)
-        euint16 newCard = player.deck[player.deckIndex];
+        // Random index ile yeni kart çek (euint16 - kart ID 0-730)
+        uint8 randomIndex = _getRandomUnusedDeckIndex(player, gameId, playerIndex);
+        euint16 newCard = player.deck[randomIndex];
         player.hand[handSlot] = newCard;
+        player.deckUsed[randomIndex] = true;
+        player.deckRemaining--;
 
         // ACL
         FHE.allowThis(newCard);
         FHE.allow(newCard, player.wallet);
 
-        player.deckIndex++;
         player.hasReplacedThisTurn = true;
         game.lastActionTime = block.timestamp;
 
@@ -902,15 +908,17 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         game.lastActionTime = block.timestamp;
         emit TurnStarted(gameId, nextPlayer, game.turnNumber);
 
-        // Otomatik kart çek (tur başı, euint16 - kart ID 0-730)
-        if (next.handSize < MAX_HAND_SIZE && next.deckIndex < DECK_SIZE) {
-            euint16 drawnCard = next.deck[next.deckIndex];
+        // Otomatik kart çek (tur başı, random index ile)
+        if (next.handSize < MAX_HAND_SIZE && next.deckRemaining > 0) {
+            uint8 randomIndex = _getRandomUnusedDeckIndex(next, gameId, nextPlayer);
+            euint16 drawnCard = next.deck[randomIndex];
             next.hand[next.handSize] = drawnCard;
+            next.deckUsed[randomIndex] = true;
+            next.deckRemaining--;
             FHE.allowThis(drawnCard);
             FHE.allow(drawnCard, next.wallet);
             next.handSize++;
-            next.deckIndex++;
-            emit CardDrawn(gameId, nextPlayer);
+            emit CardDrawn(gameId, nextPlayer, randomIndex);
         }
     }
 
@@ -947,13 +955,24 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         return game.players[playerIndex].deck[deckIndex];
     }
 
-    /// @notice Oyuncunun deckIndex'ini döndür (kaç kart çekildiğini gösterir)
+    /// @notice Oyuncunun kalan kart sayısını döndür
     /// @param gameId Oyun ID
-    /// @return deckIndex (başlangıçta 5, her kart çekiminde +1)
-    function getDeckIndex(uint256 gameId) external view returns (uint8) {
+    /// @return deckRemaining (başlangıçta 35 - 5 başlangıç eli çekildikten sonra)
+    function getDeckRemaining(uint256 gameId) external view returns (uint8) {
         Game storage game = games[gameId];
         uint8 playerIndex = _getPlayerIndex(game, msg.sender);
-        return game.players[playerIndex].deckIndex;
+        return game.players[playerIndex].deckRemaining;
+    }
+
+    /// @notice Belirli bir deck index'inin kullanılıp kullanılmadığını kontrol et
+    /// @param gameId Oyun ID
+    /// @param deckIndex Kontrol edilecek deck indexi
+    /// @return true = kullanılmış, false = kullanılmamış
+    function isDeckIndexUsed(uint256 gameId, uint8 deckIndex) external view returns (bool) {
+        require(deckIndex < DECK_SIZE, "Invalid deck index");
+        Game storage game = games[gameId];
+        uint8 playerIndex = _getPlayerIndex(game, msg.sender);
+        return game.players[playerIndex].deckUsed[deckIndex];
     }
 
     /// @notice Oyun durumunu döndür
@@ -974,7 +993,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
     function getPlayerInfo(uint256 gameId, uint8 playerIndex) external view returns (
         address wallet,
         uint8 handSize,
-        uint8 deckRemaining,
+        uint8 deckRemainingCount,
         uint8 currentMana,
         uint8 maxMana,
         uint8 generalHp
@@ -983,7 +1002,7 @@ contract GameSession is ZamaEthereumConfig, Ownable {
         return (
             player.wallet,
             player.handSize,
-            DECK_SIZE - player.deckIndex,
+            player.deckRemaining,
             player.currentMana,
             player.maxMana,
             player.generalHp
@@ -1036,27 +1055,78 @@ contract GameSession is ZamaEthereumConfig, Ownable {
             // Bu sayede getCardFromDeck() ile TX'siz kart çekimi yapılabilir
             FHE.allow(player.deck[i], player.wallet);
 
+            // deckUsed başlangıçta false (default)
             emit FHE_CardEncrypted(gameId, playerIndex, i, 0); // Şifreli olduğu için ID 0 gösteriyoruz
         }
+
+        // Deck remaining'i başlat
+        player.deckRemaining = DECK_SIZE;
 
         emit FHE_DeckInitialized(gameId, playerIndex, DECK_SIZE);
     }
 
-    /// @notice Başlangıç eli çek
+    /// @notice Başlangıç eli çek (random index ile)
     function _drawStartingHand(Game storage game, uint8 playerIndex, uint256 gameId) internal {
         Player storage player = game.players[playerIndex];
 
         for (uint8 i = 0; i < STARTING_HAND_SIZE; i++) {
-            player.hand[i] = player.deck[i];
+            // Random index ile kart çek
+            uint8 randomIndex = _getRandomUnusedDeckIndex(player, gameId, playerIndex);
+            player.hand[i] = player.deck[randomIndex];
+            player.deckUsed[randomIndex] = true;
+            player.deckRemaining--;
+
             FHE.allowThis(player.hand[i]);
             FHE.allow(player.hand[i], player.wallet);
+
+            emit CardDrawn(gameId, playerIndex, randomIndex);
         }
 
         player.handSize = STARTING_HAND_SIZE;
-        player.deckIndex = STARTING_HAND_SIZE;
 
         // FHE Debug: Log starting hand drawn
         emit FHE_StartingHandDrawn(gameId, playerIndex, STARTING_HAND_SIZE);
+    }
+
+    /// @notice Desteden kullanılmamış random bir index seç
+    /// @dev Plaintext random kullanıyor - güvenli çünkü user zaten kendi deck'ini biliyor
+    /// @param player Oyuncu storage referansı
+    /// @param gameId Oyun ID (seed için)
+    /// @param playerIndex Oyuncu indexi (seed için)
+    /// @return randomIndex Kullanılmamış random deck indexi
+    function _getRandomUnusedDeckIndex(
+        Player storage player,
+        uint256 gameId,
+        uint8 playerIndex
+    ) internal view returns (uint8) {
+        require(player.deckRemaining > 0, "Deck empty");
+
+        // Plaintext random seed oluştur
+        uint256 seed = uint256(keccak256(abi.encodePacked(
+            block.timestamp,
+            block.prevrandao,
+            gameId,
+            playerIndex,
+            player.deckRemaining,
+            msg.sender
+        )));
+
+        // Kalan kartlar arasından random seç
+        uint8 targetPosition = uint8(seed % player.deckRemaining);
+
+        // targetPosition'ıncı kullanılmamış kartı bul
+        uint8 count = 0;
+        for (uint8 i = 0; i < DECK_SIZE; i++) {
+            if (!player.deckUsed[i]) {
+                if (count == targetPosition) {
+                    return i;
+                }
+                count++;
+            }
+        }
+
+        // Bu noktaya asla ulaşmamalı
+        revert("Random index not found");
     }
 
     /// @notice Elden kart çıkar
@@ -1116,12 +1186,12 @@ contract GameSession is ZamaEthereumConfig, Ownable {
     /// @notice Msg.sender'ın player index'ini bul
     /// @dev Single player modda her zaman 0 döner
     function _getPlayerIndex(Game storage game, address sender) internal view returns (uint8) {
-        if (sender == game.players[0].wallet || sender == game.players[0].sessionKey) {
+        if (sender == game.players[0].wallet || sender == game.players[0].fheWallet) {
             return 0;
         }
         // Single player modda player 1 kontrolü atla
         if (!game.isSinglePlayer) {
-            if (sender == game.players[1].wallet || sender == game.players[1].sessionKey) {
+            if (sender == game.players[1].wallet || sender == game.players[1].fheWallet) {
                 return 1;
             }
         }

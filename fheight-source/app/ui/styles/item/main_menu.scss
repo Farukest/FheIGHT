@@ -583,3 +583,188 @@ $bossPromoScale: $standardPromoScale;
 		background-image: linear-gradient(left, transparent, rgba(255,255,255, 0.25) 20%, rgba(255,255,255, 0.25) 80%, transparent);
 	}
 }
+
+/* ---------- SESSION WALLET GUIDE OVERLAY ---------- */
+.session-wallet-guide-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 9998;
+	pointer-events: none;
+
+	// Hide state
+	&.hide {
+		display: none !important;
+	}
+
+	.guide-backdrop {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.7);
+		pointer-events: none;
+	}
+
+	.guide-content {
+		position: absolute;
+		bottom: 0.8rem;
+		right: 7rem;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 1.2rem;
+		padding: 5rem;
+		animation: guideSlideIn 0.5s ease-out forwards;
+		pointer-events: auto;
+	}
+
+	.guide-close-btn {
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+		transition: transform 0.2s;
+
+		img {
+			width: 3rem;
+			height: 3rem;
+		}
+
+		&:hover {
+			transform: scale(1.1);
+		}
+	}
+
+	.guide-arrow {
+		color: $yellow;
+		animation: guideArrowPulse 1s ease-in-out infinite;
+		order: 2;
+
+		i {
+			text-shadow: 0 0 1rem $yellow;
+		}
+	}
+
+	.guide-message {
+		background: #111;
+		border: 2px solid $yellow;
+		border-radius: 0.8rem;
+		padding: 1.2rem 1.5rem;
+		max-width: 26rem;
+		order: 1;
+		position: relative;
+
+		h3 {
+			color: $yellow;
+			font-size: 1.4rem;
+			margin: 0 0 0.6rem 0;
+			padding: 0;
+			text-transform: uppercase;
+			letter-spacing: 0.1rem;
+		}
+
+		p {
+			color: #fff;
+			font-size: 1.2rem;
+			margin: 0;
+			line-height: 1.4;
+		}
+	}
+
+	@keyframes guideSlideIn {
+		from {
+			opacity: 0;
+			transform: translateX(-3rem);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
+	}
+
+	@keyframes guideArrowPulse {
+		0%, 100% {
+			transform: translateX(0);
+			opacity: 0.7;
+		}
+		50% {
+			transform: translateX(0.4rem);
+			opacity: 1;
+		}
+	}
+}
+
+/* ---------- UTILITY MENU DIM WHEN GUIDE ACTIVE ---------- */
+body.session-wallet-guide-active {
+	#app-utility-main-menu .utility-bottom .btn-group {
+		// Hide all buttons except session-wallet
+		button:not(.session-wallet) {
+			opacity: 0 !important;
+			pointer-events: none;
+		}
+
+		// Keep session-wallet button bright and clickable
+		button.session-wallet {
+			opacity: 1 !important;
+			pointer-events: auto;
+			z-index: 9999;
+			position: relative;
+		}
+	}
+
+	// Also hide the booster pack collection button
+	#app-utility-main-menu .utility-bottom .booster-pack-collection {
+		opacity: 0 !important;
+		pointer-events: none;
+	}
+
+	// Hide all popovers but keep their position
+	.popover {
+		visibility: hidden !important;
+	}
+}
+
+/* ---------- MENU LOCK SYSTEM ---------- */
+.main-menu {
+	.menu-lockable {
+		position: relative;
+
+		&.locked {
+			opacity: 0.5;
+			pointer-events: none;
+			cursor: not-allowed;
+
+			&:hover {
+				text-shadow: none;
+			}
+
+			canvas {
+				opacity: 0.3;
+			}
+		}
+	}
+
+	.menu-lock-icon {
+		position: absolute;
+		right: -2rem;
+		top: 36%;
+		transform: translateY(-50%);
+		color: #ffd802;
+		font-size: 1.4rem;
+		text-shadow: 0 0 0.5rem rgba(255, 216, 2, 0.5);
+		animation: lockIconPulse 2s ease-in-out infinite;
+	}
+
+	@keyframes lockIconPulse {
+		0%, 100% {
+			opacity: 0.6;
+		}
+		50% {
+			opacity: 1;
+		}
+	}
+}

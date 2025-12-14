@@ -153,9 +153,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
   console.log(`   GameSession deployed at: ${deployedGameSession.address}\n`);
 
+  // 9. Deploy WalletVault (FHE Session Wallet Key Storage)
+  console.log("9. Deploying WalletVault (FHE Session Wallet Key Storage)...");
+  const deployedWalletVault = await deploy("WalletVault", {
+    from: deployer,
+    log: true,
+    args: [],
+  });
+  console.log(`   WalletVault deployed at: ${deployedWalletVault.address}\n`);
+
   // Summary
   console.log("\n========================================");
-  console.log("Deployment Summary v2");
+  console.log("Deployment Summary v3");
   console.log("========================================");
   console.log(`GameGold:     ${deployedGameGold.address}`);
   console.log(`CardNFT:      ${deployedCardNFT.address}`);
@@ -163,6 +172,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`CardRegistry: ${deployedCardRegistry.address}`);
   console.log(`FHECounter:   ${deployedFHECounter.address}`);
   console.log(`GameSession:  ${deployedGameSession.address}`);
+  console.log(`WalletVault:  ${deployedWalletVault.address}`);
   console.log("========================================\n");
 
   // Save deployment addresses to a JSON file for frontend use
@@ -195,6 +205,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       GameSession: {
         address: deployedGameSession.address,
         description: "FHE-based card game with session keys, encrypted hands, and on-chain game logic"
+      },
+      WalletVault: {
+        address: deployedWalletVault.address,
+        description: "FHE-encrypted session wallet private key storage"
       }
     },
     configuration: {
@@ -221,5 +235,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.id = "deploy_fheight_v3"; // Changed ID to force redeployment - FHE debug events
-func.tags = ["FHEIGHT", "GameGold", "CardNFT", "SpiritOrb", "CardRegistry", "FHECounter", "GameSession"];
+func.id = "deploy_fheight_v4"; // Changed ID to force redeployment - WalletVault added
+func.tags = ["FHEIGHT", "GameGold", "CardNFT", "SpiritOrb", "CardRegistry", "FHECounter", "GameSession", "WalletVault"];

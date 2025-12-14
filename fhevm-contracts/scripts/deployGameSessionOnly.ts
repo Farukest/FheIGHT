@@ -7,8 +7,8 @@ async function main() {
   console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
 
   // Mevcut CardRegistry adresi (Sepolia'da zaten deploy edilmis)
-  // v11 - getCardFromDeck ve getDeckIndex view fonksiyonlari eklendi
-  const CARD_REGISTRY_ADDRESS = "0x1BD8190C546D58518E438eCC65E7aE01fEd4c169";
+  // v12 - 18 generals + 17 minions
+  const CARD_REGISTRY_ADDRESS = "0xf9EB68605c1df066fC944c28770fFF8476ADE8fc";
 
   console.log("\nDeploying GameSession...");
   const GameSession = await ethers.getContractFactory("GameSession");
