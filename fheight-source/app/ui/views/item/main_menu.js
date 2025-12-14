@@ -129,8 +129,9 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
     this._onChainChangedBound = this._onChainChanged.bind(this);
     window.addEventListener('wallet:chainChanged', this._onChainChangedBound);
 
-    // Check session wallet status and show overlay/locks if needed
-    this._checkSessionWalletStatus();
+    // Sync with blockchain first, then check session wallet status
+    // This ensures we know if user already has a wallet in WalletVault
+    this._syncAndCheckSessionWallet();
 
     this.animateReveal();
 
@@ -743,27 +744,82 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
   // =====================================================
 
   /**
+   * Sync with blockchain and check session wallet status
+   * This is the main entry point - always use this instead of _checkSessionWalletStatus directly
+   * Ensures we fetch latest data from WalletVault before deciding on overlay visibility
+   */
+  _syncAndCheckSessionWallet: function () {
+    var self = this;
+    var sessionWallet = SessionWalletManager.getInstance();
+    var Wallet = require('app/common/wallet');
+
+    // Log current wallet state
+    var walletState = Wallet.getState();
+    Logger.module('UI').log('=== MAIN MENU WALLET DEBUG ===');
+    Logger.module('UI').log('Wallet.getState():', JSON.stringify(walletState));
+    Logger.module('UI').log('window.ethereum:', !!window.ethereum);
+    Logger.module('UI').log('window.ethereum.selectedAddress:', window.ethereum ? window.ethereum.selectedAddress : 'N/A');
+    Logger.module('UI').log('SessionWallet.hasWallet():', sessionWallet.hasWallet());
+    Logger.module('UI').log('SessionWallet.getAddress():', sessionWallet.getAddress());
+    Logger.module('UI').log('==============================');
+
+    // First check localStorage immediately (fast path)
+    // This prevents flash of overlay for users who already have wallet
+    if (sessionWallet.hasWallet()) {
+      Logger.module('UI').log('MainMenu: Found wallet in localStorage, unlocking immediately');
+      self._unlockMenus();
+      self._hideGuideOverlay();
+      return; // No need to sync, already have wallet
+    }
+
+    Logger.module('UI').log('MainMenu: No wallet in localStorage, checking for previously connected accounts...');
+
+    // On page refresh, MetaMask doesn't auto-expose selectedAddress
+    // Use eth_accounts to check for previously authorized accounts (doesn't prompt user)
+    if (window.ethereum) {
+      window.ethereum.request({ method: 'eth_accounts' })
+        .then(function(accounts) {
+          if (self.isDestroyed) return;
+
+          if (accounts && accounts.length > 0) {
+            Logger.module('UI').log('MainMenu: Found previously connected account:', accounts[0]);
+            // We have a previously connected account, sync with blockchain
+            sessionWallet.syncWithBlockchain()
+              .then(function (address) {
+                if (self.isDestroyed) return;
+                Logger.module('UI').log('MainMenu: Sync complete, session wallet: ' + (address || 'none'));
+                self._checkSessionWalletStatus();
+              })
+              .catch(function (err) {
+                if (self.isDestroyed) return;
+                Logger.module('UI').warn('MainMenu: Sync failed', err);
+                self._checkSessionWalletStatus();
+              });
+          } else {
+            Logger.module('UI').log('MainMenu: No previously connected accounts, showing guide');
+            self._checkSessionWalletStatus();
+          }
+        })
+        .catch(function(err) {
+          if (self.isDestroyed) return;
+          Logger.module('UI').warn('MainMenu: eth_accounts failed', err);
+          self._checkSessionWalletStatus();
+        });
+    } else {
+      Logger.module('UI').log('MainMenu: No ethereum provider, showing guide');
+      self._checkSessionWalletStatus();
+    }
+  },
+
+  /**
    * Handle network/chain change - sync with blockchain and re-check wallet status
    */
   _onChainChanged: function (event) {
-    var self = this;
     var chainId = event && event.detail ? event.detail.chainId : null;
-    Logger.module('UI').log('MainMenu: Chain changed to ' + chainId + ', syncing wallet status');
+    Logger.module('UI').log('MainMenu: Chain changed to ' + chainId + ', re-syncing wallet status');
 
-    var sessionWallet = SessionWalletManager.getInstance();
-
-    // Sync with blockchain for the new network, then re-check status
-    sessionWallet.syncWithBlockchain()
-      .then(function (address) {
-        if (self.isDestroyed) return;
-        Logger.module('UI').log('MainMenu: Sync complete, wallet address: ' + address);
-        self._checkSessionWalletStatus();
-      })
-      .catch(function (err) {
-        if (self.isDestroyed) return;
-        Logger.module('UI').warn('MainMenu: Sync failed, re-checking status anyway', err);
-        self._checkSessionWalletStatus();
-      });
+    // Use the modular sync function
+    this._syncAndCheckSessionWallet();
   },
 
   /**

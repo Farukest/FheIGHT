@@ -16,7 +16,15 @@
     <meta name="x5-fullscreen" content="true"/>
 
     <script type="text/javascript">
-      window.ccMapLimit = 100
+      window.ccMapLimit = 100;
+      // Firebase eski versiyon için navigator polyfill
+      if (typeof navigator === 'undefined') {
+        window.navigator = { userAgent: 'Mozilla/5.0' };
+      }
+      // Global polyfills for old Firebase
+      if (typeof global === 'undefined') {
+        window.global = window;
+      }
     </script>
 
     <!-- Ethers.js for FHE/Web3 integration -->

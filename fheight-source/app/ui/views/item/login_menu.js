@@ -158,52 +158,31 @@ var LoginMenuItemView = Backbone.Marionette.ItemView.extend({
     var walletManager = Wallet.getInstance();
     walletManager.connect()
       .then(function(address) {
-        Logger.module('UI').log('===========================================');
-        Logger.module('UI').log('WALLET CONNECTED SUCCESSFULLY');
-        Logger.module('UI').log('===========================================');
-        Logger.module('UI').log('Address:', address);
+        Logger.module('UI').log('Wallet connected:', address);
 
-        // Get network info
-        return walletManager.getChainId().then(function(chainId) {
-          var networkName = walletManager.getNetworkName(chainId);
-          Logger.module('UI').log('Chain ID:', chainId, '(' + parseInt(chainId, 16) + ')');
-          Logger.module('UI').log('Network:', networkName);
+        // Generate login message and sign it
+        var message = walletManager.generateLoginMessage();
+        Logger.module('UI').log('Signing message for authentication...');
 
-          // Get balance
-          return walletManager.getBalance().then(function(balance) {
-            Logger.module('UI').log('Balance:', balance, 'ETH');
-            Logger.module('UI').log('===========================================');
+        return walletManager.signMessage(message)
+          .then(function(signature) {
+            Logger.module('UI').log('Message signed, authenticating with backend...');
 
-            // Authenticate with backend using wallet address
-            return self._authenticateWithBackend(address);
+            // Authenticate with backend using wallet signature
+            return Session.walletConnect(address, signature, message);
           });
-        });
       })
-      .catch(function(err) {
-        Logger.module('UI').error('Wallet connection failed:', err);
-        self.ui.$connectWallet.prop('disabled', false).text('CONNECT WALLET');
-        self.onError(err.message || 'Failed to connect wallet');
-      });
-  },
-
-  _authenticateWithBackend: function(address) {
-    var self = this;
-
-    Logger.module('UI').log('Authenticating with backend for address:', address);
-
-    // For now, use Session.login with wallet address
-    // This creates a session based on wallet address
-    return Session.login(address)
-      .then(function() {
-        Logger.module('UI').log('Backend authentication successful');
+      .then(function(data) {
         Logger.module('UI').log('===========================================');
         Logger.module('UI').log('LOGIN COMPLETE');
+        Logger.module('UI').log('User ID:', data.userId);
+        Logger.module('UI').log('Wallet:', data.walletAddress);
         Logger.module('UI').log('===========================================');
       })
       .catch(function(err) {
-        Logger.module('UI').error('Backend authentication failed:', err);
+        Logger.module('UI').error('Wallet login failed:', err);
         self.ui.$connectWallet.prop('disabled', false).text('CONNECT WALLET');
-        self.onError(err.message || 'Authentication failed');
+        self.onError(err.message || 'Failed to connect wallet');
       });
   },
 

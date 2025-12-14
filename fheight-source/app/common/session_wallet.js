@@ -771,7 +771,20 @@ SessionWalletManager.prototype.syncWithBlockchain = function() {
   self.trigger('syncStarted');
 
   return new Promise(function(resolve, reject) {
-    var walletProvider = getEthereumProvider();
+    // Safety check - ensure MetaMask/wallet is fully initialized
+    // SES sandbox needs time to fully initialize window.ethereum
+    var walletProvider = null;
+    try {
+      walletProvider = getEthereumProvider();
+    } catch (e) {
+      Logger.module('SESSION_WALLET').warn('getEthereumProvider threw error (wallet not ready?):', e.message);
+      self._syncing = false;
+      self._synced = true;
+      self.trigger('syncCompleted', null);
+      resolve(null);
+      return;
+    }
+
     if (!walletProvider || !window.ethers) {
       Logger.module('SESSION_WALLET').log('No provider or ethers available, skipping sync');
       self._syncing = false;
@@ -781,11 +794,9 @@ SessionWalletManager.prototype.syncWithBlockchain = function() {
       return;
     }
 
-    // Use read-only provider for blockchain reads - INDEPENDENT of wallet's network
-    // This allows sync to work even if wallet is on a different network (e.g., Base, Optimism)
-    var readOnlyProvider = self._getReadOnlyProvider();
-    if (!readOnlyProvider) {
-      Logger.module('SESSION_WALLET').warn('No read-only provider available, skipping sync');
+    // Additional check - ensure provider is ready
+    if (typeof walletProvider.request !== 'function') {
+      Logger.module('SESSION_WALLET').warn('Wallet provider not ready (no request method), skipping sync');
       self._syncing = false;
       self._synced = true;
       self.trigger('syncCompleted', null);
@@ -793,42 +804,26 @@ SessionWalletManager.prototype.syncWithBlockchain = function() {
       return;
     }
 
-    // Get current network from Wallet state
     var Wallet = require('app/common/wallet');
-    var walletState = Wallet.getState();
-    var networkName = walletState.networkName;
 
-    // Only support sepolia and hardhat
-    if (networkName !== 'sepolia' && networkName !== 'hardhat') {
-      Logger.module('SESSION_WALLET').warn('Unsupported network for session wallet sync:', networkName);
-      self._syncing = false;
-      self._synced = true;
-      self.trigger('syncCompleted', null);
-      resolve(null);
-      return;
-    }
+    // CRITICAL: First fetch chainId from wallet and update Wallet module state
+    // This ensures network is known BEFORE we try to get read-only provider
+    walletProvider.request({ method: 'eth_chainId' })
+      .then(function(chainId) {
+        Logger.module('SESSION_WALLET').log('syncWithBlockchain - fetched chainId from wallet:', chainId);
 
-    Logger.module('SESSION_WALLET').log('syncWithBlockchain - using network:', networkName);
+        // Update Wallet module's cached network state
+        var walletManager = Wallet.getInstance();
+        var networkName = walletManager.getNetworkName(chainId);
+        Wallet.setCurrentNetwork(networkName);
+        Wallet.setCurrentChainId(chainId);
 
-    // Get contract addresses for current network
-    var FHESession = require('app/common/fhe_session');
-    var addresses = FHESession.DEPLOYED_CONTRACTS[networkName];
-    var vaultAddress = addresses ? addresses.WalletVault : null;
+        Logger.module('SESSION_WALLET').log('syncWithBlockchain - network set to:', networkName);
 
-    if (!vaultAddress) {
-      Logger.module('SESSION_WALLET').warn('No WalletVault address configured for', networkName);
-      self._syncing = false;
-      self._synced = true;
-      self.trigger('syncCompleted', null);
-      resolve(null);
-      return;
-    }
-
-    // Get main wallet address from connected wallet (this is user identity, not network-dependent)
-    walletProvider.request({ method: 'eth_accounts' })
-      .then(function(accounts) {
-        if (!accounts || accounts.length === 0) {
-          Logger.module('SESSION_WALLET').log('No wallet connected');
+        // Now get read-only provider (should work now that network is set)
+        var readOnlyProvider = self._getReadOnlyProvider();
+        if (!readOnlyProvider) {
+          Logger.module('SESSION_WALLET').warn('No read-only provider available, skipping sync');
           self._syncing = false;
           self._synced = true;
           self.trigger('syncCompleted', null);
@@ -836,20 +831,45 @@ SessionWalletManager.prototype.syncWithBlockchain = function() {
           return null;
         }
 
-        var userAddress = accounts[0];
-        Logger.module('SESSION_WALLET').log('Main wallet address:', userAddress);
+        // Only support sepolia and hardhat
+        if (networkName !== 'sepolia' && networkName !== 'hardhat') {
+          Logger.module('SESSION_WALLET').warn('Unsupported network for session wallet sync:', networkName);
+          self._syncing = false;
+          self._synced = true;
+          self.trigger('syncCompleted', null);
+          resolve(null);
+          return null;
+        }
 
-        // Cache main wallet address immediately so getStorageKey() works
-        _cachedMainWalletAddress = userAddress;
+        Logger.module('SESSION_WALLET').log('syncWithBlockchain - using network:', networkName);
 
-        // Use read-only provider for contract calls - this is the key fix!
-        var contract = new window.ethers.Contract(vaultAddress, WALLET_VAULT_ABI, readOnlyProvider);
+        return { readOnlyProvider: readOnlyProvider, networkName: networkName };
+      })
+      .then(function(context) {
+        if (!context) return null; // Already resolved
 
-        // Check if user has a stored key on blockchain
-        return contract.hasKey(userAddress)
-          .then(function(hasKey) {
-            if (!hasKey) {
-              Logger.module('SESSION_WALLET').log('No session wallet on blockchain for this user');
+        var readOnlyProvider = context.readOnlyProvider;
+        var networkName = context.networkName;
+
+        // Get contract addresses for current network
+        var FHESession = require('app/common/fhe_session');
+        var addresses = FHESession.DEPLOYED_CONTRACTS[networkName];
+        var vaultAddress = addresses ? addresses.WalletVault : null;
+
+        if (!vaultAddress) {
+          Logger.module('SESSION_WALLET').warn('No WalletVault address configured for', networkName);
+          self._syncing = false;
+          self._synced = true;
+          self.trigger('syncCompleted', null);
+          resolve(null);
+          return;
+        }
+
+        // Get main wallet address from connected wallet (this is user identity, not network-dependent)
+        walletProvider.request({ method: 'eth_accounts' })
+          .then(function(accounts) {
+            if (!accounts || accounts.length === 0) {
+              Logger.module('SESSION_WALLET').log('No wallet connected');
               self._syncing = false;
               self._synced = true;
               self.trigger('syncCompleted', null);
@@ -857,47 +877,69 @@ SessionWalletManager.prototype.syncWithBlockchain = function() {
               return null;
             }
 
-            // Get session wallet address from blockchain
-            return contract.getSessionWallet(userAddress)
-              .then(function(sessionWalletAddress) {
-                return { sessionWalletAddress: sessionWalletAddress, userAddress: userAddress };
+            var userAddress = accounts[0];
+            Logger.module('SESSION_WALLET').log('Main wallet address:', userAddress);
+
+            // Cache main wallet address immediately so getStorageKey() works
+            _cachedMainWalletAddress = userAddress;
+
+            // Use read-only provider for contract calls - this is the key fix!
+            var contract = new window.ethers.Contract(vaultAddress, WALLET_VAULT_ABI, readOnlyProvider);
+
+            // Check if user has a stored key on blockchain
+            return contract.hasKey(userAddress)
+              .then(function(hasKey) {
+                if (!hasKey) {
+                  Logger.module('SESSION_WALLET').log('No session wallet on blockchain for this user');
+                  self._syncing = false;
+                  self._synced = true;
+                  self.trigger('syncCompleted', null);
+                  resolve(null);
+                  return null;
+                }
+
+                // Get session wallet address from blockchain
+                return contract.getSessionWallet(userAddress)
+                  .then(function(sessionWalletAddress) {
+                    return { sessionWalletAddress: sessionWalletAddress, userAddress: userAddress };
+                  });
               });
+          })
+          .then(function(result) {
+            if (!result) return; // Already resolved
+
+            var sessionWalletAddress = result.sessionWalletAddress;
+            var mainWalletAddress = result.userAddress;
+
+            if (sessionWalletAddress && sessionWalletAddress !== '0x0000000000000000000000000000000000000000') {
+              Logger.module('SESSION_WALLET').log('Found session wallet on blockchain:', sessionWalletAddress);
+
+              // Save to localStorage
+              if (mainWalletAddress) {
+                _cachedMainWalletAddress = mainWalletAddress;
+                var storageKey = STORAGE_KEY_PREFIX + mainWalletAddress.toLowerCase();
+                localStorage.setItem(storageKey, sessionWalletAddress);
+                Logger.module('SESSION_WALLET').log('Session wallet synced to localStorage with key:', storageKey);
+              }
+
+              self._syncing = false;
+              self._synced = true;
+              self.trigger('syncCompleted', sessionWalletAddress);
+              resolve(sessionWalletAddress);
+            } else {
+              self._syncing = false;
+              self._synced = true;
+              self.trigger('syncCompleted', null);
+              resolve(null);
+            }
+          })
+          .catch(function(err) {
+            Logger.module('SESSION_WALLET').error('Error syncing with blockchain:', err);
+            self._syncing = false;
+            self._synced = true;
+            self.trigger('syncCompleted', null);
+            resolve(null);
           });
-      })
-      .then(function(result) {
-        if (!result) return; // Already resolved
-
-        var sessionWalletAddress = result.sessionWalletAddress;
-        var mainWalletAddress = result.userAddress;
-
-        if (sessionWalletAddress && sessionWalletAddress !== '0x0000000000000000000000000000000000000000') {
-          Logger.module('SESSION_WALLET').log('Found session wallet on blockchain:', sessionWalletAddress);
-
-          // Save to localStorage
-          if (mainWalletAddress) {
-            _cachedMainWalletAddress = mainWalletAddress;
-            var storageKey = STORAGE_KEY_PREFIX + mainWalletAddress.toLowerCase();
-            localStorage.setItem(storageKey, sessionWalletAddress);
-            Logger.module('SESSION_WALLET').log('Session wallet synced to localStorage with key:', storageKey);
-          }
-
-          self._syncing = false;
-          self._synced = true;
-          self.trigger('syncCompleted', sessionWalletAddress);
-          resolve(sessionWalletAddress);
-        } else {
-          self._syncing = false;
-          self._synced = true;
-          self.trigger('syncCompleted', null);
-          resolve(null);
-        }
-      })
-      .catch(function(err) {
-        Logger.module('SESSION_WALLET').error('Error syncing with blockchain:', err);
-        self._syncing = false;
-        self._synced = true;
-        self.trigger('syncCompleted', null);
-        resolve(null);
       });
   });
 };

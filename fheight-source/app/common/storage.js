@@ -6,6 +6,12 @@ function createNamespace() {
   return 'fheight-' + env;
 }
 
-var namespace = createNamespace();
-var storage = store.namespace(namespace);
+var namespaceStr = createNamespace();
+var storage = store.namespace(namespaceStr);
+
+// Add namespace() method for compatibility with localization and other modules
+storage.namespace = function() {
+  return namespaceStr;
+};
+
 module.exports = storage;

@@ -8,12 +8,17 @@
 var Promise = require('bluebird');
 var Logger = require('app/common/logger');
 
+// Get RPC URL from env or use default
+var SEPOLIA_RPC_URL = (typeof process !== 'undefined' && process.env && process.env.SEPOLIA_RPC_URL)
+  ? process.env.SEPOLIA_RPC_URL
+  : 'https://eth-sepolia.g.alchemy.com/v2/QSKgm3HkNCI9KzcjveL9a';
+
 // Network configurations
 var NETWORKS = {
   sepolia: {
     chainId: '0xaa36a7',  // 11155111
     chainName: 'Sepolia Testnet',
-    rpcUrls: ['https://rpc.sepolia.org'],
+    rpcUrls: [SEPOLIA_RPC_URL, 'https://rpc.sepolia.org'],
     nativeCurrency: { name: 'SepoliaETH', symbol: 'ETH', decimals: 18 },
     blockExplorerUrls: ['https://sepolia.etherscan.io']
   },
@@ -128,6 +133,7 @@ WalletManager.prototype.connect = function() {
       .then(function(chainId) {
         var networkName = self.getNetworkName(chainId);
         currentNetwork = networkName;
+        currentChainId = chainId;
         Logger.module('WALLET').log('connect: network detected', networkName, chainId);
 
         self.emit('connected', self.address);
@@ -146,6 +152,7 @@ WalletManager.prototype.connect = function() {
         provider.on('chainChanged', function(chainId) {
           var networkName = self.getNetworkName(chainId);
           currentNetwork = networkName;
+          currentChainId = chainId;
           Logger.module('WALLET').log('chainChanged:', chainId, '-> network:', networkName);
           self.emit('chainChanged', { chainId: chainId, network: networkName });
         });
@@ -429,11 +436,137 @@ WalletManager.prototype.getBalanceEthers = function() {
     });
 };
 
+/**
+ * Get ETH balance using Alchemy RPC (works without wallet connection)
+ * Good for reading any address balance
+ * @param {string} address - Address to check (defaults to connected wallet)
+ * @returns {Promise<string>} Balance in ETH
+ */
+WalletManager.prototype.getBalanceViaRPC = function(address) {
+  var targetAddress = address || this.address;
+
+  if (!targetAddress) {
+    return Promise.resolve('0');
+  }
+
+  Logger.module('WALLET').log('Fetching balance via Alchemy RPC for:', targetAddress);
+
+  // Create a JsonRpcProvider with Alchemy endpoint
+  var rpcProvider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
+
+  return rpcProvider.getBalance(targetAddress)
+    .then(function(balanceWei) {
+      var formattedBalance = ethers.utils.formatEther(balanceWei);
+      Logger.module('WALLET').log('Balance (Alchemy RPC):', formattedBalance, 'ETH');
+      return formattedBalance;
+    })
+    .catch(function(err) {
+      Logger.module('WALLET').error('Failed to get balance via RPC:', err.message);
+      return '0';
+    });
+};
+
 // Singleton instance
 var instance = null;
 
 // Current detected network (updated on connect and chainChanged)
 var currentNetwork = null;
+
+// Current chain ID (updated on connect and chainChanged)
+var currentChainId = null;
+
+// ==================== EAGER INITIALIZATION ====================
+// Modül yüklendiğinde otomatik olarak wallet state'i senkronize et
+// Bu sayede sayfa yenilendiğinde connect() çağrılmadan state dolu olur
+
+(function initWalletState() {
+  console.log('[EAGER INIT] wallet.js IIFE starting...');
+
+  if (typeof window === 'undefined') {
+    console.log('[EAGER INIT] No window, skipping');
+    return;
+  }
+
+  if (!window.ethereum) {
+    console.log('[EAGER INIT] No window.ethereum, skipping');
+    return;
+  }
+
+  var ethereum = window.ethereum;
+  console.log('[EAGER INIT] window.ethereum found, requesting accounts...');
+
+  // 1. Mevcut hesapları al (popup açmaz, sadece daha önce bağlanmış hesapları döner)
+  ethereum.request({ method: 'eth_accounts' })
+    .then(function(accounts) {
+      console.log('[EAGER INIT] eth_accounts result:', accounts);
+      if (accounts && accounts.length > 0) {
+        console.log('[EAGER INIT] Found connected account:', accounts[0]);
+
+        // Instance oluştur ve state'i doldur
+        if (!instance) {
+          instance = new WalletManager();
+        }
+        instance.address = accounts[0];
+        instance.connected = true;
+        instance.provider = ethereum;
+
+        // ethers provider ve signer oluştur
+        if (window.ethers) {
+          instance.ethersProvider = new ethers.providers.Web3Provider(ethereum, 'any');
+          instance.signer = instance.ethersProvider.getSigner();
+        }
+      }
+    })
+    .catch(function(err) {
+      console.warn('[EAGER INIT] eth_accounts failed:', err.message);
+    });
+
+  // 2. Mevcut chain ID'yi al
+  ethereum.request({ method: 'eth_chainId' })
+    .then(function(chainId) {
+      console.log('[EAGER INIT] Current chainId:', chainId);
+      currentChainId = chainId;
+
+      // Network adını belirle
+      if (!instance) {
+        instance = new WalletManager();
+      }
+      currentNetwork = instance.getNetworkName(chainId);
+      console.log('[EAGER INIT] Network:', currentNetwork);
+    })
+    .catch(function(err) {
+      console.warn('[EAGER INIT] eth_chainId failed:', err.message);
+    });
+
+  // 3. Event listener'ları kur (global seviyede, her zaman dinle)
+  ethereum.on('accountsChanged', function(accounts) {
+    console.log('[GLOBAL] accountsChanged:', accounts);
+    if (instance) {
+      if (accounts.length === 0) {
+        instance.address = null;
+        instance.connected = false;
+        instance.emit('disconnected');
+      } else {
+        instance.address = accounts[0];
+        instance.connected = true;
+        instance.emit('accountChanged', accounts[0]);
+      }
+    }
+  });
+
+  ethereum.on('chainChanged', function(chainId) {
+    console.log('[GLOBAL] chainChanged:', chainId);
+    currentChainId = chainId;
+    if (instance) {
+      currentNetwork = instance.getNetworkName(chainId);
+      instance.emit('chainChanged', { chainId: chainId, network: currentNetwork });
+    }
+  });
+
+  console.log('[EAGER INIT] Wallet module initialized with global listeners');
+})();
+
+// ==================== MODULE EXPORTS ====================
 
 module.exports = {
   getInstance: function() {
@@ -447,6 +580,7 @@ module.exports = {
   },
   NETWORKS: NETWORKS,
   TARGET_NETWORK: TARGET_NETWORK,
+  SEPOLIA_RPC_URL: SEPOLIA_RPC_URL,
   getCurrentNetwork: function() {
     return currentNetwork;
   },
@@ -456,5 +590,36 @@ module.exports = {
   getBalance: function() {
     if (!instance) return Promise.resolve('0');
     return instance.getBalance();
+  },
+  // Get balance via Alchemy RPC (works without wallet connection)
+  getBalanceViaRPC: function(address) {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getBalanceViaRPC(address);
+  },
+  // Create a read-only ethers provider with Alchemy RPC
+  getReadOnlyProvider: function() {
+    return new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
+  },
+  // Get current wallet state (for UI components)
+  getState: function() {
+    return {
+      networkName: currentNetwork || 'unknown',
+      chainId: currentChainId,
+      connected: instance ? instance.connected : false,
+      address: instance ? instance.address : null
+    };
+  },
+  // Set current chain ID (called when chain changes)
+  setCurrentChainId: function(chainId) {
+    currentChainId = chainId;
+  },
+  // Switch network (proxy to instance)
+  switchNetwork: function(networkName) {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.switchNetwork(networkName);
   }
 };
