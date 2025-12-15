@@ -567,9 +567,10 @@
 		}
 
 		.reveal-key-btn {
-			width: 100%;
-			margin-bottom: 1.5rem;
+			width: 70%;
+			margin: 0 auto 1.5rem auto;
 			padding: 1.8rem 1rem;
+			display: block;
 		}
 
 		.private-key-display {
@@ -594,7 +595,8 @@
 			}
 
 			.copy-key-btn {
-				width: 100%;
+				width: 60%;
+				margin: auto;
 				display: flex;
 				align-items: center;
 				justify-content: center;

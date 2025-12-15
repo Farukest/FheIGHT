@@ -664,9 +664,42 @@ module.exports = {
     }
     return instance.getBalanceViaRPC(address);
   },
-  // Create a read-only ethers provider with Alchemy RPC
-  getReadOnlyProvider: function() {
-    return new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
+  // Get active RPC URL based on current network
+  // Bu method dinamik olarak aktif network'e gore RPC URL dondurur
+  // Sepolia -> Alchemy RPC (hizli)
+  // Hardhat -> localhost
+  // Diger -> null (desteklenmiyor)
+  getActiveRpcUrl: function() {
+    var network = currentNetwork || TARGET_NETWORK;
+    if (network === 'sepolia') {
+      return SEPOLIA_RPC_URL;
+    } else if (network === 'hardhat' || network === 'localhost') {
+      return 'http://127.0.0.1:8545';
+    }
+    // Fallback to Sepolia for unknown networks
+    Logger.module('WALLET').warn('Unknown network for RPC:', network, '- falling back to Sepolia');
+    return SEPOLIA_RPC_URL;
+  },
+  // Aktif network icin RPC provider olusturur (getActiveRpcUrl() kullanir)
+  getActiveRpcProvider: function() {
+    var rpcUrl = module.exports.getActiveRpcUrl();
+    return new ethers.providers.JsonRpcProvider(rpcUrl);
+  },
+  // Aktif network icin chainId dondurur (number)
+  getActiveChainId: function() {
+    var network = currentNetwork || TARGET_NETWORK;
+    if (network === 'sepolia') {
+      return 11155111;
+    } else if (network === 'hardhat' || network === 'localhost') {
+      return 31337;
+    }
+    // Fallback to Sepolia
+    Logger.module('WALLET').warn('Unknown network for chainId:', network, '- falling back to Sepolia');
+    return 11155111;
+  },
+  // Aktif network ismini dondurur (string)
+  getActiveNetwork: function() {
+    return currentNetwork || TARGET_NETWORK;
   },
   // Get current wallet state (for UI components)
   getState: function() {

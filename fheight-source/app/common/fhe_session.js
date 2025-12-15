@@ -15,6 +15,116 @@ var Logger = require('app/common/logger');
 var Wallet = require('app/common/wallet');
 var ethers = require('ethers');
 
+// ==================== AES CRYPTO UTILITIES ====================
+// PIN-based encryption for localStorage security
+
+/**
+ * Derive encryption key from PIN using PBKDF2
+ * @param {string} pin - User's PIN
+ * @param {Uint8Array} salt - Random salt
+ * @returns {Promise<CryptoKey>}
+ */
+function deriveKeyFromPIN(pin, salt) {
+  var encoder = new TextEncoder();
+  var pinData = encoder.encode(pin);
+
+  return window.crypto.subtle.importKey('raw', pinData, 'PBKDF2', false, ['deriveKey'])
+    .then(function(keyMaterial) {
+      return window.crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    });
+}
+
+/**
+ * Encrypt data with PIN
+ * @param {string} data - JSON string to encrypt
+ * @param {string} pin - User's PIN
+ * @returns {Promise<object>} { encrypted: base64, salt: base64, iv: base64 }
+ */
+function encryptWithPIN(data, pin) {
+  var salt = window.crypto.getRandomValues(new Uint8Array(16));
+  var iv = window.crypto.getRandomValues(new Uint8Array(12));
+  var encoder = new TextEncoder();
+  var dataBuffer = encoder.encode(data);
+
+  return deriveKeyFromPIN(pin, salt)
+    .then(function(key) {
+      return window.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        dataBuffer
+      );
+    })
+    .then(function(encrypted) {
+      return {
+        encrypted: arrayBufferToBase64(encrypted),
+        salt: arrayBufferToBase64(salt),
+        iv: arrayBufferToBase64(iv)
+      };
+    });
+}
+
+/**
+ * Decrypt data with PIN
+ * @param {object} encryptedData - { encrypted, salt, iv } all base64
+ * @param {string} pin - User's PIN
+ * @returns {Promise<string>} Decrypted JSON string
+ */
+function decryptWithPIN(encryptedData, pin) {
+  var salt = base64ToArrayBuffer(encryptedData.salt);
+  var iv = base64ToArrayBuffer(encryptedData.iv);
+  var encrypted = base64ToArrayBuffer(encryptedData.encrypted);
+
+  return deriveKeyFromPIN(pin, new Uint8Array(salt))
+    .then(function(key) {
+      return window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: new Uint8Array(iv) },
+        key,
+        encrypted
+      );
+    })
+    .then(function(decrypted) {
+      var decoder = new TextDecoder();
+      return decoder.decode(decrypted);
+    });
+}
+
+/**
+ * Convert ArrayBuffer to Base64
+ */
+function arrayBufferToBase64(buffer) {
+  var bytes = new Uint8Array(buffer);
+  var binary = '';
+  for (var i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+/**
+ * Convert Base64 to ArrayBuffer
+ */
+function base64ToArrayBuffer(base64) {
+  var binary = window.atob(base64);
+  var bytes = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+// ==================== END CRYPTO UTILITIES ====================
+
 // FHEVM Contract adresleri (Sepolia)
 var DEPLOYED_CONTRACTS = {
   sepolia: {
@@ -56,85 +166,200 @@ function FHESessionManager() {
 }
 
 /**
- * Session'i localStorage'dan yukle
+ * Check if encrypted session exists in localStorage
+ * @returns {boolean}
  */
-FHESessionManager.prototype.loadSession = function() {
+FHESessionManager.prototype.hasEncryptedSession = function() {
+  var stored = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!stored) return false;
+
   try {
-    var stored = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!stored) return false;
-
-    var session = JSON.parse(stored);
-
-    // Suresi dolmus mu kontrol et
-    if (session.expiry && Date.now() > session.expiry) {
-      Logger.module('FHE_SESSION').log('Session expired, clearing');
-      this.clearSession();
-      return false;
-    }
-
-    // Key format kontrolu - ML-KEM keyleri cok daha uzun
-    // Eski sahte hex key'ler ~70 karakter, gercek ML-KEM public key binlerce byte
-    // Public key Uint8Array olmali veya cok uzun bir hex string
-    var pubKey = session.publicKey;
-    var isValidKeyFormat = false;
-
-    if (pubKey) {
-      // Uint8Array ise gecerli
-      if (pubKey instanceof Uint8Array || (pubKey.type === 'Buffer' && pubKey.data)) {
-        isValidKeyFormat = true;
+    var data = JSON.parse(stored);
+    // Check if it's PIN-encrypted (version 2) and not expired
+    if (data.version === 2 && data.encrypted) {
+      if (data.expiry && Date.now() > data.expiry) {
+        Logger.module('FHE_SESSION').log('Encrypted session expired');
+        return false;
       }
-      // String ise uzunlugunu kontrol et (ML-KEM public key ~1600 byte = ~3200 hex char)
-      else if (typeof pubKey === 'string') {
-        // 0x04 ile baslayan kisa key eski sahte key
-        if (pubKey.startsWith('0x04') && pubKey.length < 200) {
-          isValidKeyFormat = false;
-          Logger.module('FHE_SESSION').warn('Detected old mock key format, clearing session');
-        } else if (pubKey.length > 1000) {
-          // Uzun key muhtemelen gecerli ML-KEM key
-          isValidKeyFormat = true;
-        }
-      }
-      // Object ise (serialized Uint8Array) gecerli
-      else if (typeof pubKey === 'object') {
-        isValidKeyFormat = true;
-      }
+      return true;
     }
-
-    if (!isValidKeyFormat) {
-      Logger.module('FHE_SESSION').log('Invalid key format detected, clearing session');
-      this.clearSession();
-      return false;
+    // Legacy version 1 (unencrypted) - also valid
+    if (data.version === 1 || data.publicKey) {
+      if (data.expiry && Date.now() > data.expiry) {
+        return false;
+      }
+      return true;
     }
-
-    this.keypair = {
-      publicKey: session.publicKey,
-      privateKey: session.privateKey
-    };
-    this.signature = session.signature;
-    this.sessionStartTime = session.startTime;
-    this.sessionExpiry = session.expiry;
-    this.contractAddresses = session.contractAddresses;
-    // Signature parametrelerini yukle - userDecrypt'te kullanilacak
-    this.sessionStartTimeStamp = session.sessionStartTimeStamp;
-    this.sessionDurationDays = session.sessionDurationDays;
-    this.initialized = true;
-
-    Logger.module('FHE_SESSION').log('Session loaded from storage');
-    Logger.module('FHE_SESSION').log('Session params:', {
-      startTimeStamp: this.sessionStartTimeStamp,
-      durationDays: this.sessionDurationDays
-    });
-    return true;
   } catch (e) {
-    Logger.module('FHE_SESSION').error('Failed to load session:', e);
     return false;
   }
+  return false;
 };
 
 /**
- * Session'i localStorage'a kaydet
+ * Session'i localStorage'dan yukle (PIN ile decrypt)
+ * @param {string} pin - User's PIN for decryption
+ * @returns {Promise<boolean>} true if loaded successfully
  */
-FHESessionManager.prototype.saveSession = function() {
+FHESessionManager.prototype.loadSession = function(pin) {
+  var self = this;
+
+  return new Promise(function(resolve, reject) {
+    try {
+      Logger.module('FHE_SESSION').log('=== loadSession ATTEMPT ===');
+      var stored = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!stored) {
+        Logger.module('FHE_SESSION').log('  localStorage EMPTY - no session found');
+        resolve(false);
+        return;
+      }
+
+      Logger.module('FHE_SESSION').log('  localStorage has data, parsing...');
+      var storageData = JSON.parse(stored);
+      Logger.module('FHE_SESSION').log('  storage keys:', Object.keys(storageData));
+
+      // Check if PIN-encrypted (version 2)
+      if (storageData.version === 2 && storageData.encrypted) {
+        Logger.module('FHE_SESSION').log('  Detected PIN-encrypted session (v2)');
+
+        // Check expiry before decrypting
+        if (storageData.expiry && Date.now() > storageData.expiry) {
+          Logger.module('FHE_SESSION').log('Session expired, clearing');
+          self.clearSession();
+          resolve(false);
+          return;
+        }
+
+        // Decrypt with PIN
+        decryptWithPIN(storageData, pin)
+          .then(function(decryptedJson) {
+            var session = JSON.parse(decryptedJson);
+            self._loadSessionData(session);
+            resolve(true);
+          })
+          .catch(function(e) {
+            Logger.module('FHE_SESSION').error('PIN decrypt failed (wrong PIN?):', e.message);
+            reject(new Error('Wrong PIN'));
+          });
+        return;
+      }
+
+      // Legacy unencrypted session (version 1 or old format)
+      Logger.module('FHE_SESSION').log('  Detected legacy session, loading directly');
+      var session = storageData;
+
+      // Check expiry
+      if (session.expiry && Date.now() > session.expiry) {
+        Logger.module('FHE_SESSION').log('Session expired, clearing');
+        self.clearSession();
+        resolve(false);
+        return;
+      }
+
+      self._loadSessionData(session);
+      resolve(true);
+
+    } catch (e) {
+      Logger.module('FHE_SESSION').error('=== loadSession FAILED ===', e);
+      resolve(false);
+    }
+  });
+};
+
+/**
+ * Internal: Load session data into memory
+ * @private
+ */
+FHESessionManager.prototype._loadSessionData = function(session) {
+  Logger.module('FHE_SESSION').log('  Loading session data into memory...');
+
+  // Key format kontrolu - ML-KEM keyleri cok daha uzun
+  var pubKey = session.publicKey;
+  var isValidKeyFormat = false;
+
+  if (pubKey) {
+    if (pubKey instanceof Uint8Array || (pubKey.type === 'Buffer' && pubKey.data)) {
+      isValidKeyFormat = true;
+    } else if (typeof pubKey === 'string') {
+      if (pubKey.startsWith('0x04') && pubKey.length < 200) {
+        isValidKeyFormat = false;
+        Logger.module('FHE_SESSION').warn('Detected old mock key format');
+      } else if (pubKey.length > 1000) {
+        isValidKeyFormat = true;
+      }
+    } else if (typeof pubKey === 'object') {
+      isValidKeyFormat = true;
+    }
+  }
+
+  if (!isValidKeyFormat) {
+    Logger.module('FHE_SESSION').log('Invalid key format detected');
+    return false;
+  }
+
+  this.keypair = {
+    publicKey: session.publicKey,
+    privateKey: session.privateKey
+  };
+  this.signature = session.signature;
+  this.sessionStartTime = session.startTime;
+  this.sessionExpiry = session.expiry;
+  this.contractAddresses = session.contractAddresses;
+  this.sessionStartTimeStamp = session.sessionStartTimeStamp;
+  this.sessionDurationDays = session.sessionDurationDays;
+  this.initialized = true;
+
+  Logger.module('FHE_SESSION').log('=== _loadSessionData SUCCESS ===');
+  Logger.module('FHE_SESSION').log('  initialized:', this.initialized);
+  Logger.module('FHE_SESSION').log('  contractAddresses:', this.contractAddresses);
+  return true;
+};
+
+/**
+ * Session'i localStorage'a kaydet (PIN ile sifrelenmis)
+ * @param {string} pin - User's PIN for encryption
+ * @returns {Promise}
+ */
+FHESessionManager.prototype.saveSession = function(pin) {
+  var self = this;
+
+  var session = {
+    publicKey: this.keypair.publicKey,
+    privateKey: this.keypair.privateKey,
+    signature: this.signature,
+    startTime: this.sessionStartTime,
+    expiry: this.sessionExpiry,
+    contractAddresses: this.contractAddresses,
+    sessionStartTimeStamp: this.sessionStartTimeStamp,
+    sessionDurationDays: this.sessionDurationDays
+  };
+
+  var sessionJson = JSON.stringify(session);
+
+  return encryptWithPIN(sessionJson, pin)
+    .then(function(encryptedData) {
+      // Store encrypted blob + metadata
+      var storageData = {
+        encrypted: encryptedData.encrypted,
+        salt: encryptedData.salt,
+        iv: encryptedData.iv,
+        expiry: self.sessionExpiry, // Store expiry unencrypted for quick check
+        version: 2 // PIN-encrypted version
+      };
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(storageData));
+      Logger.module('FHE_SESSION').log('Session saved to storage (PIN encrypted)');
+    })
+    .catch(function(e) {
+      Logger.module('FHE_SESSION').error('Failed to save session:', e);
+      throw e;
+    });
+};
+
+/**
+ * Legacy saveSession without PIN (for backwards compatibility during transition)
+ * @deprecated Use saveSession(pin) instead
+ */
+FHESessionManager.prototype.saveSessionLegacy = function() {
   try {
     var session = {
       publicKey: this.keypair.publicKey,
@@ -143,13 +368,12 @@ FHESessionManager.prototype.saveSession = function() {
       startTime: this.sessionStartTime,
       expiry: this.sessionExpiry,
       contractAddresses: this.contractAddresses,
-      // Signature parametreleri - userDecrypt'te AYNI degerler kullanilmali!
       sessionStartTimeStamp: this.sessionStartTimeStamp,
-      sessionDurationDays: this.sessionDurationDays
+      sessionDurationDays: this.sessionDurationDays,
+      version: 1 // Legacy unencrypted version
     };
-
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-    Logger.module('FHE_SESSION').log('Session saved to storage');
+    Logger.module('FHE_SESSION').log('Session saved to storage (legacy unencrypted)');
   } catch (e) {
     Logger.module('FHE_SESSION').error('Failed to save session:', e);
   }
@@ -175,14 +399,23 @@ FHESessionManager.prototype.clearSession = function() {
  * Session gecerli mi?
  */
 FHESessionManager.prototype.isSessionValid = function() {
+  Logger.module('FHE_SESSION').log('=== isSessionValid CHECK ===');
+  Logger.module('FHE_SESSION').log('  initialized:', this.initialized);
+  Logger.module('FHE_SESSION').log('  keypair:', this.keypair ? 'EXISTS' : 'NULL');
+  Logger.module('FHE_SESSION').log('  signature:', this.signature ? 'EXISTS (len=' + this.signature.length + ')' : 'NULL');
+  Logger.module('FHE_SESSION').log('  sessionExpiry:', this.sessionExpiry, '- now:', Date.now(), '- expired:', this.sessionExpiry ? Date.now() > this.sessionExpiry : 'N/A');
+
   if (!this.initialized || !this.keypair || !this.signature) {
+    Logger.module('FHE_SESSION').log('  RESULT: FALSE (missing data)');
     return false;
   }
 
   if (this.sessionExpiry && Date.now() > this.sessionExpiry) {
+    Logger.module('FHE_SESSION').log('  RESULT: FALSE (expired)');
     return false;
   }
 
+  Logger.module('FHE_SESSION').log('  RESULT: TRUE');
   return true;
 };
 
@@ -277,18 +510,9 @@ FHESessionManager.prototype._simpleHash = function(input) {
  */
 FHESessionManager.prototype.createEIP712TypedData = function(contractAddresses, userAddress) {
   var self = this;
-  // Dinamik olarak chainId al
-  var currentNetwork = Wallet.getCurrentNetwork();
-  var chainId;
-  if (currentNetwork === 'sepolia') {
-    chainId = 11155111;
-  } else if (currentNetwork === 'hardhat' || currentNetwork === 'localhost') {
-    chainId = 31337;
-  } else {
-    // Fallback to TARGET_NETWORK
-    chainId = Wallet.TARGET_NETWORK === 'sepolia' ? 11155111 : 31337;
-  }
-  Logger.module('FHE_SESSION').log('createEIP712TypedData - using chainId:', chainId, 'network:', currentNetwork);
+  // Wallet.js'den merkezi metod ile chainId al
+  var chainId = Wallet.getActiveChainId();
+  Logger.module('FHE_SESSION').log('createEIP712TypedData - chainId:', chainId);
   var startTime = Math.floor(Date.now() / 1000);
   var duration = SESSION_DURATION_DAYS * 24 * 60 * 60; // saniye cinsinden
 
@@ -392,6 +616,9 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
         self.sessionDurationDays = durationDays;
         self.sessionStartTimeStamp = startTimeStamp; // String olarak sakla
         self.contractAddresses = contracts;
+        // Expiry hesapla (ms cinsinden)
+        var durationSeconds = parseInt(durationDays) * 24 * 60 * 60;
+        self.sessionExpiry = (parseInt(startTimeStamp) + durationSeconds) * 1000;
 
         // ethers.js v5 signer ile imzala - v5'te _signTypedData kullanilir
         return signer._signTypedData(
@@ -404,8 +631,9 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
         self.signature = signature;
         self.initialized = true;
 
-        // localStorage'a kaydet
-        self.saveSession();
+        // NOT: saveSession() artik PIN gerektiriyor
+        // Kaydetme islemi initializeSessionWithPIN() veya _createNewSessionWithPIN() tarafindan yapilacak
+        // Legacy initializeSession() kullaniliyorsa saveSessionLegacy() cagrilabilir
 
         Logger.module('FHE_SESSION').log('Session signature obtained via SDK');
         resolve(signature);
@@ -425,32 +653,83 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
  * Tam session baslatma akisi
  * 1. Keypair olustur
  * 2. Signature al
- * @param {string|string[]} contractAddresses
- * @returns {Promise<object>} { publicKey, signature }
+ * @param {string|string[]} contractAddresses - Gerekli contract adresleri
+ * @param {boolean} forceNew - Mevcut session gecerli olsa bile yeni olustur (default: false)
+ * @returns {Promise<object>} { publicKey, signature, fromCache }
  */
-FHESessionManager.prototype.initializeSession = function(contractAddresses) {
+FHESessionManager.prototype.initializeSession = function(contractAddresses, forceNew) {
   var self = this;
+  var requiredContracts = Array.isArray(contractAddresses) ? contractAddresses : [contractAddresses];
 
-  // Once mevcut session'i kontrol et
-  if (self.loadSession() && self.isSessionValid()) {
-    Logger.module('FHE_SESSION').log('Using existing valid session');
-    // FHEVM instance'i da yukle
-    return self._initFhevmInstance()
-      .then(function() {
-        return {
-          publicKey: self.keypair.publicKey,
-          signature: self.signature,
-          fromCache: true
-        };
-      });
+  Logger.module('FHE_SESSION').log('=== initializeSession START ===');
+  Logger.module('FHE_SESSION').log('  requiredContracts:', requiredContracts);
+  Logger.module('FHE_SESSION').log('  forceNew:', forceNew);
+
+  // Helper: Mevcut session gerekli kontratları içeriyor mu?
+  function sessionHasRequiredContracts() {
+    if (!self.contractAddresses || self.contractAddresses.length === 0) {
+      return false;
+    }
+    // Her gerekli kontrat session'da var mı?
+    var sessionContractsLower = self.contractAddresses.map(function(a) { return a.toLowerCase(); });
+    return requiredContracts.every(function(addr) {
+      return sessionContractsLower.indexOf(addr.toLowerCase()) !== -1;
+    });
+  }
+
+  // forceNew değilse mevcut session'ı dene
+  if (!forceNew) {
+    // Once memory'deki session'i kontrol et
+    if (self.isSessionValid()) {
+      if (sessionHasRequiredContracts()) {
+        Logger.module('FHE_SESSION').log('Using existing valid session from memory (has required contracts)');
+        return self._initFhevmInstance()
+          .then(function() {
+            return {
+              publicKey: self.keypair.publicKey,
+              signature: self.signature,
+              fromCache: true
+            };
+          });
+      } else {
+        Logger.module('FHE_SESSION').log('Memory session valid but missing required contracts');
+        Logger.module('FHE_SESSION').log('  session has:', self.contractAddresses);
+        Logger.module('FHE_SESSION').log('  needs:', requiredContracts);
+      }
+    }
+
+    // Memory'de yoksa localStorage'dan yukle
+    if (self.loadSession() && self.isSessionValid()) {
+      if (sessionHasRequiredContracts()) {
+        Logger.module('FHE_SESSION').log('Using existing valid session from storage (has required contracts)');
+        return self._initFhevmInstance()
+          .then(function() {
+            return {
+              publicKey: self.keypair.publicKey,
+              signature: self.signature,
+              fromCache: true
+            };
+          });
+      } else {
+        Logger.module('FHE_SESSION').log('Storage session valid but missing required contracts');
+        Logger.module('FHE_SESSION').log('  session has:', self.contractAddresses);
+        Logger.module('FHE_SESSION').log('  needs:', requiredContracts);
+      }
+    }
   }
 
   // Yeni session olustur
+  // NOT: Eski session'ı silmiyoruz! saveSession() üzerine yazacak.
+  // Eğer kullanıcı imza atmadan cancel ederse eski session kalır.
+  Logger.module('FHE_SESSION').log('Creating new session for contracts:', requiredContracts);
   return self.generateKeypair()
     .then(function() {
-      return self.createSessionSignature(contractAddresses);
+      return self.createSessionSignature(requiredContracts);
     })
     .then(function(signature) {
+      // Legacy: PIN olmadan kaydet (backwards compatibility)
+      self.saveSessionLegacy();
+
       // FHEVM instance'i yukle
       return self._initFhevmInstance()
         .then(function() {
@@ -503,21 +782,12 @@ FHESessionManager.prototype._initFhevmInstance = function() {
         });
       })
       .then(function(network) {
-        // Network'e gore chainId belirle
-        var chainId;
-        if (network === 'sepolia') {
-          chainId = 11155111;
-        } else if (network === 'hardhat' || network === 'localhost') {
-          chainId = 31337;
-        } else {
-          // Bilinmeyen network - Sepolia olarak varsay
-          Logger.module('FHE_SESSION').warn('Unknown network "' + network + '", falling back to Sepolia config');
-          chainId = 11155111;
-        }
+        // Wallet.js'den merkezi metodlar ile al
+        var chainId = Wallet.getActiveChainId();
+        var activeRpcUrl = Wallet.getActiveRpcUrl();
 
-        Logger.module('FHE_SESSION').log('SDK config chainId:', chainId);
+        Logger.module('FHE_SESSION').log('SDK config - chainId:', chainId, 'rpcUrl:', activeRpcUrl);
 
-        // Sepolia config (Hardhat icin de ayni config kullanilir, mock olur)
         var config = {
           aclContractAddress: '0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D',
           kmsContractAddress: '0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A',
@@ -526,7 +796,7 @@ FHESessionManager.prototype._initFhevmInstance = function() {
           verifyingContractAddressInputVerification: '0x483b9dE06E4E4C7D35CCf5837A1668487406D955',
           chainId: chainId,
           gatewayChainId: 10901,
-          network: window.ethereum,
+          network: activeRpcUrl,
           relayerUrl: 'https://relayer.testnet.zama.org'
         };
 
@@ -628,7 +898,8 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
 
         Logger.module('FHE_SESSION').log('Calling SDK userDecrypt...', {
           handles: handles.length,
-          contractAddress: contractAddress,
+          targetContract: contractAddress,
+          sessionContracts: self.contractAddresses,
           userAddress: userAddress,
           startTimestamp: startTimestamp,
           durationDays: durationDays,
@@ -640,7 +911,7 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
           self.keypair.privateKey,
           self.keypair.publicKey,
           signatureWithoutPrefix,
-          [contractAddress],
+          self.contractAddresses,  // Session'da kayıtlı contract adresleri
           userAddress,
           startTimestamp,
           durationDays
@@ -799,6 +1070,139 @@ FHESessionManager.prototype.getGameSessionAddress = function() {
   Logger.module('FHE_SESSION').log('GameSession:', addresses.GameSession);
   Logger.module('FHE_SESSION').log('==============================');
   return addresses.GameSession;
+};
+
+/**
+ * Show PIN dialog and return Promise with PIN
+ * @param {boolean} isCreate - true for "Create PIN", false for "Enter PIN"
+ * @param {string} message - Optional message to show
+ * @returns {Promise<string>} PIN entered by user
+ */
+FHESessionManager.prototype.showPinDialog = function(isCreate, message) {
+  return new Promise(function(resolve, reject) {
+    // Lazy load to avoid circular dependency
+    var NavigationManager = require('app/ui/managers/navigation_manager');
+    var PinDialogItemView = require('app/ui/views/item/pin_dialog');
+
+    var pinDialog = new PinDialogItemView({
+      isCreate: isCreate,
+      message: message || ''
+    });
+
+    pinDialog.on('confirm', function(pin) {
+      resolve(pin);
+    });
+
+    pinDialog.on('cancel', function() {
+      reject(new Error('PIN entry cancelled'));
+    });
+
+    NavigationManager.getInstance().showDialogView(pinDialog);
+  });
+};
+
+/**
+ * Initialize session with automatic PIN handling
+ * Shows PIN dialog when needed
+ * @param {string|string[]} contractAddresses
+ * @returns {Promise<object>} { publicKey, signature, fromCache }
+ */
+FHESessionManager.prototype.initializeSessionWithPIN = function(contractAddresses) {
+  var self = this;
+  var requiredContracts = Array.isArray(contractAddresses) ? contractAddresses : [contractAddresses];
+
+  Logger.module('FHE_SESSION').log('=== initializeSessionWithPIN START ===');
+
+  // Memory'de gecerli session var mi?
+  if (self.isSessionValid()) {
+    // Contract'ları kontrol et
+    var sessionContractsLower = (self.contractAddresses || []).map(function(a) { return a.toLowerCase(); });
+    var hasRequired = requiredContracts.every(function(addr) {
+      return sessionContractsLower.indexOf(addr.toLowerCase()) !== -1;
+    });
+
+    if (hasRequired) {
+      Logger.module('FHE_SESSION').log('Using existing session from memory');
+      return self._initFhevmInstance().then(function() {
+        return { publicKey: self.keypair.publicKey, signature: self.signature, fromCache: true };
+      });
+    }
+  }
+
+  // Encrypted session var mi localStorage'da?
+  if (self.hasEncryptedSession()) {
+    Logger.module('FHE_SESSION').log('Encrypted session found, requesting PIN...');
+
+    return self.showPinDialog(false, 'Unlock your FHE session')
+      .then(function(pin) {
+        return self.loadSession(pin);
+      })
+      .then(function(loaded) {
+        if (loaded && self.isSessionValid()) {
+          // Contract'ları kontrol et
+          var sessionContractsLower = (self.contractAddresses || []).map(function(a) { return a.toLowerCase(); });
+          var hasRequired = requiredContracts.every(function(addr) {
+            return sessionContractsLower.indexOf(addr.toLowerCase()) !== -1;
+          });
+
+          if (hasRequired) {
+            Logger.module('FHE_SESSION').log('Session loaded from storage with PIN');
+            return self._initFhevmInstance().then(function() {
+              return { publicKey: self.keypair.publicKey, signature: self.signature, fromCache: true };
+            });
+          }
+        }
+        // Session yok veya contract'lar uyuşmuyor - yeni oluştur
+        return self._createNewSessionWithPIN(requiredContracts);
+      })
+      .catch(function(err) {
+        if (err.message === 'Wrong PIN') {
+          // PIN yanlış, tekrar dene
+          Logger.module('FHE_SESSION').warn('Wrong PIN, retrying...');
+          return self.initializeSessionWithPIN(contractAddresses);
+        }
+        if (err.message === 'PIN entry cancelled') {
+          throw err;
+        }
+        // Diğer hatalar - yeni session oluştur
+        return self._createNewSessionWithPIN(requiredContracts);
+      });
+  }
+
+  // Hiç session yok - yeni oluştur
+  Logger.module('FHE_SESSION').log('No session found, creating new...');
+  return self._createNewSessionWithPIN(requiredContracts);
+};
+
+/**
+ * Create new session and encrypt with PIN
+ * @private
+ */
+FHESessionManager.prototype._createNewSessionWithPIN = function(contractAddresses) {
+  var self = this;
+
+  return self.generateKeypair()
+    .then(function() {
+      return self.createSessionSignature(contractAddresses);
+    })
+    .then(function(signature) {
+      // PIN oluştur dialogu göster
+      return self.showPinDialog(true, 'Create a PIN to secure your session')
+        .then(function(pin) {
+          // PIN ile şifreleyip kaydet
+          return self.saveSession(pin);
+        })
+        .then(function() {
+          return self._initFhevmInstance();
+        })
+        .then(function() {
+          return {
+            publicKey: self.keypair.publicKey,
+            signature: signature,
+            fromCache: false
+          };
+        });
+    });
 };
 
 // Singleton instance

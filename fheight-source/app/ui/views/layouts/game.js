@@ -137,6 +137,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     this.listenTo(NetworkManager.getInstance().spectators, 'remove', this.onSpectatorLeft);
   },
 
+ // GameLayout gösterilince (oyun başlangıcı)
   onShow: function () {
     // listen to game events
     this.listenTo(SDK.GameSession.getInstance().getEventBus(), EVENTS.status, this.onGameStatusChanged);
@@ -160,6 +161,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     // listen to global events
     this.listenTo(EventBus.getInstance(), EVENTS.resize, this.onResize);
 
+    // oyun başında ilk İlk çağrı
     this.showNextStepInGameSetup();
 
     this.onResize();
@@ -567,7 +569,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
         }
       }
 
-      // show starting or choose hand
+      // show starting or choose hand // başlangıçta 5 kart çekme yer. 5 cards. ilk el
       if (SDK.GameSession.current().getMyPlayer().getHasStartingHand()) {
         return this.showStartingHand();
       } else {

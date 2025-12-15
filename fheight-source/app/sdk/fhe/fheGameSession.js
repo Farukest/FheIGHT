@@ -17,6 +17,7 @@ var Promise = require('bluebird');
 var Logger = require('app/common/logger');
 var Wallet = require('app/common/wallet');
 var FHESession = require('app/common/fhe_session');
+var SessionWalletManager = require('app/common/session_wallet');
 var CONFIG = require('app/common/config');
 var ethers = require('ethers');
 
@@ -71,6 +72,9 @@ var GameState = {
 
 /**
  * FHE Game Session Manager
+ *
+ * ONEMLI: Tum TX operasyonlari session wallet ile yapilir (popupless).
+ * Ana wallet sadece view call'lar icin kullanilir.
  */
 function FHEGameSession() {
   this.contract = null;
@@ -78,13 +82,25 @@ function FHEGameSession() {
   this.gameId = null;
   this.playerIndex = null;
   this.fheSession = FHESession.getInstance();
+  this.sessionWallet = SessionWalletManager.getInstance();
   this.decryptedHand = []; // Decrypt edilmis el kartlari
   this.handHandles = []; // Sifreli el handle'lari
   this.localDeckIndex = 5; // Local deck index takibi (baslangicta 5 kart cekilmis)
 }
 
 /**
+ * Get session wallet address
+ * @returns {string} Session wallet address
+ */
+FHEGameSession.prototype.getSessionWalletAddress = function() {
+  return this.sessionWallet.getAddress();
+};
+
+/**
  * Contract'i baglat
+ * Read-only provider ile contract olusturur (view calls icin).
+ * TX operasyonlari session wallet signer ile ayrica yapilir.
+ *
  * @param {string} contractAddress - GameSession contract adresi
  */
 FHEGameSession.prototype.connect = function(contractAddress) {
@@ -98,19 +114,23 @@ FHEGameSession.prototype.connect = function(contractAddress) {
     }
 
     try {
-      // ethers.js ile contract instance olustur
       self.contractAddress = contractAddress;
 
-      Logger.module('FHE_GAME').log('Creating contract with signer:', !!walletManager.signer);
+      // Aktif network icin RPC provider al (view calls icin)
+      var readOnlyProvider = Wallet.getActiveRpcProvider();
 
+      Logger.module('FHE_GAME').log('Creating read-only contract for view calls');
+
+      // Contract read-only provider ile olusturulur
+      // TX operasyonlari sessionWallet.callContract() ile yapilir
       self.contract = new ethers.Contract(
         contractAddress,
         GAME_SESSION_ABI,
-        walletManager.signer
+        readOnlyProvider
       );
 
       Logger.module('FHE_GAME').log('Connected to GameSession at:', contractAddress);
-      Logger.module('FHE_GAME').log('Contract signer:', self.contract.signer ? 'attached' : 'NOT attached');
+      Logger.module('FHE_GAME').log('Session wallet address:', self.sessionWallet.getAddress());
       resolve(self.contract);
     } catch (e) {
       Logger.module('FHE_GAME').error('Contract creation failed:', e);
@@ -122,13 +142,14 @@ FHEGameSession.prototype.connect = function(contractAddress) {
 /**
  * Yeni oyun olustur (Multiplayer)
  * v10: Deck shuffle edilir ve sifreli olarak gonderilir
+ * POPUPLESS: Session wallet ile TX atilir
+ *
  * @param {number} generalCardId - General kart ID'si
  * @param {number[]} deckCardIds - 40 kartlik deste
  * @returns {Promise<number>} gameId
  */
 FHEGameSession.prototype.createGame = function(generalCardId, deckCardIds) {
   var self = this;
-  var walletManager = Wallet.getInstance();
 
   return new Promise(function(resolve, reject) {
     if (!self.contract) {
@@ -136,9 +157,15 @@ FHEGameSession.prototype.createGame = function(generalCardId, deckCardIds) {
       return;
     }
 
-    Logger.module('FHE_GAME').log('Creating multiplayer game with general:', generalCardId, 'deck size:', deckCardIds.length);
+    // Session wallet adresi (FHE decrypt icin gerekli)
+    var fheWallet = self.sessionWallet.getAddress();
+    if (!fheWallet) {
+      reject(new Error('Session wallet not available. Please create a session wallet first.'));
+      return;
+    }
 
-    var fheWallet = walletManager.address;
+    Logger.module('FHE_GAME').log('Creating multiplayer game with general:', generalCardId, 'deck size:', deckCardIds.length);
+    Logger.module('FHE_GAME').log('FHE wallet (session):', fheWallet);
 
     // 1. Deck'i 40 karta tamamla
     var deck = self._padDeckTo40(deckCardIds);
@@ -163,30 +190,26 @@ FHEGameSession.prototype.createGame = function(generalCardId, deckCardIds) {
           encryptedResult.inputProof
         ]);
 
-        Logger.module('FHE_GAME').log('Sending TX via wallet API...');
+        Logger.module('FHE_GAME').log('Sending TX via session wallet (popupless)...');
 
-        // Direkt wallet API ile TX gonder (ethers provider kullanmadan)
-        return window.ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [{
-            from: walletManager.address,
-            to: self.contractAddress,
-            data: data,
-            gas: '0x7A1200' // 8000000 (encrypted deck icin daha fazla gas)
-          }]
+        // Session wallet ile TX gonder (popup yok!)
+        return self.sessionWallet.signTransaction({
+          to: self.contractAddress,
+          data: data,
+          gasLimit: '0x7A1200'
         });
       })
-      .then(function(txHash) {
-        Logger.module('FHE_GAME').log('createGame TX sent:', txHash);
+      .then(function(txResponse) {
+        Logger.module('FHE_GAME').log('createGame TX sent:', txResponse.hash);
 
-        // TX receipt bekle ve event'ten gameId al
-        return self._waitForReceipt(txHash);
+        // TX confirmation bekle
+        return txResponse.wait();
       })
       .then(function(receipt) {
         Logger.module('FHE_GAME').log('TX confirmed, parsing events...');
 
         // TX basarisiz olduysa hata firlat
-        if (receipt.status === '0x0' || receipt.status === 0) {
+        if (receipt.status === 0) {
           throw new Error('Transaction reverted');
         }
 
@@ -227,13 +250,14 @@ FHEGameSession.prototype.createGame = function(generalCardId, deckCardIds) {
  * Single Player oyun olustur (AI modu)
  * joinGame gerektirmez, oyun direkt baslar
  * v10: Deck shuffle edilir ve sifreli olarak gonderilir
+ * POPUPLESS: Session wallet ile TX atilir
+ *
  * @param {number} generalCardId - General kart ID'si
  * @param {number[]} deckCardIds - 40 kartlik deste
  * @returns {Promise<number>} gameId
  */
 FHEGameSession.prototype.createSinglePlayerGame = function(generalCardId, deckCardIds) {
   var self = this;
-  var walletManager = Wallet.getInstance();
 
   return new Promise(function(resolve, reject) {
     if (!self.contract) {
@@ -241,9 +265,15 @@ FHEGameSession.prototype.createSinglePlayerGame = function(generalCardId, deckCa
       return;
     }
 
-    Logger.module('FHE_GAME').log('Creating SINGLE PLAYER game with general:', generalCardId, 'deck size:', deckCardIds.length);
+    // Session wallet adresi (FHE decrypt icin gerekli)
+    var fheWallet = self.sessionWallet.getAddress();
+    if (!fheWallet) {
+      reject(new Error('Session wallet not available. Please create a session wallet first.'));
+      return;
+    }
 
-    var fheWallet = walletManager.address;
+    Logger.module('FHE_GAME').log('Creating SINGLE PLAYER game with general:', generalCardId, 'deck size:', deckCardIds.length);
+    Logger.module('FHE_GAME').log('FHE wallet (session):', fheWallet);
 
     // 1. Deck'i 40 karta tamamla
     var deck = self._padDeckTo40(deckCardIds);
@@ -268,24 +298,20 @@ FHEGameSession.prototype.createSinglePlayerGame = function(generalCardId, deckCa
           encryptedResult.inputProof
         ]);
 
-        Logger.module('FHE_GAME').log('Sending createSinglePlayerGame TX via wallet API...');
+        Logger.module('FHE_GAME').log('Sending createSinglePlayerGame TX via session wallet (popupless)...');
 
-        // Direkt wallet API ile TX gonder (ethers provider kullanmadan)
-        return window.ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [{
-            from: walletManager.address,
-            to: self.contractAddress,
-            data: data,
-            gas: '0x7A1200' // 8000000 (encrypted deck icin daha fazla gas)
-          }]
+        // Session wallet ile TX gonder (popup yok!)
+        return self.sessionWallet.signTransaction({
+          to: self.contractAddress,
+          data: data,
+          gasLimit: '0x7A1200'
         });
       })
-      .then(function(txHash) {
-        Logger.module('FHE_GAME').log('createSinglePlayerGame TX sent:', txHash);
+      .then(function(txResponse) {
+        Logger.module('FHE_GAME').log('createSinglePlayerGame TX sent:', txResponse.hash);
 
-        // TX receipt bekle ve event'ten gameId al
-        return self._waitForReceipt(txHash);
+        // TX confirmation bekle
+        return txResponse.wait();
       })
       .then(function(receipt) {
         Logger.module('FHE_GAME').log('TX confirmed, parsing events...');
@@ -293,8 +319,7 @@ FHEGameSession.prototype.createSinglePlayerGame = function(generalCardId, deckCa
         Logger.module('FHE_GAME').log('Receipt logs count:', receipt.logs ? receipt.logs.length : 0);
 
         // TX basarisiz olduysa hata firlat
-        // status: '0x1' = success, '0x0' = failed
-        if (receipt.status === '0x0' || receipt.status === 0) {
+        if (receipt.status === 0) {
           throw new Error('Transaction reverted - check contract requirements (CardRegistry, general validation, etc.)');
         }
 
@@ -344,13 +369,14 @@ FHEGameSession.prototype.createSinglePlayerGame = function(generalCardId, deckCa
 /**
  * Mevcut oyuna katil
  * v10: Deck shuffle edilir ve sifreli olarak gonderilir
+ * POPUPLESS: Session wallet ile TX atilir
+ *
  * @param {number} gameId - Katilacak oyun ID'si
  * @param {number} generalCardId - General kart ID'si
  * @param {number[]} deckCardIds - 40 kartlik deste
  */
 FHEGameSession.prototype.joinGame = function(gameId, generalCardId, deckCardIds) {
   var self = this;
-  var walletManager = Wallet.getInstance();
 
   return new Promise(function(resolve, reject) {
     if (!self.contract) {
@@ -358,9 +384,15 @@ FHEGameSession.prototype.joinGame = function(gameId, generalCardId, deckCardIds)
       return;
     }
 
-    Logger.module('FHE_GAME').log('Joining game:', gameId, 'deck size:', deckCardIds.length);
+    // Session wallet adresi (FHE decrypt icin gerekli)
+    var fheWallet = self.sessionWallet.getAddress();
+    if (!fheWallet) {
+      reject(new Error('Session wallet not available. Please create a session wallet first.'));
+      return;
+    }
 
-    var fheWallet = walletManager.address;
+    Logger.module('FHE_GAME').log('Joining game:', gameId, 'deck size:', deckCardIds.length);
+    Logger.module('FHE_GAME').log('FHE wallet (session):', fheWallet);
 
     // 1. Deck'i 40 karta tamamla
     var deck = self._padDeckTo40(deckCardIds);
@@ -386,26 +418,22 @@ FHEGameSession.prototype.joinGame = function(gameId, generalCardId, deckCardIds)
           encryptedResult.inputProof
         ]);
 
-        Logger.module('FHE_GAME').log('Sending joinGame TX via wallet API...');
+        Logger.module('FHE_GAME').log('Sending joinGame TX via session wallet (popupless)...');
 
-        // Direkt wallet API ile TX gonder
-        return window.ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [{
-            from: walletManager.address,
-            to: self.contractAddress,
-            data: data,
-            gas: '0x7A1200' // 8000000 (encrypted deck icin daha fazla gas)
-          }]
+        // Session wallet ile TX gonder (popup yok!)
+        return self.sessionWallet.signTransaction({
+          to: self.contractAddress,
+          data: data,
+          gasLimit: '0x7A1200'
         });
       })
-      .then(function(txHash) {
-        Logger.module('FHE_GAME').log('joinGame TX sent:', txHash);
-        return self._waitForReceipt(txHash);
+      .then(function(txResponse) {
+        Logger.module('FHE_GAME').log('joinGame TX sent:', txResponse.hash);
+        return txResponse.wait();
       })
       .then(function(receipt) {
         // TX basarisiz olduysa hata firlat
-        if (receipt.status === '0x0' || receipt.status === 0) {
+        if (receipt.status === 0) {
           throw new Error('Transaction reverted');
         }
 
@@ -413,8 +441,8 @@ FHEGameSession.prototype.joinGame = function(gameId, generalCardId, deckCardIds)
         self.playerIndex = 1;
         Logger.module('FHE_GAME').log('Joined game:', gameId);
 
-        // Session baslat (FHE decrypt icin)
-        return self.fheSession.initializeSession(self.contractAddress);
+        // Session baslat (FHE decrypt icin - PIN korumalı)
+        return self.fheSession.initializeSessionWithPIN(self.contractAddress);
       })
       .then(function() {
         resolve(gameId);
@@ -483,8 +511,8 @@ FHEGameSession.prototype.decryptHand = function() {
     Logger.module('FHE_GAME').log('[FHE] Player Index:', self.playerIndex);
     Logger.module('FHE_GAME').log('[FHE] Contract Address:', self.contractAddress);
 
-    // 1. Handle'lari al (view call - popup yok)
-    self.contract.getHand(self.gameId)
+    // 1. Handle'lari al (session wallet signer ile - msg.sender = session wallet)
+    self.sessionWallet.callContract(self.contractAddress, GAME_SESSION_ABI, 'getHand', [self.gameId])
       .then(function(handles) {
         self.handHandles = handles;
         Logger.module('FHE_GAME').log('[FHE] Raw handles from contract:', handles.length);
@@ -492,8 +520,8 @@ FHEGameSession.prototype.decryptHand = function() {
           Logger.module('FHE_GAME').log('[FHE]   Handle[' + idx + ']:', h.toString().slice(0, 20) + '...');
         });
 
-        // 2. El boyutunu al
-        return self.contract.getPlayerInfo(self.gameId, self.playerIndex);
+        // 2. El boyutunu al (session wallet signer ile)
+        return self.sessionWallet.callContract(self.contractAddress, GAME_SESSION_ABI, 'getPlayerInfo', [self.gameId, self.playerIndex]);
       })
       .then(function(playerInfo) {
         var handSize = playerInfo.handSize;
@@ -603,8 +631,8 @@ FHEGameSession.prototype.drawCard = function() {
 
     Logger.module('FHE_GAME').log('[DRAW] Drawing card from deck index:', self.localDeckIndex);
 
-    // Contract'tan deck[localDeckIndex]'i al (view call - TX yok, gas yok)
-    self.contract.getCardFromDeck(self.gameId, self.localDeckIndex)
+    // Contract'tan deck[localDeckIndex]'i al (session wallet signer ile)
+    self.sessionWallet.callContract(self.contractAddress, GAME_SESSION_ABI, 'getCardFromDeck', [self.gameId, self.localDeckIndex])
       .then(function(encryptedHandle) {
         Logger.module('FHE_GAME').log('[DRAW] Got encrypted handle from deck[' + self.localDeckIndex + ']');
 
@@ -659,6 +687,8 @@ FHEGameSession.prototype.drawCard = function() {
 
 /**
  * Kart oyna (public decrypt ile)
+ * POPUPLESS: Session wallet ile TX atilir
+ *
  * @param {number} handSlot - Eldeki kart indexi
  * @param {number} x - Board X pozisyonu
  * @param {number} y - Board Y pozisyonu
@@ -674,7 +704,6 @@ FHEGameSession.prototype.playCard = function(handSlot, x, y) {
 
     Logger.module('FHE_GAME').log('Playing card from slot', handSlot, 'to', x, y);
 
-    var Wallet = require('app/common/wallet');
     var currentNetwork = Wallet.getCurrentNetwork();
 
     // Zaten decrypt edilmis kart ID'sini al
@@ -692,44 +721,38 @@ FHEGameSession.prototype.playCard = function(handSlot, x, y) {
       Logger.module('FHE_GAME').log('Mock mode - skipping KMS proof');
       var proof = '0x'; // Mock'ta bos proof kabul edilir
 
-      self.contract.playCard(
-        self.gameId,
-        handSlot,
-        x,
-        y,
-        encodedCardId,
-        proof
-      )
-        .then(function(tx) {
-          return tx.wait();
-        })
-        .then(function(receipt) {
-          Logger.module('FHE_GAME').log('Card played (mock mode)');
-          self._removeCardFromHand(handSlot);
-          resolve(receipt);
-        })
-        .catch(reject);
+      self.sessionWallet.callContract(
+        self.contractAddress,
+        GAME_SESSION_ABI,
+        'playCard',
+        [self.gameId, handSlot, x, y, encodedCardId, proof]
+      ).then(function(tx) {
+        return tx.wait();
+      }).then(function(receipt) {
+        Logger.module('FHE_GAME').log('Card played (mock mode, popupless)');
+        self._removeCardFromHand(handSlot);
+        resolve(receipt);
+      }).catch(reject);
       return;
     }
 
     // Gercek mode - KMS'ten public decrypt proof al
     Logger.module('FHE_GAME').log('Requesting public decrypt proof from KMS...');
+
     self._getPublicDecryptProof(self.handHandles[handSlot])
       .then(function(result) {
-        return self.contract.playCard(
-          self.gameId,
-          handSlot,
-          x,
-          y,
-          result.encodedValue,
-          result.proof
+        return self.sessionWallet.callContract(
+          self.contractAddress,
+          GAME_SESSION_ABI,
+          'playCard',
+          [self.gameId, handSlot, x, y, result.encodedValue, result.proof]
         );
       })
       .then(function(tx) {
         return tx.wait();
       })
       .then(function(receipt) {
-        Logger.module('FHE_GAME').log('Card played');
+        Logger.module('FHE_GAME').log('Card played (popupless)');
         self._removeCardFromHand(handSlot);
         resolve(receipt);
       })
@@ -784,71 +807,112 @@ FHEGameSession.prototype._getPublicDecryptProof = function(handle) {
 
 /**
  * Birim hareket ettir
+ * POPUPLESS: Session wallet ile TX atilir
  */
 FHEGameSession.prototype.moveUnit = function(fromX, fromY, toX, toY) {
   var self = this;
 
-  return self.contract.moveUnit(self.gameId, fromX, fromY, toX, toY)
-    .then(function(tx) { return tx.wait(); });
+  return self.sessionWallet.callContract(
+    self.contractAddress,
+    GAME_SESSION_ABI,
+    'moveUnit',
+    [self.gameId, fromX, fromY, toX, toY]
+  ).then(function(tx) {
+    return tx.wait();
+  });
 };
 
 /**
  * Saldir
+ * POPUPLESS: Session wallet ile TX atilir
  */
 FHEGameSession.prototype.attack = function(attackerX, attackerY, targetX, targetY) {
   var self = this;
 
-  return self.contract.attack(self.gameId, attackerX, attackerY, targetX, targetY)
-    .then(function(tx) { return tx.wait(); });
+  return self.sessionWallet.callContract(
+    self.contractAddress,
+    GAME_SESSION_ABI,
+    'attack',
+    [self.gameId, attackerX, attackerY, targetX, targetY]
+  ).then(function(tx) {
+    return tx.wait();
+  });
 };
 
 /**
  * Kart degistir (replace)
+ * POPUPLESS: Session wallet ile TX atilir
  */
 FHEGameSession.prototype.replaceCard = function(handSlot) {
   var self = this;
 
-  return self.contract.replaceCard(self.gameId, handSlot)
-    .then(function(tx) { return tx.wait(); })
-    .then(function() {
-      // Yeni eli decrypt et
-      return self.decryptHand();
-    });
+  return self.sessionWallet.callContract(
+    self.contractAddress,
+    GAME_SESSION_ABI,
+    'replaceCard',
+    [self.gameId, handSlot]
+  ).then(function(tx) {
+    return tx.wait();
+  }).then(function() {
+    // Yeni eli decrypt et
+    return self.decryptHand();
+  });
 };
 
 /**
  * Turu bitir
+ * POPUPLESS: Session wallet ile TX atilir
  */
 FHEGameSession.prototype.endTurn = function() {
   var self = this;
 
-  return self.contract.endTurn(self.gameId)
-    .then(function(tx) { return tx.wait(); });
+  return self.sessionWallet.callContract(
+    self.contractAddress,
+    GAME_SESSION_ABI,
+    'endTurn',
+    [self.gameId]
+  ).then(function(tx) {
+    return tx.wait();
+  });
 };
 
 /**
  * Teslim ol
+ * POPUPLESS: Session wallet ile TX atilir
  */
 FHEGameSession.prototype.resign = function() {
   var self = this;
 
-  return self.contract.resign(self.gameId)
-    .then(function(tx) { return tx.wait(); });
+  return self.sessionWallet.callContract(
+    self.contractAddress,
+    GAME_SESSION_ABI,
+    'resign',
+    [self.gameId]
+  ).then(function(tx) {
+    return tx.wait();
+  });
 };
 
 /**
  * Mulligan tamamla
+ * POPUPLESS: Session wallet ile TX atilir
+ *
  * @param {boolean[]} mulliganSlots - Degistirilecek slotlar
  */
 FHEGameSession.prototype.completeMulligan = function(mulliganSlots) {
   var self = this;
 
-  return self.contract.completeMulligan(self.gameId, mulliganSlots)
-    .then(function(tx) { return tx.wait(); })
-    .then(function() {
-      // Yeni eli decrypt et
-      return self.decryptHand();
-    });
+  return self.sessionWallet.callContract(
+    self.contractAddress,
+    GAME_SESSION_ABI,
+    'completeMulligan',
+    [self.gameId, mulliganSlots]
+  ).then(function(tx) {
+    return tx.wait();
+  }).then(function() {
+    // Yeni eli decrypt et
+    return self.decryptHand();
+  });
 };
 
 /**
@@ -857,7 +921,7 @@ FHEGameSession.prototype.completeMulligan = function(mulliganSlots) {
 FHEGameSession.prototype.getGameState = function() {
   var self = this;
 
-  return self.contract.getGameState(self.gameId)
+  return self.sessionWallet.callContract(self.contractAddress, GAME_SESSION_ABI, 'getGameState', [self.gameId])
     .then(function(result) {
       return {
         state: result.state,
@@ -874,7 +938,7 @@ FHEGameSession.prototype.getGameState = function() {
 FHEGameSession.prototype.getPlayerInfo = function(playerIndex) {
   var self = this;
 
-  return self.contract.getPlayerInfo(self.gameId, playerIndex)
+  return self.sessionWallet.callContract(self.contractAddress, GAME_SESSION_ABI, 'getPlayerInfo', [self.gameId, playerIndex])
     .then(function(result) {
       return {
         wallet: result.wallet,
@@ -893,7 +957,7 @@ FHEGameSession.prototype.getPlayerInfo = function(playerIndex) {
 FHEGameSession.prototype.getBoardUnit = function(x, y) {
   var self = this;
 
-  return self.contract.getBoardUnit(self.gameId, x, y)
+  return self.sessionWallet.callContract(self.contractAddress, GAME_SESSION_ABI, 'getBoardUnit', [self.gameId, x, y])
     .then(function(result) {
       return {
         cardId: result.cardId,
@@ -950,20 +1014,29 @@ FHEGameSession.prototype._shuffleDeck = function(deck) {
  * v10: Frontend deck'i sifreler, contract'a handles + proof gonderilir
  * TX verisinde plaintext deck gorunmez, rakip deck sirasini bilemez
  *
+ * Session wallet adresi kullanilir (FHE ACL icin)
+ *
  * @private
  * @param {number[]} deckCardIds - 40 kartlik deste (shuffle edilmis)
  * @returns {Promise<{handles: string[], inputProof: string}>}
  */
 FHEGameSession.prototype._encryptDeck = function(deckCardIds) {
   var self = this;
-  var walletManager = Wallet.getInstance();
   var currentNetwork = Wallet.getCurrentNetwork();
 
+  // Session wallet adresi (FHE ACL icin)
+  var userAddress = self.sessionWallet.getAddress();
+
   return new Promise(function(resolve, reject) {
+    if (!userAddress) {
+      reject(new Error('Session wallet not available for encryption'));
+      return;
+    }
+
     Logger.module('FHE_GAME').log('[ENCRYPT] Starting deck encryption...');
     Logger.module('FHE_GAME').log('[ENCRYPT] Network:', currentNetwork);
     Logger.module('FHE_GAME').log('[ENCRYPT] Contract:', self.contractAddress);
-    Logger.module('FHE_GAME').log('[ENCRYPT] User:', walletManager.address);
+    Logger.module('FHE_GAME').log('[ENCRYPT] User (session wallet):', userAddress);
 
     // Mock mode (Hardhat) - gercek sifreleme yok, mock handles olustur
     if (currentNetwork === 'hardhat' || currentNetwork === 'localhost') {
@@ -991,10 +1064,10 @@ FHEGameSession.prototype._encryptDeck = function(deckCardIds) {
     // FHEVM SDK'yi dinamik olarak yukle
     self._getFhevmInstance()
       .then(function(fhevmInstance) {
-        // createEncryptedInput olustur
+        // createEncryptedInput olustur - session wallet adresi ile
         var input = fhevmInstance.createEncryptedInput(
           self.contractAddress,
-          walletManager.address
+          userAddress
         );
 
         // Her kart ID'sini 16-bit olarak ekle
@@ -1077,20 +1150,25 @@ FHEGameSession.prototype._getFhevmInstance = function() {
 
         initPromise
           .then(function() {
-            // SepoliaConfig kullanarak instance olustur
+            // FHEVM SDK config - wallet.js'den merkezi metodlar ile al
+            var activeRpcUrl = Wallet.getActiveRpcUrl();
+            var chainId = Wallet.getActiveChainId();
+
+            Logger.module('FHE_GAME').log('[FHEVM] config - chainId:', chainId, 'rpcUrl:', activeRpcUrl);
+
             var config = {
               aclContractAddress: '0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D',
               kmsContractAddress: '0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A',
               inputVerifierContractAddress: '0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0',
               verifyingContractAddressDecryption: '0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478',
               verifyingContractAddressInputVerification: '0x483b9dE06E4E4C7D35CCf5837A1668487406D955',
-              chainId: 11155111,
+              chainId: chainId,
               gatewayChainId: 10901,
-              network: window.ethereum, // MetaMask provider
+              network: activeRpcUrl,
               relayerUrl: 'https://relayer.testnet.zama.org'
             };
 
-            Logger.module('FHE_GAME').log('[FHEVM] Creating instance with SepoliaConfig');
+            Logger.module('FHE_GAME').log('[FHEVM] Creating instance');
             return sdk.createInstance(config);
           })
           .then(function(instance) {

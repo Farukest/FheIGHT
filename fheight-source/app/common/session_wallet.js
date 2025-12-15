@@ -29,6 +29,15 @@ function getMainWallet() {
 }
 
 /**
+ * Get active RPC provider from wallet.js
+ * Dinamik olarak aktif network'e gore RPC provider dondurur
+ */
+function getActiveRpcProvider() {
+  var Wallet = require('app/common/wallet');
+  return Wallet.getActiveRpcProvider();
+}
+
+/**
  * Get storage key for current main wallet
  * Her ana cüzdan icin ayri session wallet
  * Ana cüzdan adresi wallet.js'den gelir (IIFE ile initialize edilmiş)
@@ -75,7 +84,7 @@ var SessionWalletManager = function() {
   this._wallet = null;  // Memory'de, localStorage'a YAZILMAZ
   this._balance = '0.0000';
   this._balancePollingInterval = null;
-  this._provider = null;
+  // _provider removed - all operations use Wallet.getActiveRpcProvider()
   this._fheSession = null;
   this._walletVaultAddress = null;
 };
@@ -140,59 +149,9 @@ SessionWalletManager.prototype.getBalance = function() {
   return this._balance;
 };
 
-/**
- * Get ethers provider (connected to wallet - for signing transactions)
- * Ana wallet.js modülünden provider alır
- */
-SessionWalletManager.prototype._getProvider = function() {
-  if (!this._provider && window.ethers) {
-    var walletManager = getMainWallet();
-    var provider = walletManager.getProvider();
-    if (provider) {
-      this._provider = new window.ethers.providers.Web3Provider(provider);
-    }
-  }
-  return this._provider;
-};
-
-/**
- * Get RPC provider for current network (uses Alchemy for Sepolia)
- * Centralized RPC provider method - used for all RPC operations
- * @param {string} networkOverride - Optional network override
- * @returns {object} ethers.providers.JsonRpcProvider
- */
-SessionWalletManager.prototype._getRpcProvider = function(networkOverride) {
-  var networkName = networkOverride || getMainWalletState().networkName;
-
-  // Use Wallet module's Alchemy RPC for Sepolia (fast, reliable)
-  var Wallet = require('app/common/wallet');
-
-  if (networkName === 'sepolia') {
-    return new window.ethers.providers.JsonRpcProvider(Wallet.SEPOLIA_RPC_URL);
-  } else if (networkName === 'hardhat') {
-    return new window.ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
-  }
-
-  return null;
-};
-
-/**
- * Get read-only provider for current network (for READ operations)
- * Uses Alchemy RPC for Sepolia (fast, reliable)
- */
-SessionWalletManager.prototype._getReadOnlyProvider = function() {
-  var state = getMainWalletState();
-  var networkName = state.networkName;
-
-  // Only support sepolia and hardhat
-  if (networkName !== 'sepolia' && networkName !== 'hardhat') {
-    Logger.module('SESSION_WALLET').warn('Unsupported network for session wallet:', networkName);
-    return null;
-  }
-
-  // Use centralized _getRpcProvider method
-  return this._getRpcProvider();
-};
+// Old _getProvider() removed - it used MetaMask's slow RPC (rpc.sepolia.org)
+// All session wallet operations now use Wallet.getActiveRpcProvider() from wallet.js
+// This ensures fast, reliable Alchemy RPC for all TX and read operations
 
 /**
  * Create FHE Wallet - tek adimda wallet olustur ve blockchain'e kaydet
@@ -287,16 +246,22 @@ SessionWalletManager.prototype._createWalletInternal = function(walletManager) {
 
       initPromise
         .then(function() {
-          // SepoliaConfig for FHEVM instance
+          // FHEVM SDK config - wallet.js'den merkezi metodlar ile al
+          var Wallet = require('app/common/wallet');
+          var activeRpcUrl = Wallet.getActiveRpcUrl();
+          var chainId = Wallet.getActiveChainId();
+
+          Logger.module('SESSION_WALLET').log('FHEVM config - chainId:', chainId, 'rpcUrl:', activeRpcUrl);
+
           var config = {
             aclContractAddress: '0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D',
             kmsContractAddress: '0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A',
             inputVerifierContractAddress: '0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0',
             verifyingContractAddressDecryption: '0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478',
             verifyingContractAddressInputVerification: '0x483b9dE06E4E4C7D35CCf5837A1668487406D955',
-            chainId: 11155111,
+            chainId: chainId,
             gatewayChainId: 10901,
-            network: getMainWallet().getProvider(),
+            network: activeRpcUrl,
             relayerUrl: 'https://relayer.testnet.zama.org'
           };
 
@@ -385,8 +350,9 @@ SessionWalletManager.prototype.retrieveFromChain = function() {
     var fheSession = null;
     var vaultAddress = null;
     var userAddress = state.address;
-    var ethersProvider = walletManager.ethersProvider;
     var signer = walletManager.getSigner();
+    // Read operations use centralized Wallet.getActiveRpcProvider() - dynamic RPC based on network
+    var readOnlyProvider = getActiveRpcProvider();
 
     Logger.module('SESSION_WALLET').log('Using wallet address from wallet.js:', userAddress);
 
@@ -397,31 +363,26 @@ SessionWalletManager.prototype.retrieveFromChain = function() {
         fheSession = self._getFHESession();
         vaultAddress = self._getWalletVaultAddress();
 
-        // FHE session initialize edilmemişse veya WalletVault izinli değilse yeni session gerekli
-        var sessionContracts = fheSession.contractAddresses || [];
-        var hasWalletVaultPermission = sessionContracts.some(function(addr) {
-          return addr && addr.toLowerCase() === vaultAddress.toLowerCase();
-        });
+        // GameSession adresini de al - session TUM gerekli contract'lari kapsamali
+        var FHESession = require('app/common/fhe_session');
+        var addresses = FHESession.getInstance().getContractAddresses();
+        var gameSessionAddress = addresses.GameSession;
 
-        if (!fheSession.isSessionValid() || !hasWalletVaultPermission) {
-          Logger.module('SESSION_WALLET').log('FHE session needs WalletVault permission, clearing and reinitializing...');
-          Logger.module('SESSION_WALLET').log('Current session contracts:', sessionContracts);
-          Logger.module('SESSION_WALLET').log('WalletVault address:', vaultAddress);
+        Logger.module('SESSION_WALLET').log('WalletVault address:', vaultAddress);
+        Logger.module('SESSION_WALLET').log('GameSession address:', gameSessionAddress);
+        Logger.module('SESSION_WALLET').log('Calling initializeSessionWithPIN with BOTH contracts...');
 
-          // Mevcut session'ı temizle ve WalletVault dahil yeni session oluştur
-          fheSession.clearSession();
-
-          // Tüm contract'ları dahil et (GameSession + WalletVault)
-          var FHESession = require('app/common/fhe_session');
-          var addresses = FHESession.getInstance().getContractAddresses();
-          var allContracts = [addresses.GameSession, vaultAddress].filter(Boolean);
-
-          Logger.module('SESSION_WALLET').log('Creating new session with contracts:', allContracts);
-          return fheSession.initializeSession(allContracts);
+        // initializeSessionWithPIN:
+        // - Memory'de gecerli session varsa kullanir
+        // - Encrypted session varsa PIN sorar ve yukler
+        // - Yoksa yeni session olusturur (MetaMask imza + PIN olustur)
+        // ONEMLI: TUM contract adresleri dahil edilmeli (WalletVault + GameSession)
+        // Aksi halde GameSession'dan decrypt yapildiginda signature mismatch olur!
+        var allContracts = [vaultAddress];
+        if (gameSessionAddress) {
+          allContracts.push(gameSessionAddress);
         }
-
-        Logger.module('SESSION_WALLET').log('Existing session has WalletVault permission');
-        return Promise.resolve();
+        return fheSession.initializeSessionWithPIN(allContracts);
       })
       .then(function() {
 
@@ -431,7 +392,7 @@ SessionWalletManager.prototype.retrieveFromChain = function() {
 
         Logger.module('SESSION_WALLET').log('Retrieving encrypted key from WalletVault...');
 
-        var contract = new window.ethers.Contract(vaultAddress, WALLET_VAULT_ABI, ethersProvider);
+        var contract = new window.ethers.Contract(vaultAddress, WALLET_VAULT_ABI, readOnlyProvider);
 
         // First check if user has stored key
         return contract.hasKey(userAddress);
@@ -441,9 +402,9 @@ SessionWalletManager.prototype.retrieveFromChain = function() {
           throw new Error('No key stored for this wallet');
         }
 
-        // Get encrypted key handle
-        var contract = new window.ethers.Contract(vaultAddress, WALLET_VAULT_ABI, signer);
-        return contract.getEncryptedKey();
+        // Get encrypted key handle - use Alchemy RPC with from address (view function)
+        var contract = new window.ethers.Contract(vaultAddress, WALLET_VAULT_ABI, readOnlyProvider);
+        return contract.getEncryptedKey({ from: userAddress });
       })
       .then(function(encryptedHandle) {
         Logger.module('SESSION_WALLET').log('Got encrypted handle (raw):', encryptedHandle.toString());
@@ -511,6 +472,7 @@ SessionWalletManager.prototype.getPrivateKey = function() {
 /**
  * Get wallet signer (connected to provider)
  * If wallet is not in memory, retrieves from blockchain first
+ * Uses Alchemy RPC for fast, reliable TX sending
  */
 SessionWalletManager.prototype.getSigner = function() {
   if (!this._wallet) {
@@ -518,10 +480,8 @@ SessionWalletManager.prototype.getSigner = function() {
     return null;
   }
 
-  var provider = this._getProvider();
-  if (!provider) {
-    return null;
-  }
+  // Use centralized Alchemy RPC provider (NOT MetaMask's slow RPC)
+  var provider = getActiveRpcProvider();
 
   return this._wallet.connect(provider);
 };
@@ -545,6 +505,23 @@ SessionWalletManager.prototype.ensureWalletLoaded = function() {
       })
       .catch(reject);
   });
+};
+
+/**
+ * Get signer asynchronously (ensures wallet is loaded first)
+ * Use this instead of getSigner() when wallet might not be loaded yet
+ * @returns {Promise<ethers.Wallet>} Signer connected to Alchemy RPC
+ */
+SessionWalletManager.prototype.getSignerAsync = function() {
+  var self = this;
+  return this.ensureWalletLoaded()
+    .then(function() {
+      var signer = self.getSigner();
+      if (!signer) {
+        throw new Error('Session wallet signer not available');
+      }
+      return signer;
+    });
 };
 
 /**
@@ -572,12 +549,8 @@ SessionWalletManager.prototype.sendETH = function(toAddress, amount) {
 
     Logger.module('SESSION_WALLET').log('Sending ETH via session wallet on network:', networkName);
 
-    // Use Alchemy RPC provider (fast, reliable - no timeout)
-    var provider = self._getRpcProvider();
-    if (!provider) {
-      reject(new Error('Failed to get RPC provider'));
-      return;
-    }
+    // Use centralized Wallet.getActiveRpcProvider() - dynamic RPC based on network
+    var provider = getActiveRpcProvider();
 
     var connectedWallet = self._wallet.connect(provider);
 
@@ -607,13 +580,8 @@ SessionWalletManager.prototype.sendETH = function(toAddress, amount) {
  * Sign a transaction (for game contract calls)
  */
 SessionWalletManager.prototype.signTransaction = function(tx) {
-  var self = this;
-  return this.ensureWalletLoaded()
-    .then(function() {
-      var signer = self.getSigner();
-      if (!signer) {
-        throw new Error('Wallet not available');
-      }
+  return this.getSignerAsync()
+    .then(function(signer) {
       return signer.sendTransaction(tx);
     });
 };
@@ -622,25 +590,11 @@ SessionWalletManager.prototype.signTransaction = function(tx) {
  * Call a contract method
  */
 SessionWalletManager.prototype.callContract = function(contractAddress, abi, methodName, args) {
-  var self = this;
-  return new Promise(function(resolve, reject) {
-    self.ensureWalletLoaded()
-      .then(function() {
-        var signer = self.getSigner();
-        if (!signer) {
-          throw new Error('Wallet not available');
-        }
-
-        var contract = new window.ethers.Contract(contractAddress, abi, signer);
-        return contract[methodName].apply(contract, args);
-      })
-      .then(function(txResponse) {
-        resolve(txResponse);
-      })
-      .catch(function(err) {
-        reject(err);
-      });
-  });
+  return this.getSignerAsync()
+    .then(function(signer) {
+      var contract = new window.ethers.Contract(contractAddress, abi, signer);
+      return contract[methodName].apply(contract, args);
+    });
 };
 
 /**
@@ -654,13 +608,8 @@ SessionWalletManager.prototype.refreshBalance = function() {
     return Promise.resolve('0.0000');
   }
 
-  // Use read-only provider - always connects to target network (Sepolia)
-  // This works regardless of what network the user's wallet is on
-  var provider = this._getReadOnlyProvider();
-  if (!provider) {
-    Logger.module('SESSION_WALLET').warn('No read-only provider available for balance check');
-    return Promise.resolve(this._balance);
-  }
+  // Use centralized Wallet.getActiveRpcProvider() - dynamic RPC based on network
+  var provider = getActiveRpcProvider();
 
   return provider.getBalance(address)
     .then(function(balance) {
@@ -818,16 +767,8 @@ SessionWalletManager.prototype.syncWithBlockchain = function() {
       return;
     }
 
-    // Get read-only provider
-    var readOnlyProvider = self._getReadOnlyProvider();
-    if (!readOnlyProvider) {
-      Logger.module('SESSION_WALLET').warn('No read-only provider available, skipping sync');
-      self._syncing = false;
-      self._synced = true;
-      self.trigger('syncCompleted', null);
-      resolve(null);
-      return;
-    }
+    // Get read-only provider from centralized wallet.js
+    var readOnlyProvider = getActiveRpcProvider();
 
     // Get contract addresses for current network
     var FHESession = require('app/common/fhe_session');

@@ -70,7 +70,17 @@ FHEGameMode.prototype.initialize = function(contractAddress) {
     // FHE Session'i baslat (session key + signature)
     self.fheSession = FHESession.getInstance();
 
-    self.fheSession.initializeSession(contractAddress)
+    // TUM gerekli contract adreslerini dahil et (GameSession + WalletVault)
+    // Aksi halde session sadece GameSession icerirse, session wallet
+    // private key decrypt'i icin ayri bir session/signature gerekir
+    var addresses = self.fheSession.getContractAddresses();
+    var allContracts = [contractAddress]; // GameSession
+    if (addresses.WalletVault && allContracts.indexOf(addresses.WalletVault) === -1) {
+      allContracts.push(addresses.WalletVault);
+    }
+    Logger.module('FHE_MODE').log('FHE Session contracts:', allContracts);
+
+    self.fheSession.initializeSessionWithPIN(allContracts)
       .then(function(sessionInfo) {
         Logger.module('FHE_MODE').log('FHE Session initialized', {
           fromCache: sessionInfo.fromCache

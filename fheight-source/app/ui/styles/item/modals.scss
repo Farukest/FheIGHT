@@ -91,6 +91,14 @@
 		}
 	}
 
+	// PIN dialog için min-height kaldır
+	&#app-pin-dialog {
+		.modal-dialog .modal-content .modal-body {
+			min-height: auto;
+			padding: 2rem 3rem;
+		}
+	}
+
 	.modal-dialog {
 		.modal-content {
 			.modal-footer {

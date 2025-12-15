@@ -9,6 +9,11 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
+    // COOP/COEP headers for FHE SDK threading support (SharedArrayBuffer)
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
