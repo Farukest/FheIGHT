@@ -32,7 +32,7 @@ const config = convict({
   sp_port: {
     doc: 'The SP server port to bind.',
     format: 'port',
-    default: 8000,
+    default: 18000,
     env: 'SP_PORT',
   },
   api: {

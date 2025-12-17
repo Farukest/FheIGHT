@@ -1,0 +1,48 @@
+<div class="modal-dialog pin-dialog">
+	<button type="button" class="btn btn-clean btn-user-cancel btn-cancel-primary cancel-dialog"></button>
+	<div class="modal-content">
+		<div class="modal-header">
+			<h4 class="modal-title">
+				{{#if isCreate}}
+					<i class="fa fa-lock"></i> Create PIN
+				{{else}}
+					<i class="fa fa-key"></i> Enter PIN
+				{{/if}}
+			</h4>
+		</div>
+		<div class="modal-body">
+			{{#if message}}
+				<div class="modal-message">{{message}}</div>
+			{{/if}}
+			<div class="pin-input-container">
+				<input type="password"
+					   class="pin-input form-control"
+					   maxlength="6"
+					   placeholder="{{#if isCreate}}4-6 digits{{else}}Enter PIN{{/if}}"
+					   autocomplete="off"
+					   inputmode="numeric"
+					   pattern="[0-9]*">
+				{{#if isCreate}}
+					<input type="password"
+						   class="pin-confirm-input form-control"
+						   maxlength="6"
+						   placeholder="Confirm PIN"
+						   autocomplete="off"
+						   inputmode="numeric"
+						   pattern="[0-9]*">
+				{{/if}}
+			</div>
+			<div class="pin-error hide">
+				<span class="error-text"></span>
+			</div>
+		</div>
+		<div class="modal-footer">
+			<div class="btn-group btn-group-centered">
+				<button class="btn btn-clean btn-clean-primary cancel-dialog">Cancel</button>
+				<button class="btn btn-clean btn-clean-primary confirm-dialog">
+					{{#if isCreate}}Create{{else}}Unlock{{/if}}
+				</button>
+			</div>
+		</div>
+	</div>
+</div>

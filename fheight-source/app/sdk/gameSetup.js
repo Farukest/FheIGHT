@@ -163,13 +163,36 @@ GameSetup.setupDeck = function(gameSession, player) {
 };
 
 GameSetup.addCardsToDeck = function(gameSession, player, playerData, playerCardsData) {
-  // FHE MODE: Skip deck setup for FHE player - cards come from blockchain
+  // FHE MODE: Add cards to deck in ORIGINAL ORDER (no shuffle, no starting hand)
+  // Per FLOW.MD: Server will populate hand after reading from blockchain
   if (gameSession.fheEnabled && playerData.fhePlayer) {
-    console.log('[GAME SETUP] FHE MODE: Skipping deck setup for FHE player (cards from blockchain)');
+    console.log('[GAME SETUP] FHE MODE: Adding deck cards in ORIGINAL ORDER (no hand)');
     console.log('[GAME SETUP] FHE player ID:', player.getPlayerId());
-    // Just initialize empty deck - frontend will populate from blockchain
-    const playerDeck = player.getDeck();
-    playerDeck.setOwnerId(player.getPlayerId());
+
+    if (playerCardsData != null) {
+      const playerDeck = player.getDeck();
+      playerDeck.setOwnerId(player.getPlayerId());
+
+      // Copy and remove general (first card)
+      playerCardsData = UtilsJavascript.deepCopy(playerCardsData);
+      playerCardsData.shift();
+
+      // Store original deck order for blockchain index calculation
+      // Server will use this with getVerifiedDrawOrder indices
+      gameSession.fheDeckOrder = playerCardsData.map(function(c) { return c.id; });
+      gameSession.fhePlayerId = player.getPlayerId();
+      console.log('[GAME SETUP] FHE deck order stored:', gameSession.fheDeckOrder.length, 'cards');
+
+      // Add ALL cards to deck in ORIGINAL ORDER (no hand, no shuffle)
+      for (const cardData of playerCardsData) {
+        const card = gameSession.getExistingCardFromIndexOrCreateCardFromData(cardData);
+        if (card != null) {
+          card.setOwner(player);
+          gameSession.applyCardToDeck(playerDeck, cardData, card);
+        }
+      }
+      console.log('[GAME SETUP] FHE deck populated with', playerDeck.getNumCardsInDrawPile(), 'cards (hand empty)');
+    }
     return;
   }
 

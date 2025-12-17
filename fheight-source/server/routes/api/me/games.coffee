@@ -418,7 +418,8 @@ router.post "/single_player", (req, res, next) ->
     # add FHE mode if requested
     if result.value.fhe_enabled
       gameSetupOptions.fheEnabled = true
-      Logger.module("SINGLE PLAYER").debug "FHE mode ENABLED - player deck will come from blockchain"
+      gameSetupOptions.fheGameId = result.value.fhe_game_id  # Blockchain game ID
+      Logger.module("SINGLE PLAYER").debug "FHE mode ENABLED - fheGameId: #{result.value.fhe_game_id}"
 
     # create game
     return createSinglePlayerGame(userId,"You",GameType.SinglePlayer,deck,cardBackId,battleMapIndexesToSampleFrom,aiPlayerId,aiUsername,aiGeneralId,null,aiDifficulty,aiNumRandomCards,null,gameSetupOptions)

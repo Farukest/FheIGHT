@@ -128,7 +128,7 @@ function base64ToArrayBuffer(base64) {
 // FHEVM Contract adresleri (Sepolia)
 var DEPLOYED_CONTRACTS = {
   sepolia: {
-    GameSession: '0x953E4749A9324e0d270d3713bbb64AA66F840e08', // v14 - renamed sessionKey to fheWallet
+    GameSession: '0x0Cc86698f008a6b86d1469Dcc8929E4FF7c28dBD', // v19 - FHE.allowThis() added for ACL permissions
     CardRegistry: '0xf9EB68605c1df066fC944c28770fFF8476ADE8fc', // with 18 generals + 17 minions
     SpiritOrb: '0xD0C7a512BAEaCe7a52E9BEe47A1B13868A0345B3',
     CardNFT: '0xD200776dE5A8472382F5b8b902a676E2117d7A31',
@@ -141,7 +141,7 @@ var DEPLOYED_CONTRACTS = {
     SpiritOrb: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
     CardRegistry: '0x0165878A594ca255338adfa4d48449f69242Eb8F',
     FHECounter: '0x0B306BF915C4d645ff596e518fAf3F9669b97016',
-    GameSession: '0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1',
+    GameSession: '0x68B1D87F95878fE05B998F19b66F4baba5De1aed', // v15 - ownerWallet parameter added
     WalletVault: '0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE'
   }
 };

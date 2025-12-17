@@ -3,10 +3,10 @@ import { ethers } from "hardhat";
 async function main() {
   const [deployer] = await ethers.getSigners();
 
-  console.log("Deploying GameSession with account:", deployer.address);
+  console.log("Deploying GameSession V2 (FLOW.MD) with account:", deployer.address);
   console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
 
-  console.log("\nDeploying GameSession (no constructor args)...");
+  console.log("\nDeploying GameSession...");
   const GameSession = await ethers.getContractFactory("GameSession");
   const gameSession = await GameSession.deploy();
   await gameSession.waitForDeployment();
@@ -15,7 +15,7 @@ async function main() {
   console.log("GameSession deployed to:", gameSessionAddress);
 
   console.log("\n========================================");
-  console.log("UPDATE fhe_session.js with:");
+  console.log("UPDATE fhe_session.js & blockchain.coffee:");
   console.log(`GameSession: '${gameSessionAddress}'`);
   console.log("========================================");
 }

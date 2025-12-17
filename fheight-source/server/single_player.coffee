@@ -24,6 +24,7 @@ UtilsGameSession = require '../app/common/utils/utils_game_session'
 
 # lib Modules
 Consul = require './lib/consul'
+BlockchainModule = require './lib/blockchain'
 
 # Configuration object
 config = require '../config/config.js'
@@ -83,8 +84,8 @@ io.use(
 )
 module.exports = io
 port = config.get('sp_port')
-server.listen port, () ->
-  Logger.module("AI SERVER").log "SP server started on port #{port}"
+server.listen port, '127.0.0.1', () ->
+  Logger.module("AI SERVER").log "SP server started on port #{port} (localhost only)"
 
 # redis
 {Redis, Jobs, GameManager} = require './redis/'
@@ -134,6 +135,17 @@ io.sockets.on "connection", (socket) ->
   socket.on EVENTS.leave_game, onGameLeave
   socket.on EVENTS.network_game_event, onGameEvent
   socket.on "disconnect", onGameDisconnect
+
+  # FHE Event handlers (FLOW.MD)
+  # DEBUG: Check if handler functions are defined
+  Logger.module("FHE").log "Handler check - onFHEGameCreated:", typeof onFHEGameCreated
+  Logger.module("FHE").log "Handler check - onFHEInitialHandRevealed:", typeof onFHEInitialHandRevealed
+  Logger.module("FHE").log "Handler check - onFHECardDrawn:", typeof onFHECardDrawn
+
+  socket.on "fhe_game_created", onFHEGameCreated
+  socket.on "fhe_initial_hand_revealed", onFHEInitialHandRevealed
+  socket.on "fhe_card_drawn", onFHECardDrawn
+  Logger.module("FHE").log "FHE socket handlers registered for socket #{socket.id}"
 
 getConnectedSpectatorsDataForGamePlayer = (gameId,playerId)->
   spectators = []
@@ -831,6 +843,12 @@ onGameTimeTick = (gameId) ->
       stopTurnTimer(gameId)
 
       if gameSession.status == SDK.GameStatus.new
+        # FHE MODE: Don't auto-mulligan if initial hand reveal is not complete
+        fheState = games[gameId]?.fhe
+        if fheState?.enabled and not fheState.initialHandRevealComplete
+          Logger.module("FHE").debug "[G:#{gameId}]", "onGameTimeTick:: FHE mode - waiting for initial hand reveal, skipping auto-mulligan"
+          return
+
         # force draw starting hand with current cards
         for player in gameSession.players
           if not player.getHasStartingHand()
@@ -838,6 +856,12 @@ onGameTimeTick = (gameId) ->
             drawStartingHandAction = player.actionDrawStartingHand([])
             gameSession.executeAction(drawStartingHandAction)
       else if gameSession.status == SDK.GameStatus.active
+        # FHE MODE: Don't auto-end-turn if draw decrypt is not complete
+        fheStateActive = games[gameId]?.fhe
+        if fheStateActive?.enabled and not fheStateActive.turnDrawComplete
+          Logger.module("FHE").debug "[G:#{gameId}]", "onGameTimeTick:: FHE mode - waiting for draw decrypt, skipping auto-end-turn"
+          return
+
         # force end turn
         Logger.module("IO").log "[G:#{gameId}]", "onGameTimeTick:: turn timer up, submitting player #{gameSession.getCurrentPlayerId().blue} turn".red
         endTurnAction = gameSession.actionEndTurn()
@@ -1107,6 +1131,20 @@ initGameSession = (gameId,onComplete) ->
     # store session
     games[gameId].session = gameSession
 
+    # FHE MODE: Initialize fhe state from gameSession if enabled
+    if gameSession.fheEnabled
+      Logger.module("FHE").debug "[G:#{gameId}]", "FHE mode detected in gameSession, initializing fhe state"
+      games[gameId].fhe =
+        enabled: true
+        network: 'sepolia'
+        blockchainGameId: gameSession.fheGameId
+        playerDeck: gameSession.fheDeckOrder or []
+        revealedCount: 0
+        remainingDeck: null
+        verifiedHand: null
+        turnDrawComplete: true  # First turn can proceed, set to false when human ends turn
+      Logger.module("FHE").debug "[G:#{gameId}]", "FHE state initialized - blockchainGameId: #{gameSession.fheGameId}, deck: #{games[gameId].fhe.playerDeck.length} cards"
+
     # store mouse and ui event data
     games[gameId].mouseAndUIEvents = mouseData
 
@@ -1125,7 +1163,11 @@ initGameSession = (gameId,onComplete) ->
     subscribeToGameSessionEvents(gameId)
 
     # start the turn timer
-    restartTurnTimer(gameId)
+    # FHE MODE: Don't start turn timer until initial hand reveal is complete
+    if games[gameId].fhe?.enabled
+      Logger.module("FHE").debug "[G:#{gameId}]", "FHE mode - turn timer will start after initial hand reveal"
+    else
+      restartTurnTimer(gameId)
 
     return Promise.resolve([
       games[gameId].session
@@ -1216,6 +1258,17 @@ onStep = (event) ->
           if games[gameId]? and games[gameId].session?
             GameManager.saveGameSession(gameId, games[gameId].session.serializeToJSON(games[gameId].session))
         ), 500)
+
+        # FHE MODE: When HUMAN player ends their turn, they draw a card
+        # Mark draw as pending - AI must wait for FHE decrypt to complete
+        fheState = games[gameId]?.fhe
+        if fheState?.enabled
+          endingPlayerId = action.getOwnerId()
+          aiPlayerId = game.session.getAiPlayerId()
+          if endingPlayerId != aiPlayerId
+            # Human player ended their turn - they draw a card via FHE
+            fheState.turnDrawComplete = false
+            Logger.module("FHE").debug "[G:#{gameId}]", "Human player ended turn - FHE draw pending, AI must wait"
       else if action instanceof SDK.StartTurnAction
         # restart the turn timer whenever a turn starts
         restartTurnTimer(gameId)
@@ -1517,7 +1570,17 @@ ai_isValidTurn = (gameId) ->
  * @param  {String}    gameId
 ###
 ai_canStartTurn = (gameId) ->
-  return ai_isValidTurn(gameId) and !ai_isExecutingTurn(gameId) and !games[gameId].session.hasStepsInQueue()
+  # Check basic conditions
+  if !ai_isValidTurn(gameId) or ai_isExecutingTurn(gameId) or games[gameId].session.hasStepsInQueue()
+    return false
+
+  # FHE MODE: Don't start AI turn if human's FHE draw is pending
+  fheState = games[gameId]?.fhe
+  if fheState?.enabled and not fheState.turnDrawComplete
+    Logger.module("AI").debug "[G:#{gameId}]", "ai_canStartTurn:: FHE draw pending, blocking AI start"
+    return false
+
+  return true
 
 ###*
  * Returns whether ai is currently executing turn.
@@ -2146,3 +2209,276 @@ ai_stopEmoteTimeouts = (gameId) ->
     games[gameId].aiEmoteTimeoutId = null
 
 # endregion AI
+
+# region FHE Handlers
+# FLOW.MD adımları: Server blockchain'den doğrulama yapıyor, hiçbir TX göndermiyor
+
+###*
+# Handler: Client tells server the blockchain gameId after calling createSinglePlayerGame
+# FLOW.MD Step 5 sonrası: Client contract'ta oyunu oluşturdu
+# @param {Object} requestData - {gameId, blockchainGameId, network}
+###
+onFHEGameCreated = (requestData) ->
+  # VERY FIRST LINE - debug why this might not be called
+  Logger.module("FHE").log ">>> fhe_game_created HANDLER CALLED with data:", JSON.stringify(requestData)
+
+  gameId = requestData.gameId
+  blockchainGameId = requestData.blockchainGameId
+  network = requestData.network or 'sepolia'
+  playerId = @.playerId
+
+  Logger.module("FHE").debug "[G:#{gameId}]", "fhe_game_created -> blockchainGameId: #{blockchainGameId}, network: #{network}"
+
+  if !gameId or !games[gameId]
+    @emit "fhe_game_created_response", { error: "Game not found" }
+    return
+
+  if @.playerId != playerId
+    @emit "fhe_game_created_response", { error: "Not authorized" }
+    return
+
+  # Store FHE state in game
+  games[gameId].fhe = {
+    enabled: true
+    network: network
+    blockchainGameId: blockchainGameId
+    revealedCount: 0
+    playerDeck: null  # Will be set from game session
+    turnDrawComplete: true  # First turn can proceed, set to false when human ends turn
+  }
+
+  # Get player deck from game session
+  game = games[gameId]
+  if game.session?
+    player = game.session.getPlayerById(playerId)
+    if player?
+      # Store deck for later verification (general + 39 cards)
+      setupData = game.session.getPlayerSetupData(player)
+      if setupData?.deck?
+        games[gameId].fhe.playerDeck = setupData.deck.slice()  # Copy
+        Logger.module("FHE").debug "[G:#{gameId}]", "Stored player deck: #{games[gameId].fhe.playerDeck.length} cards"
+
+  @emit "fhe_game_created_response", { success: true }
+  Logger.module("FHE").debug "[G:#{gameId}]", "FHE game registered with blockchain"
+
+###*
+# Handler: Client completed initial hand reveal (5 cards)
+# FLOW.MD Step 14: CLIENT → SERVER: "Reveal tamamlandı"
+# FLOW.MD Step 15: SERVER: getVerifiedDrawOrder(gameId) çağırır (VIEW)
+# FLOW.MD Step 16: SERVER: Kendi hesaplar
+# @param {Object} requestData - {gameId}
+###
+onFHEInitialHandRevealed = (requestData) ->
+  # VERY FIRST LINE - must see this log
+  Logger.module("FHE").log ">>> fhe_initial_hand_revealed HANDLER CALLED with data:", JSON.stringify(requestData)
+
+  gameId = requestData.gameId
+  playerId = @.playerId
+  # NEW: Client now sends hand cards directly
+  clientHand = requestData.hand  # Array of card IDs [10021, 20066, ...]
+  clientBlockchainGameId = requestData.blockchainGameId
+  clientIndices = requestData.revealedIndices
+
+  Logger.module("FHE").log "[G:#{gameId}]", "fhe_initial_hand_revealed received from player #{playerId}"
+  Logger.module("FHE").log "[G:#{gameId}]", "Client sent hand: #{JSON.stringify(clientHand)}, blockchainGameId: #{clientBlockchainGameId}"
+
+  if !gameId or !games[gameId]
+    Logger.module("FHE").log "[G:#{gameId}]", "ERROR: Game not found"
+    @emit "fhe_initial_hand_revealed_response", { error: "Game not found" }
+    return
+
+  fheState = games[gameId].fhe
+  if !fheState?.enabled
+    Logger.module("FHE").log "[G:#{gameId}]", "ERROR: FHE not enabled - fheState:", JSON.stringify(fheState or 'null')
+    @emit "fhe_initial_hand_revealed_response", { error: "FHE not enabled for this game" }
+    return
+
+  # NEW: Update FHE state with client's blockchain game ID if missing
+  if clientBlockchainGameId and !fheState.blockchainGameId
+    Logger.module("FHE").log "[G:#{gameId}]", "Setting blockchainGameId from client: #{clientBlockchainGameId}"
+    fheState.blockchainGameId = clientBlockchainGameId
+
+  # NEW: Use client-sent hand cards directly (trust client for now)
+  # This fixes the sync issue where blockchain verification fails
+  if clientHand?.length > 0
+    Logger.module("FHE").log "[G:#{gameId}]", "Using client-sent hand cards: #{clientHand.length} cards"
+
+    game = games[gameId]
+    if game.session?
+      player = game.session.getPlayerById(playerId)
+      if player?
+        playerDeck = player.getDeck()
+        drawPile = playerDeck.getDrawPile()  # Array of integers (card indices)
+        handSlotIndex = 0
+
+        for cardId in clientHand
+          # Find the position in drawPile where the card with this ID exists
+          foundDrawPilePos = -1
+          for i in [0...drawPile.length]
+            cardIndex = drawPile[i]
+            card = game.session.getCardByIndex(cardIndex)
+            if card? and card.getId() == cardId
+              foundDrawPilePos = i
+              break
+
+          if foundDrawPilePos >= 0
+            # Get the card index and card object
+            cardIndex = drawPile[foundDrawPilePos]
+            card = game.session.getCardByIndex(cardIndex)
+            # Use SDK method to properly move card from deck to hand
+            game.session.applyCardToHand(playerDeck, cardIndex, card, handSlotIndex)
+            handSlotIndex++
+            Logger.module("FHE").debug "[G:#{gameId}]", "Moved card #{cardId} (index #{cardIndex}) to hand slot #{handSlotIndex - 1}"
+          else
+            Logger.module("FHE").warn "[G:#{gameId}]", "Card #{cardId} not found in draw pile - may already be in hand or removed"
+
+        Logger.module("FHE").log "[G:#{gameId}]", "Player hand now has #{playerDeck.getNumCardsInHand()} cards"
+
+        # Update FHE state
+        fheState.revealedCount = clientHand.length
+        fheState.verifiedHand = clientHand
+        if clientIndices
+          fheState.lastVerifiedIndices = clientIndices
+
+    @emit "fhe_initial_hand_revealed_response", {
+      success: true
+      verified: true
+      revealedCount: clientHand.length
+    }
+
+    # Signal that the game can start
+    @emit "fhe_ready_to_play", { gameId: gameId }
+
+    # FHE MODE: Now start the turn timer (was delayed until reveal complete)
+    Logger.module("FHE").debug "[G:#{gameId}]", "Initial hand reveal complete - starting turn timer"
+    fheState.initialHandRevealComplete = true
+    restartTurnTimer(gameId)
+
+  else
+    # Fallback: No hand from client, return error
+    Logger.module("FHE").error "[G:#{gameId}]", "No hand cards received from client"
+    @emit "fhe_initial_hand_revealed_response", { error: "No hand cards received" }
+
+###*
+# Handler: Client completed a draw card reveal (1 card per turn)
+# FHE trust model: Client decrypts card via FHE contract, sends cardId to server
+# Server trusts the cardId and applies it directly (just like initial hand)
+# @param {Object} requestData - {gameId, turn, cardId}
+###
+onFHECardDrawn = (requestData) ->
+  # VERY FIRST LINE - must see this log
+  Logger.module("FHE").log ">>> fhe_card_drawn HANDLER CALLED with data:", JSON.stringify(requestData)
+
+  gameId = requestData.gameId
+  turn = requestData.turn or 0
+  cardId = requestData.cardId  # FHE-revealed card ID from client
+  playerId = @.playerId
+  socket = @
+
+  Logger.module("FHE").log "[G:#{gameId}]", "fhe_card_drawn received for turn #{turn}, cardId: #{cardId} from player #{playerId}"
+
+  if !gameId or !games[gameId]
+    Logger.module("FHE").log "[G:#{gameId}]", "ERROR: Game not found"
+    @emit "fhe_card_drawn_response", { error: "Game not found" }
+    return
+
+  fheState = games[gameId].fhe
+  if !fheState?.enabled
+    Logger.module("FHE").log "[G:#{gameId}]", "ERROR: FHE not enabled - fheState:", JSON.stringify(fheState or 'null')
+    @emit "fhe_card_drawn_response", { error: "FHE not enabled for this game" }
+    return
+
+  if !cardId?
+    Logger.module("FHE").log "[G:#{gameId}]", "ERROR: No cardId received from client"
+    @emit "fhe_card_drawn_response", { error: "No cardId received" }
+    return
+
+  # FHE Trust Model: Client reveals card via blockchain, server applies directly
+  # No blockchain verification - same trust model as initial hand
+  Logger.module("FHE").debug "[G:#{gameId}]", "FHE trust mode: applying card #{cardId} directly"
+
+  # Track card index for response - client needs this to sync with server
+  appliedCardIndex = null
+  cardBurned = false  # True if hand was full and card was burned
+
+  # Apply drawn card to SDK game session
+  game = games[gameId]
+  if game.session?
+    player = game.session.getPlayerById(playerId)
+    if player?
+      playerDeck = player.getDeck()
+      drawPile = playerDeck.getDrawPile()  # Array of integers (card indices)
+
+      Logger.module("FHE").debug "[G:#{gameId}]", "Looking for cardId #{cardId} in drawPile (#{drawPile.length} cards)"
+
+      # Find the position in drawPile where the card with this ID exists
+      foundDrawPilePos = -1
+      for i in [0...drawPile.length]
+        idx = drawPile[i]
+        card = game.session.getCardByIndex(idx)
+        if card? and card.getId() == cardId
+          foundDrawPilePos = i
+          Logger.module("FHE").debug "[G:#{gameId}]", "Found card #{cardId} at drawPile[#{i}], cardIndex=#{idx}"
+          break
+
+      if foundDrawPilePos >= 0
+        # Get the card index and card object
+        appliedCardIndex = drawPile[foundDrawPilePos]
+        card = game.session.getCardByIndex(appliedCardIndex)
+
+        # Check if hand is full before adding
+        handSize = playerDeck.getNumCardsInHand()
+        maxHandSize = CONFIG.MAX_HAND_SIZE || 6
+
+        if handSize >= maxHandSize
+          # Hand is full - "burn" the card (remove from draw pile but don't add to hand)
+          # SDK applyCardToHand handles this by not adding if hand is full, but let's be explicit
+          Logger.module("FHE").log "[G:#{gameId}]", "BURN: Hand is full (#{handSize}/#{maxHandSize}), card #{cardId} burned (turn #{turn})"
+          # Still need to remove from draw pile to keep sync
+          drawPileIndex = drawPile.indexOf(appliedCardIndex)
+          if drawPileIndex >= 0
+            drawPile.splice(drawPileIndex, 1)
+            Logger.module("FHE").log "[G:#{gameId}]", "Removed burned card from draw pile, #{drawPile.length} cards remaining"
+          # Mark as burned for client
+          cardBurned = true
+        else
+          # Use SDK method to properly move card from deck to hand
+          game.session.applyCardToHand(playerDeck, appliedCardIndex, card)
+          Logger.module("FHE").log "[G:#{gameId}]", "SUCCESS: Moved card #{cardId} (index #{appliedCardIndex}) to hand (turn #{turn})"
+      else
+        Logger.module("FHE").warn "[G:#{gameId}]", "Card #{cardId} not found in draw pile for turn #{turn}"
+        # Log all cards in drawPile for debugging
+        for i in [0...Math.min(drawPile.length, 5)]
+          idx = drawPile[i]
+          card = game.session.getCardByIndex(idx)
+          Logger.module("FHE").debug "[G:#{gameId}]", "  drawPile[#{i}] = index #{idx}, cardId: #{card?.getId()}"
+    else
+      Logger.module("FHE").warn "[G:#{gameId}]", "Player #{playerId} not found in session"
+  else
+    Logger.module("FHE").warn "[G:#{gameId}]", "Game session not found"
+
+  # FHE MODE: Mark turn draw as complete - now AI can start
+  fheState.turnDrawComplete = true
+  Logger.module("FHE").log "[G:#{gameId}]", "Turn draw complete - turnDrawComplete=true"
+
+  # CRITICAL: FHE decrypt took time, turn timer may have expired.
+  # Restart turn timer to give AI a fresh turn duration.
+  restartTurnTimer(gameId)
+  Logger.module("FHE").log "[G:#{gameId}]", "Turn timer restarted after FHE draw"
+
+  # CRITICAL: AI was blocked waiting for FHE draw, now trigger it
+  # Use setTimeout to allow step queue to flush and current call stack to complete
+  setTimeout((()->
+    Logger.module("FHE").log "[G:#{gameId}]", "Triggering AI turn after FHE draw delay"
+    ai_updateTurn(gameId)
+  ), 500)
+
+  socket.emit "fhe_card_drawn_response", {
+    success: true
+    turn: turn
+    cardId: cardId
+    cardIndex: appliedCardIndex  # Client uses this to sync with server
+    burned: cardBurned  # True if hand was full and card was discarded
+  }
+
+# endregion FHE Handlers

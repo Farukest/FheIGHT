@@ -159,9 +159,12 @@ FHEGameMode.prototype.createSinglePlayerGame = function(generalCardId, deckCardI
       return;
     }
 
-    Logger.module('FHE_MODE').log('Creating FHE SINGLE PLAYER game');
+    // Generate unique gameId (timestamp-based to ensure uniqueness on blockchain)
+    // Note: generalCardId is for SDK, NOT for blockchain gameId!
+    var uniqueGameId = Date.now();
+    Logger.module('FHE_MODE').log('Creating FHE SINGLE PLAYER game with uniqueGameId:', uniqueGameId);
 
-    self.fheGameSession.createSinglePlayerGame(generalCardId, deckCardIds)
+    self.fheGameSession.createSinglePlayerGame(uniqueGameId, deckCardIds)
       .then(function(gameId) {
         self.gameId = gameId;
         self.playerIndex = 0;

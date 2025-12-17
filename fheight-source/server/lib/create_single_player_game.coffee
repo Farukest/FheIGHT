@@ -27,6 +27,8 @@ FirebasePromises = require './firebase_promises'
 knex = require './data_access/knex'
 Errors = require './custom_errors'
 Consul = require './consul'
+# BlockchainModule artık kullanılmıyor - Per FLOW.MD server TX göndermez
+# VIEW calls için single_player.coffee'de import edilecek
 
 createSinglePlayerGame = (userId,name,gameType,deck,cardBackId,battleMapIndexesToSampleFrom,aiPlayerId,aiUsername,aiGeneralId,aiDeckId,aiDifficulty,aiNumRandomCards,ticketId,gameSetupOptions)->
   if !gameType? then gameType = GameType.SinglePlayer
@@ -162,13 +164,30 @@ createSinglePlayerGame = (userId,name,gameType,deck,cardBackId,battleMapIndexesT
     # check if FHE mode is requested via gameSetupOptions
     if gameSetupOptions?.fheEnabled
       @.newGameSession.fheEnabled = true
+      @.newGameSession.fheGameId = gameSetupOptions.fheGameId  # Blockchain game ID
       # Mark human player's data with fhePlayer flag (before swap, player1DataForGame is human)
       # After swap logic above, we need to find which playerData has the real userId (not 'ai')
+      # FHE MODE: Server should NOT draw starting hand for human player
+      # Client will determine cards via FHE reveal, then tell server
       if player1DataForGame.userId == userId
         player1DataForGame.fhePlayer = true
+        player1DataForGame.startingHandSize = 0  # Don't draw random cards - FHE will determine
       else
         player2DataForGame.fhePlayer = true
-      Logger.module("SINGLE PLAYER").debug "FHE mode ENABLED - human player deck will be skipped (comes from blockchain)"
+        player2DataForGame.startingHandSize = 0  # Don't draw random cards - FHE will determine
+      Logger.module("SINGLE PLAYER").debug "FHE mode ENABLED - fheGameId: #{gameSetupOptions.fheGameId}, startingHandSize: 0 for human"
+
+      # FHE MODE: Call blockchain contract with verified deck
+      # Store FHE options for later blockchain call
+      @.fheOptions =
+        enabled: true
+        network: gameSetupOptions.fheNetwork or 'sepolia'
+        fheWallet: gameSetupOptions.fheWallet  # Session wallet address
+        ownerWallet: gameSetupOptions.ownerWallet  # Main wallet address (for ACL)
+        generalCardId: deck[0]?.id  # First card is general
+        deckCardIds: _.map(deck.slice(1), (c) -> c.id)  # Remaining 39 cards
+
+      Logger.module("SINGLE PLAYER").debug "FHE options:", @.fheOptions
 
     GameSetup.setupNewSession(@.newGameSession, player1DataForGame, player2DataForGame, withoutManaTiles)
 
@@ -265,7 +284,17 @@ createSinglePlayerGame = (userId,name,gameType,deck,cardBackId,battleMapIndexesT
 
     # ...
     return GamesModule.newUserGame(userId,@gameId,gameData)
-  .then ()-> # send data back to the player
+  .then ()-> # FHE MODE: Return game data for client to call contract
+    # Per FLOW.MD: Server NEVER sends TX
+    # Client will call contract.createSinglePlayerGame(gameId) with session wallet
+    if @.fheOptions?.enabled
+      Logger.module("SINGLE PLAYER").debug "FHE mode enabled - client will call contract"
+      @.responseData.fhe_enabled = true
+      @.responseData.fhe_network = @.fheOptions.network
+      # Client needs deck_cards to store locally (Step 4 in FLOW.MD)
+      # deck_cards already in responseData from gameData
     return @.responseData
+  .then (responseData)-> # send data back to the player
+    return responseData
 
 module.exports = createSinglePlayerGame

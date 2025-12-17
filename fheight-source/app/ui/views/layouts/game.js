@@ -398,18 +398,39 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
         if (myDrawCardActions.length > 0) {
           this._fheDecrypting = true;
           var fheSession = FHEGameSession.getInstance();
+          var gameSession = SDK.GameSession.getInstance();
+
+          // NOTE: DrawCardAction artık FHE modunda kart eklemiyor (SDK seviyesinde skip)
+          // Bu sayede hack'e gerek kalmadı - doğrudan FHE decrypt yapabiliriz
+
+          // Ensure socket is set for server notifications
+          if (!fheSession._socket) {
+            var socket = NetworkManager.getInstance().socket;
+            if (socket) {
+              fheSession.setSocket(socket);
+              fheSession.setServerGameId(gameSession.getGameId());
+            }
+          }
 
           Logger.module('FHE').log('[DRAW] DrawCardAction detected for my player (count: ' + myDrawCardActions.length + ')');
 
-          // Contract'tan getHand + decrypt (TX yok, gas yok)
-          fheSession.drawCard()
-            .then(function(cardId) {
-              if (cardId !== null) {
-                Logger.module('FHE').log('[DRAW] FHE card drawn:', cardId);
-                // SDK'ya karti ekle
-                this._addFHECardToHand(cardId);
-                // UI refresh icin event tetikle
-                EventBus.getInstance().trigger(EVENTS.fhe_card_drawn, { cardId: cardId });
+          // FLOW.MD Adım 31-35: getDrawHandles -> publicDecrypt -> revealDrawBatch -> calculateCard
+          fheSession.revealDrawCard()
+            .then(function(cardData) {
+              // cardData = {cardId, cardIndex, burned} from server response
+              if (cardData !== null && cardData.cardId !== null) {
+                if (cardData.burned) {
+                  // Server says hand was full and card was burned
+                  Logger.module('FHE').log('[DRAW] FHE card BURNED (hand full):', cardData.cardId);
+                  // _addFHECardToHand will handle deck remaining decrement and burn event
+                  this._addFHECardToHand(cardData.cardId, cardData.cardIndex);
+                } else {
+                  Logger.module('FHE').log('[DRAW] FHE card drawn:', cardData.cardId, 'index:', cardData.cardIndex);
+                  // SDK'ya karti ekle - server'dan gelen cardIndex'i kullan
+                  this._addFHECardToHand(cardData.cardId, cardData.cardIndex);
+                  // UI refresh icin event tetikle (only if not burned)
+                  EventBus.getInstance().trigger(EVENTS.fhe_card_drawn, { cardId: cardData.cardId });
+                }
               } else {
                 Logger.module('FHE').warn('[DRAW] Deck empty - fatigue!');
               }
@@ -584,6 +605,33 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
 
           var fheGameSession = FHEGameSession.getInstance();
           if (fheGameSession && fheGameSession.gameId) {
+            // Set socket for server notifications (FLOW.MD)
+            var socket = NetworkManager.getInstance().socket;
+            if (socket) {
+              fheGameSession.setSocket(socket);
+              fheGameSession.setServerGameId(gameSession.getGameId());
+              Logger.module('FHE_UI').log('[FHE] Socket set for server notifications');
+
+              // CRITICAL: Socket bağlandıktan sonra fhe_game_created event'i gönder
+              // createSinglePlayerGame TX sırasında socket henüz yoktu, şimdi yeniden gönder
+              // Bu event server'da games[gameId].fhe state'ini oluşturuyor
+              if (fheGameSession.blockchainGameId) {
+                var fheEventData = {
+                  gameId: gameSession.getGameId(),
+                  blockchainGameId: fheGameSession.blockchainGameId,
+                  network: fheGameSession.network || 'sepolia'
+                };
+                Logger.module('FHE_UI').log('[FHE] >>> Sending fhe_game_created with data:', JSON.stringify(fheEventData));
+                Logger.module('FHE_UI').log('[FHE] >>> Socket connected:', socket.connected, 'id:', socket.id);
+                fheGameSession._notifyServer('fhe_game_created', fheEventData);
+                Logger.module('FHE_UI').log('[FHE] Sent fhe_game_created event to server (blockchainGameId:', fheGameSession.blockchainGameId, ')');
+              } else {
+                Logger.module('FHE_UI').warn('[FHE] No blockchainGameId set - cannot notify server');
+              }
+            } else {
+              Logger.module('FHE_UI').warn('[FHE] No socket available for server notifications');
+            }
+
             // First show choose hand UI
             var showPromise = self.showChooseHand();
 
@@ -600,30 +648,29 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
               self.chooseHandView.setConfirmButtonVisibility(false);
             }
 
-            // Then start decrypt in background
-            Logger.module('FHE_UI').log('[FHE] Starting background decrypt for gameId:', fheGameSession.gameId);
+            // Then start reveal in background (FLOW Step 7-13)
+            Logger.module('FHE_UI').log('[FHE] Starting revealInitialHand for gameId:', fheGameSession.gameId);
 
-            fheGameSession.decryptHand()
-              .then(function(decryptedCardIds) {
-                Logger.module('FHE_UI').log('[FHE] Hand decrypted:', decryptedCardIds);
+            fheGameSession.revealInitialHand()
+              .then(function(revealedCardIds) {
+                Logger.module('FHE_UI').log('[FHE] Hand revealed:', revealedCardIds);
 
-                // Get player info from blockchain to get real deckRemaining
-                return fheGameSession.getPlayerInfo(fheGameSession.playerIndex)
-                  .then(function(playerInfo) {
-                    Logger.module('FHE_UI').log('[FHE] Player info from blockchain:', playerInfo);
-                    return { decryptedCardIds: decryptedCardIds, deckRemaining: playerInfo.deckRemaining };
-                  });
-              })
-              .then(function(result) {
-                var decryptedCardIds = result.decryptedCardIds;
-                var deckRemaining = result.deckRemaining;
+                // deckRemaining = total deck size - revealed cards (FLOW: 40 - 5 = 35)
+                var deckRemaining = fheGameSession.getRemainingDeckSize();
+                Logger.module('FHE_UI').log('[FHE] Remaining deck size:', deckRemaining);
 
-                // Populate SDK deck with decrypted cards and real deck remaining from blockchain
-                self._populateFHEHand(decryptedCardIds, [], deckRemaining);
+                // Populate SDK deck with revealed cards
+                self._populateFHEHand(revealedCardIds, [], deckRemaining);
 
                 // Hide FHE decrypt state on cards
+                Logger.module('FHE_UI').log('[FHE] Attempting to hide decrypt state...');
+                Logger.module('FHE_UI').log('[FHE] gameLayer exists:', !!gameLayer);
+                Logger.module('FHE_UI').log('[FHE] bottomDeckLayer exists:', !!(gameLayer && gameLayer.bottomDeckLayer));
                 if (gameLayer && gameLayer.bottomDeckLayer) {
+                  Logger.module('FHE_UI').log('[FHE] Calling hideFHEDecryptState()');
                   gameLayer.bottomDeckLayer.hideFHEDecryptState();
+                } else {
+                  Logger.module('FHE_UI').warn('[FHE] Cannot hide decrypt state - bottomDeckLayer not available');
                 }
 
                 // Enable continue button
@@ -903,10 +950,11 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
    * Used for turn-start card draw in FHE mode.
    *
    * @param {number} cardId - Card ID from FHE contract
+   * @param {number|null} serverCardIndex - Card index from server (for sync). If null, generates new index.
    */
-  _addFHECardToHand: function(cardId) {
+  _addFHECardToHand: function(cardId, serverCardIndex) {
     Logger.module('FHE_UI').log('[FHE] === _addFHECardToHand START ===');
-    Logger.module('FHE_UI').log('[FHE] Card ID:', cardId);
+    Logger.module('FHE_UI').log('[FHE] Card ID:', cardId, 'Server cardIndex:', serverCardIndex);
 
     var gameSession = SDK.GameSession.getInstance();
     var myPlayerId = gameSession.getMyPlayerId();
@@ -930,7 +978,17 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     }
 
     if (emptySlot === -1) {
-      Logger.module('FHE_UI').log('[FHE] Hand is full, cannot add card');
+      // Hand is full - card is "burned" (discarded)
+      // Still need to decrement deck remaining for sync
+      Logger.module('FHE_UI').log('[FHE] Hand is full - card BURNED (ID: ' + cardId + ')');
+      var currentRemaining = deck.getFheDeckRemaining();
+      if (currentRemaining !== null && currentRemaining > 0) {
+        deck.setFheDeckRemaining(currentRemaining - 1);
+        Logger.module('FHE_UI').log('[FHE] Deck remaining after burn:', currentRemaining - 1);
+      }
+      // Trigger burn event for UI feedback
+      EventBus.getInstance().trigger(EVENTS.fhe_card_burned, { cardId: cardId });
+      Logger.module('FHE_UI').log('[FHE] === _addFHECardToHand BURNED (hand full) ===');
       return;
     }
 
@@ -941,8 +999,9 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
       return;
     }
 
-    // SDK's own index generation function
-    var cardIndex = gameSession.generateIndex();
+    // Use server-provided cardIndex for sync, or generate new one if not available
+    var cardIndex = serverCardIndex != null ? serverCardIndex : gameSession.generateIndex();
+    Logger.module('FHE_UI').log('[FHE] Using cardIndex:', cardIndex, '(from server:', serverCardIndex != null, ')');
     fheCard.setIndex(cardIndex);
     fheCard.setOwnerId(myPlayerId);
     fheCard.setOwner(myPlayer);
