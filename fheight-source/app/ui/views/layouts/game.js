@@ -652,15 +652,19 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
             Logger.module('FHE_UI').log('[FHE] Starting revealInitialHand for gameId:', fheGameSession.gameId);
 
             fheGameSession.revealInitialHand()
-              .then(function(revealedCardIds) {
-                Logger.module('FHE_UI').log('[FHE] Hand revealed:', revealedCardIds);
+              .then(function(handData) {
+                // handData = {cardIds: [...], cardIndices: [...]} from server
+                var revealedCardIds = handData.cardIds || handData; // backward compat if array
+                var serverCardIndices = handData.cardIndices || null;
+                Logger.module('FHE_UI').log('[FHE] Hand revealed - cardIds:', revealedCardIds);
+                Logger.module('FHE_UI').log('[FHE] Hand revealed - serverCardIndices:', serverCardIndices);
 
                 // deckRemaining = total deck size - revealed cards (FLOW: 40 - 5 = 35)
                 var deckRemaining = fheGameSession.getRemainingDeckSize();
                 Logger.module('FHE_UI').log('[FHE] Remaining deck size:', deckRemaining);
 
-                // Populate SDK deck with revealed cards
-                self._populateFHEHand(revealedCardIds, [], deckRemaining);
+                // Populate SDK deck with revealed cards - USE SERVER cardIndices for sync!
+                self._populateFHEHand(revealedCardIds, [], deckRemaining, serverCardIndices);
 
                 // Hide FHE decrypt state on cards
                 Logger.module('FHE_UI').log('[FHE] Attempting to hide decrypt state...');
@@ -1037,9 +1041,10 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
    * @param {number[]} mulliganIndices - Indices of cards that were mulliganed (unused for now)
    * @param {number} deckRemaining - Remaining cards in deck from blockchain (from getPlayerInfo)
    */
-  _populateFHEHand: function(decryptedCardIds, mulliganIndices, deckRemaining) {
+  _populateFHEHand: function(decryptedCardIds, mulliganIndices, deckRemaining, serverCardIndices) {
     Logger.module('FHE_UI').log('[FHE] === _populateFHEHand START ===');
     Logger.module('FHE_UI').log('[FHE] FHE Card IDs:', decryptedCardIds);
+    Logger.module('FHE_UI').log('[FHE] Server cardIndices:', serverCardIndices);
     Logger.module('FHE_UI').log('[FHE] Card count:', decryptedCardIds.length);
 
     var gameSession = SDK.GameSession.getInstance();
@@ -1074,8 +1079,16 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
         continue;
       }
 
-      // SDK'nin kendi index uretme fonksiyonunu kullan (normal akisla ayni)
-      var cardIndex = gameSession.generateIndex();
+      // CRITICAL: Use server-provided cardIndex for sync with authoritative server!
+      // If serverCardIndices not provided, fall back to generateIndex (but this will cause sync issues)
+      var cardIndex;
+      if (serverCardIndices && serverCardIndices[i] != null) {
+        cardIndex = serverCardIndices[i];
+        Logger.module('FHE_UI').log('[FHE] Using SERVER cardIndex:', cardIndex);
+      } else {
+        cardIndex = gameSession.generateIndex();
+        Logger.module('FHE_UI').warn('[FHE] WARNING: No server cardIndex, using generateIndex:', cardIndex);
+      }
       fheCard.setIndex(cardIndex);
       fheCard.setOwnerId(myPlayerId);
       fheCard.setOwner(myPlayer);

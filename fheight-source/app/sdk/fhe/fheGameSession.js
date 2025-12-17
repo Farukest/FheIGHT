@@ -290,17 +290,43 @@ FHEGameSession.prototype.revealInitialHand = function() {
         Logger.module('FHE_GAME').log('=== INITIAL HAND READY ===');
         Logger.module('FHE_GAME').log('Hand:', self.myHand);
 
-        // FLOW Step 14: Server'a bildir "Reveal tamamlandı"
-        // Include hand cards so server can sync (in case blockchain verification fails)
-        self._notifyServer('fhe_initial_hand_revealed', {
-          gameId: self.serverGameId,
-          blockchainGameId: self.gameId,
-          hand: self.myHand,
-          revealedIndices: self.revealedIndices.slice()
-        });
+        // FLOW Step 14: Server'a bildir ve RESPONSE BEKLE!
+        // Server kartlari olusturur ve cardIndices doner - KRITIK SYNC ICIN!
+        return new Promise(function(innerResolve, innerReject) {
+          // Listen for server response BEFORE emitting
+          self._socket.once('fhe_initial_hand_revealed_response', function(response) {
+            Logger.module('FHE_GAME').log('Server response:', JSON.stringify(response));
+            if (response.success && response.cardIndices) {
+              Logger.module('FHE_GAME').log('Server cardIndices:', response.cardIndices);
+              // Store server cardIndices for client use
+              self.serverCardIndices = response.cardIndices;
+              innerResolve(response.cardIndices);
+            } else if (response.success) {
+              // Old server without cardIndices support
+              Logger.module('FHE_GAME').warn('Server did not return cardIndices - sync may fail!');
+              innerResolve(null);
+            } else {
+              Logger.module('FHE_GAME').error('Server error:', response.error);
+              innerReject(new Error(response.error || 'Server error'));
+            }
+          });
 
-        // Step 13: Kartlari dondur
-        resolve(self.myHand.slice());
+          // Now emit to server
+          self._socket.emit('fhe_initial_hand_revealed', {
+            gameId: self.serverGameId,
+            blockchainGameId: self.gameId,
+            hand: self.myHand,
+            revealedIndices: self.revealedIndices.slice()
+          });
+          Logger.module('FHE_GAME').log('Server notified: fhe_initial_hand_revealed');
+        });
+      })
+      .then(function(serverCardIndices) {
+        // Step 13: Return hand AND cardIndices to caller
+        resolve({
+          cardIds: self.myHand.slice(),
+          cardIndices: serverCardIndices  // Server-assigned indices for sync
+        });
       })
       .catch(function(error) {
         Logger.module('FHE_GAME').error('revealInitialHand failed:', error);

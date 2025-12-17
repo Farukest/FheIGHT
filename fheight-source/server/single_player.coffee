@@ -2304,6 +2304,8 @@ onFHEInitialHandRevealed = (requestData) ->
     Logger.module("FHE").log "[G:#{gameId}]", "Using client-sent hand cards: #{clientHand.length} cards"
 
     game = games[gameId]
+    cardIndicesForClient = []  # Track cardIndices to send back to client
+
     if game.session?
       player = game.session.getPlayerById(playerId)
       if player?
@@ -2327,12 +2329,17 @@ onFHEInitialHandRevealed = (requestData) ->
             card = game.session.getCardByIndex(cardIndex)
             # Use SDK method to properly move card from deck to hand
             game.session.applyCardToHand(playerDeck, cardIndex, card, handSlotIndex)
+            # IMPORTANT: Track this cardIndex for client sync!
+            cardIndicesForClient.push(cardIndex)
             handSlotIndex++
             Logger.module("FHE").debug "[G:#{gameId}]", "Moved card #{cardId} (index #{cardIndex}) to hand slot #{handSlotIndex - 1}"
           else
             Logger.module("FHE").warn "[G:#{gameId}]", "Card #{cardId} not found in draw pile - may already be in hand or removed"
+            # Still need to push something to maintain index alignment
+            cardIndicesForClient.push(null)
 
         Logger.module("FHE").log "[G:#{gameId}]", "Player hand now has #{playerDeck.getNumCardsInHand()} cards"
+        Logger.module("FHE").log "[G:#{gameId}]", "Card indices for client: #{JSON.stringify(cardIndicesForClient)}"
 
         # Update FHE state
         fheState.revealedCount = clientHand.length
@@ -2340,10 +2347,12 @@ onFHEInitialHandRevealed = (requestData) ->
         if clientIndices
           fheState.lastVerifiedIndices = clientIndices
 
+    # CRITICAL: Send cardIndices back to client for sync!
     @emit "fhe_initial_hand_revealed_response", {
       success: true
       verified: true
       revealedCount: clientHand.length
+      cardIndices: cardIndicesForClient  # Client MUST use these indices!
     }
 
     # Signal that the game can start
