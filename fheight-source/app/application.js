@@ -650,9 +650,8 @@ App.main = function() {
               Logger.module("UI").log("Last active game was on ", new Date(lastGameModel.get("created_at")), "with data", lastGameModel);
               return App._resumeGame(lastGameModel);
             } else if (!NewPlayerManager.getInstance().isDoneWithTutorial()) {
-              // FHEIGHT: Skip tutorial - go directly to main menu
-              // Original: return App._showTutorialLessons();
-              return App._showMainMenu();
+              // Show tutorial for new players
+              return App._showTutorialLessons();
             } else if (QuestsManager.getInstance().hasUnreadQuests()) {
               // show main menu
               return App._showMainMenu();
@@ -2057,6 +2056,19 @@ App._startSinglePlayerGameFHE = function(myPlayerDeck, myPlayerFactionId, myPlay
   }).catch(function(errorMessage) {
     // Shutdown FHE on error
     FHE.GameMode.getInstance().shutdown();
+
+    // Check for INSUFFICIENT_FUNDS error and show user-friendly message
+    var errorStr = String(errorMessage || '');
+    if (errorStr.includes('INSUFFICIENT_FUNDS') || errorStr.includes('insufficient funds')) {
+      var sessionWalletAddress = SessionWalletManager.getInstance().getAddress() || 'unknown';
+      var networkName = Wallet.getCurrentNetwork() || 'Sepolia';
+      var userFriendlyMessage = 'Insufficient ETH for gas fees.\n\n' +
+        'Your session wallet needs ' + networkName + ' ETH to submit blockchain transactions.\n\n' +
+        'Session Wallet Address:\n' + sessionWalletAddress + '\n\n' +
+        'Please send some ' + networkName + ' ETH to this address and try again.';
+      return App._error(userFriendlyMessage);
+    }
+
     return App._error((errorMessage != null) ? "Failed to start FHE single player game: " + errorMessage : undefined);
   });
 };
