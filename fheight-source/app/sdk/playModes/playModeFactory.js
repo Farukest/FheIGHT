@@ -63,7 +63,7 @@ class PlayModeFactory {
         id: PlayModes.Practice,
         name: i18next.t("main_menu.play_mode_practice_name"),
         description: i18next.t("main_menu.play_mode_practice_description"),
-        img: RSX.play_mode_sandbox.img,
+        img: RSX.play_mode_bossbattle.img,
         enabled: true,
         isHiddenInUI: false
       };
@@ -148,7 +148,7 @@ class PlayModeFactory {
         id: PlayModes.Developer,
         name: "Developer Sandbox",
         description: "Shuffle free. Mulligan free.",
-        img: RSX.play_mode_sandbox.img,
+        img: RSX.play_mode_sandbox_developer.img,
         enabled: true,
         isHiddenInUI: true
       };

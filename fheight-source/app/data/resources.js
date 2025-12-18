@@ -4884,6 +4884,7 @@ const RSX = {
   play_mode_arenagauntlet: { name: 'play_mode_arenagauntlet', img: 'resources/play/play_mode_arenagauntlet.jpg' },
   play_mode_rankedladder: { name: 'play_mode_rankedladder', img: 'resources/play/play_mode_rankedladder.jpg' },
   play_mode_sandbox: { name: 'play_mode_sandbox', img: 'resources/play/play_mode_sandbox.jpg' },
+  play_mode_sandbox_developer: { name: 'play_mode_sandbox_developer', img: 'resources/play/play_mode_sandbox_developer.jpg' },
   play_mode_training: { name: 'play_mode_training', img: 'resources/play/play_mode_training.jpg' },
   play_mode_rift: { name: 'play_mode_rift', img: 'resources/play/play_mode_rift.jpg' },
   play_mode_bossbattle: { name: 'play_mode_bossbattle', img: 'resources/play/play_mode_bossbattle.jpg' },

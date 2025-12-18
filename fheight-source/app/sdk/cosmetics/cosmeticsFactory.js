@@ -538,8 +538,8 @@ cos[Scene.Shimzar] = {
 cos[Scene.ZamatForest] = {
   id: Scene.ZamatForest,
   typeId: CosmeticsTypeLookup.Scene,
-  name: "Zamat Forest",
-  shopDescription: "A mystical Zamat forest parallax scene",
+  name: "Zamacy Forest",
+  shopDescription: "A mystical forest of privacy-preserving computations",
   enabled: true,
   alwaysVisible: true,
   order: ORDER_SCENES,
@@ -554,8 +554,8 @@ cos[Scene.ZamatForest] = {
 cos[Scene.ZamatianRivers] = {
   id: Scene.ZamatianRivers,
   typeId: CosmeticsTypeLookup.Scene,
-  name: "Zamatian Rivers",
-  shopDescription: "A serene Zamatian rivers parallax scene",
+  name: "Zamacy Rivers",
+  shopDescription: "A serene river of encrypted data flows",
   enabled: true,
   alwaysVisible: true,
   order: ORDER_SCENES,
