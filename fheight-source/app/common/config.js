@@ -1277,7 +1277,7 @@ CONFIG.resolution = CONFIG.RESOLUTION_DEFAULT;
 
 // whether HiDPI mode is enabled
 // set dynamically by local storage
-CONFIG.hiDPIEnabled = false;
+CONFIG.hiDPIEnabled = true;
 
 // currently chosen main menu scene
 // set dynamically by user profile and/or local storage
