@@ -430,10 +430,10 @@ class CosmeticsLookup {
     this.Scene = {
       MagaariEmberHighlands: 40001,
       ObsidianWoods: 40002,
-      Frostfire: 40003,
       Vetruvian: 40004,
       Shimzar: 40005,
-      ZamatForest: 40006
+      ZamatForest: 40006,
+      ZamatianRivers: 40007
   };
   
     this.BattleMap = {

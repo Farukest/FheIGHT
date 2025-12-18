@@ -72,10 +72,10 @@ const TransitionLayer = require('app/view/layers/TransitionLayer');
 const LoadLayer = require('app/view/layers/start/LoadLayer');
 const MainObsidianWoodsLayer = require('app/view/layers/start/MainObsidianWoodsLayer');
 const MainMagaariEmberHighlandsLayer = require('app/view/layers/start/MainMagaariEmberHighlandsLayer');
-const MainFrostfireLayer = require('app/view/layers/start/MainFrostfireLayer');
 const MainVetruvianLayer = require('app/view/layers/start/MainVetruvianLayer');
 const MainShimzarLayer = require('app/view/layers/start/MainShimzarLayer');
 const MainZamatForestLayer = require('app/view/layers/start/MainZamatForestLayer');
+const MainZamatianRiversLayer = require('app/view/layers/start/MainZamatianRiversLayer');
 const MatchmakingLayer = require('app/view/layers/pregame/MatchmakingLayer');
 const GameLayer = require('app/view/layers/game/GameLayer');
 
@@ -405,14 +405,14 @@ var _Scene = cc.Scene.extend({
       this._mainLayerClass = MainMagaariEmberHighlandsLayer;
     } else if (selectedSceneId === SDK.CosmeticsLookup.Scene.ObsidianWoods) {
       this._mainLayerClass = MainObsidianWoodsLayer;
-    } else if (selectedSceneId === SDK.CosmeticsLookup.Scene.Frostfire) {
-      this._mainLayerClass = MainFrostfireLayer;
     } else if (selectedSceneId === SDK.CosmeticsLookup.Scene.Vetruvian) {
       this._mainLayerClass = MainVetruvianLayer;
     } else if (selectedSceneId === SDK.CosmeticsLookup.Scene.Shimzar) {
       this._mainLayerClass = MainShimzarLayer;
     } else if (selectedSceneId === SDK.CosmeticsLookup.Scene.ZamatForest) {
       this._mainLayerClass = MainZamatForestLayer;
+    } else if (selectedSceneId === SDK.CosmeticsLookup.Scene.ZamatianRivers) {
+      this._mainLayerClass = MainZamatianRiversLayer;
     } else {
       // Default to ZamatForest if no valid scene selected
       this._mainLayerClass = MainZamatForestLayer;

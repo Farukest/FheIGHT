@@ -665,23 +665,24 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
               Logger.module('FHE_UI').warn('[FHE] No socket available for server notifications');
             }
 
-            // First show choose hand UI
+            // First show choose hand UI, then show decrypt state after cards are ready
             var showPromise = self.showChooseHand();
+            showPromise.then(function() {
+              // Show FHE decrypt state on all card nodes (after cards are created)
+              var scene = Scene.getInstance();
+              var gameLayer = scene && scene.getGameLayer();
+              if (gameLayer && gameLayer.bottomDeckLayer) {
+                gameLayer.bottomDeckLayer.showFHEDecryptState();
+              }
 
-            // Show FHE decrypt state on all card nodes
-            var scene = Scene.getInstance();
-            var gameLayer = scene && scene.getGameLayer();
-            if (gameLayer && gameLayer.bottomDeckLayer) {
-              gameLayer.bottomDeckLayer.showFHEDecryptState();
-            }
+              // Also disable continue button while decrypting
+              self._fheDecrypting = true;
+              if (self.chooseHandView) {
+                self.chooseHandView.setConfirmButtonVisibility(false);
+              }
+            });
 
-            // Also disable continue button while decrypting
-            self._fheDecrypting = true;
-            if (self.chooseHandView) {
-              self.chooseHandView.setConfirmButtonVisibility(false);
-            }
-
-            // Then start reveal in background (FLOW Step 7-13)
+            // Start reveal in background (FLOW Step 7-13)
             Logger.module('FHE_UI').log('[FHE] Starting revealInitialHand for gameId:', fheGameSession.gameId);
 
             fheGameSession.revealInitialHand()
@@ -700,6 +701,8 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
                 self._populateFHEHand(revealedCardIds, [], deckRemaining, serverCardIndices);
 
                 // Hide FHE decrypt state on cards
+                var scene = Scene.getInstance();
+                var gameLayer = scene && scene.getGameLayer();
                 Logger.module('FHE_UI').log('[FHE] Attempting to hide decrypt state...');
                 Logger.module('FHE_UI').log('[FHE] gameLayer exists:', !!gameLayer);
                 Logger.module('FHE_UI').log('[FHE] bottomDeckLayer exists:', !!(gameLayer && gameLayer.bottomDeckLayer));
@@ -719,11 +722,15 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
                 }
 
                 // Refresh the card display in GameLayer
-                Scene.getInstance().getGameLayer().showChooseHand();
+                if (gameLayer) {
+                  gameLayer.showChooseHand();
+                }
               })
               .catch(function(err) {
                 Logger.module('FHE_UI').error('[FHE] Decrypt failed:', err);
                 // Show Failed state on cards instead of hiding
+                var scene = Scene.getInstance();
+                var gameLayer = scene && scene.getGameLayer();
                 if (gameLayer && gameLayer.bottomDeckLayer) {
                   gameLayer.bottomDeckLayer.showFHEDecryptFailedState();
                 }

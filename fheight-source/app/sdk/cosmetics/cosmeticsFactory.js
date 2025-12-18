@@ -503,22 +503,6 @@ cos[Scene.ObsidianWoods] = {
   purchasable: false
 };
 
-cos[Scene.Frostfire] = {
-  id: Scene.Frostfire,
-  typeId: CosmeticsTypeLookup.Scene,
-  name: i18next.t("cosmetics.scene_frostfire_festival_name"),
-  shopDescription: i18next.t("cosmetics.scene_frostfire_festival_desc"),
-  enabled: true,
-  alwaysVisible: true,
-  order: ORDER_SCENES,
-  rarityId: Rarity.Fixed,
-  pkgId: "FrostfireMainMenu",
-  img: null, // TODO
-  rsx: null, // TODO
-  unlockable: false,
-  purchasable: false
-};
-
 cos[Scene.Vetruvian] = {
   id: Scene.Vetruvian,
   typeId: CosmeticsTypeLookup.Scene,
@@ -561,6 +545,22 @@ cos[Scene.ZamatForest] = {
   order: ORDER_SCENES,
   rarityId: Rarity.Fixed,
   pkgId: "ZamatForestMainMenu",
+  img: null,
+  rsx: null,
+  unlockable: false,
+  purchasable: false
+};
+
+cos[Scene.ZamatianRivers] = {
+  id: Scene.ZamatianRivers,
+  typeId: CosmeticsTypeLookup.Scene,
+  name: "Zamatian Rivers",
+  shopDescription: "A serene Zamatian rivers parallax scene",
+  enabled: true,
+  alwaysVisible: true,
+  order: ORDER_SCENES,
+  rarityId: Rarity.Fixed,
+  pkgId: "ZamatianRivers",
   img: null,
   rsx: null,
   unlockable: false,

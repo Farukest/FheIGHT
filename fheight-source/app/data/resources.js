@@ -3842,6 +3842,13 @@ const RSX = {
   obsidian_woods_pillar: { name: 'obsidian_woods_pillar', img: 'resources/scenes/obsidian_woods/obsidian_woods_pillar.png' },
   obsidian_woods_vignette: { name: 'obsidian_woods_vignette', img: 'resources/scenes/obsidian_woods/obsidian_woods_vignette.png', noScale: true },
 
+  // Zamatian Rivers Parallax Scene
+  scene_zamatian_rivers_background: { name: 'scene_zamatian_rivers_background', img: 'resources/scenes/zamatian_rivers/zamatian_rivers_background.jpg' },
+  zamatian_rivers_light_ray: { name: 'zamatian_rivers_light_ray', img: 'resources/scenes/zamatian_rivers/zamatian_rivers_light_ray.jpg', noScale: true },
+  zamatian_rivers_cliff: { name: 'zamatian_rivers_cliff', img: 'resources/scenes/zamatian_rivers/zamatian_rivers_cliff.png' },
+  zamatian_rivers_pillar: { name: 'zamatian_rivers_pillar', img: 'resources/scenes/zamatian_rivers/zamatian_rivers_pillar.png' },
+  zamatian_rivers_vignette: { name: 'zamatian_rivers_vignette', img: 'resources/scenes/zamatian_rivers/zamatian_rivers_vignette.png', noScale: true },
+
   scene_magaari_ember_highlands_background: { name: 'scene_magaari_ember_highlands_background', img: 'resources/scenes/magaari_ember_highlands/magaari_ember_highlands_background.jpg' },
   scene_magaari_ember_highlands_middleground: { name: 'scene_magaari_ember_highlands_middleground', img: 'resources/scenes/magaari_ember_highlands/magaari_ember_highlands_middleground.png' },
   scene_magaari_ember_highlands_foreground: { name: 'scene_magaari_ember_highlands_foreground', img: 'resources/scenes/magaari_ember_highlands/magaari_ember_highlands_foreground.png' },

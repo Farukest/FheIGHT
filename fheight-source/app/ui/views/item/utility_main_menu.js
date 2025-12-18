@@ -428,10 +428,6 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
   },
 
   toggleSessionWallet: function () {
-    // Hide guide overlay when wallet button is clicked
-    $('body').removeClass('session-wallet-guide-active');
-    $('.session-wallet-guide-overlay').addClass('hide');
-
     // Lazy load session wallet modules on first use
     if (!SessionWalletPopupView) {
       SessionWallet = require('app/common/session_wallet');

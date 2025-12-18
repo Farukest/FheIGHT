@@ -61,7 +61,6 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
     $bossEventPromoTimer: '.boss-toast-promo-timer',
     $purchasePromoBtn: '.purchase-promo-btn',
     $premiumPurchasePromoBtn: '.premium-purchase-promo-btn',
-    $guideOverlay: '.session-wallet-guide-overlay',
     $lockIcons: '.menu-lock-icon',
     $lockableMenus: '.menu-lockable',
   },
@@ -767,7 +766,6 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
     if (SessionWallet.hasWallet()) {
       Logger.module('UI').log('MainMenu: Found wallet in localStorage, unlocking immediately');
       self._unlockMenus();
-      self._hideGuideOverlay();
       return; // No need to sync, already have wallet
     }
 
@@ -826,63 +824,20 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
    */
   _checkSessionWalletStatus: function () {
     if (!SessionWallet.hasWallet()) {
-      // No session wallet - lock menus and show guide
+      // No session wallet - lock menus
       this._lockMenus();
-      this._showGuideOverlay();
     } else {
       // Has session wallet - unlock everything
       this._unlockMenus();
-      this._hideGuideOverlay();
     }
   },
 
   /**
-   * Handle session wallet created event - unlock menus and hide guide
+   * Handle session wallet created event - unlock menus
    */
   onSessionWalletCreated: function (address) {
     Logger.module('UI').log('MainMenu: Session wallet created, unlocking menus');
     this._unlockMenus();
-    this._hideGuideOverlay();
-  },
-
-  /**
-   * Handle close button click on guide overlay
-   */
-  onCloseGuideOverlay: function () {
-    this._hideGuideOverlay();
-  },
-
-  /**
-   * Show the guide overlay pointing to wallet button
-   */
-  _showGuideOverlay: function () {
-    var self = this;
-    if (this.ui.$guideOverlay instanceof $) {
-      this.ui.$guideOverlay.removeClass('hide');
-      // Add class to body to dim utility buttons
-      $('body').addClass('session-wallet-guide-active');
-      // Add click handler on wallet button to hide overlay
-      this._walletClickHandler = function () {
-        self._hideGuideOverlay();
-      };
-      $('button.session-wallet').on('click', this._walletClickHandler);
-    }
-  },
-
-  /**
-   * Hide the guide overlay
-   */
-  _hideGuideOverlay: function () {
-    if (this.ui.$guideOverlay instanceof $) {
-      this.ui.$guideOverlay.addClass('hide');
-      // Remove class from body
-      $('body').removeClass('session-wallet-guide-active');
-      // Remove click handler
-      if (this._walletClickHandler) {
-        $('button.session-wallet').off('click', this._walletClickHandler);
-        this._walletClickHandler = null;
-      }
-    }
   },
 
   /**
