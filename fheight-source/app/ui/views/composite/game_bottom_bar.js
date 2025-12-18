@@ -24,6 +24,7 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
   ui: {
     $submitTurn: '.submit-turn',
     $submitTurnType: '.submit-turn .turn-type',
+    $reDecryptButton: '.redecrypt-turn',
     $replayControl: '.replay-control',
     $replayControlPause: '.replay-control .control-type-pause',
     $replayControlPlay: '.replay-control .control-type-play',
@@ -33,6 +34,7 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
 
   events: {
     'click .submit-turn': 'onClickSubmitTurn',
+    'click .redecrypt-turn': 'onClickReDecrypt',
     'click .replay-control .control-type-pause': 'onReplayPause',
     'click .replay-control .control-type-play': 'onReplayPlay',
     'click .replay-control .control-type-speed': 'onIncreaseReplaySpeed',
@@ -77,11 +79,14 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
   onRender: function () {
     if (SDK.GameSession.getInstance().getIsSpectateMode()) {
       this.ui.$submitTurn.remove();
+      this.ui.$reDecryptButton.remove();
       if (!SDK.GameSession.getInstance().getIsReplay()) {
         this.ui.$replayControl.remove();
       }
     } else {
       this.ui.$replayControl.remove();
+      // Hide Re-Decrypt button by default (only shown on 500 error)
+      this.ui.$reDecryptButton.hide();
     }
     this._updateControls();
   },
@@ -113,6 +118,10 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
       this.listenTo(ReplayEngine.getInstance().getEventBus(), EVENTS.replay_paused, this._updateReplayControlPlaying);
       this.listenTo(ReplayEngine.getInstance().getEventBus(), EVENTS.replay_resumed, this._updateReplayControlPlaying);
     }
+
+    // FHE decrypt events - show/hide Re-Decrypt button on 500 error
+    this.listenTo(EventBus.getInstance(), EVENTS.fhe_draw_decrypt_failed, this._onFHEDecryptFailed);
+    this.listenTo(EventBus.getInstance(), EVENTS.fhe_draw_decrypt_success, this._onFHEDecryptSuccess);
 
     this._updateControls();
 
@@ -321,6 +330,45 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
   },
 
   /* endregion TURN */
+
+  /* region FHE RE-DECRYPT */
+
+  /**
+   * Called when FHE draw decrypt fails with 500 error.
+   * Shows the Re-Decrypt button and hides the normal turn button.
+   */
+  _onFHEDecryptFailed: function (event) {
+    this._fheDecryptFailed = true;
+    // Hide submit-turn, show redecrypt-turn
+    this.ui.$submitTurn.hide();
+    this.ui.$reDecryptButton.show();
+  },
+
+  /**
+   * Called when FHE draw decrypt succeeds (or retry starts).
+   * Hides the Re-Decrypt button and shows the normal turn button.
+   */
+  _onFHEDecryptSuccess: function (event) {
+    this._fheDecryptFailed = false;
+    // Hide redecrypt-turn, show submit-turn
+    this.ui.$reDecryptButton.hide();
+    this.ui.$submitTurn.show();
+  },
+
+  /**
+   * Called when user clicks Re-Decrypt button.
+   * Triggers retry of FHE draw decrypt in game layout.
+   */
+  onClickReDecrypt: function () {
+    audio_engine.current().play_effect_for_interaction(RSX.sfx_ui_confirm.audio, CONFIG.CONFIRM_SFX_PRIORITY);
+    var scene = Scene.getInstance();
+    var gameLayout = scene && scene.getGameLayout && scene.getGameLayout();
+    if (gameLayout && gameLayout.retryFHEDrawDecrypt) {
+      gameLayout.retryFHEDrawDecrypt();
+    }
+  },
+
+  /* endregion FHE RE-DECRYPT */
 
 });
 

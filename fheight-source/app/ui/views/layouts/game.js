@@ -82,6 +82,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
   _remindReplaceCardTimeoutId: null,
   _spectatorNotificationTimeout: null,
   _fheDecrypting: false,
+  _fheDecryptFailed: false,
 
   /* region INITIALIZATION */
 
@@ -397,8 +398,10 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
 
         if (myDrawCardActions.length > 0) {
           this._fheDecrypting = true;
+          this._fheDrawDecryptFailed = false;
           var fheSession = FHEGameSession.getInstance();
           var gameSession = SDK.GameSession.getInstance();
+          var gameLayer = Scene.getInstance().getGameLayer();
 
           // NOTE: DrawCardAction artık FHE modunda kart eklemiyor (SDK seviyesinde skip)
           // Bu sayede hack'e gerek kalmadı - doğrudan FHE decrypt yapabiliriz
@@ -414,9 +417,19 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
 
           Logger.module('FHE').log('[DRAW] DrawCardAction detected for my player (count: ' + myDrawCardActions.length + ')');
 
+          // Show "Decrypting" state on first empty slot in hand
+          if (gameLayer && gameLayer.bottomDeckLayer) {
+            gameLayer.bottomDeckLayer.showFHEDecryptStateOnFirstEmptySlot();
+          }
+
           // FLOW.MD Adım 31-35: getDrawHandles -> publicDecrypt -> revealDrawBatch -> calculateCard
           fheSession.revealDrawCard()
             .then(function(cardData) {
+              // Hide decrypt state
+              if (gameLayer && gameLayer.bottomDeckLayer) {
+                gameLayer.bottomDeckLayer.hideFHEDecryptStateOnSlot();
+              }
+
               // cardData = {cardId, cardIndex, burned} from server response
               if (cardData !== null && cardData.cardId !== null) {
                 if (cardData.burned) {
@@ -435,10 +448,30 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
                 Logger.module('FHE').warn('[DRAW] Deck empty - fatigue!');
               }
               this._fheDecrypting = false;
+              this._fheDrawDecryptFailed = false;
             }.bind(this))
             .catch(function(error) {
               Logger.module('FHE').error('[DRAW] FHE draw failed:', error);
               this._fheDecrypting = false;
+
+              // Check if this is a 500 error
+              if (error && error.is500Error) {
+                Logger.module('FHE').log('[DRAW] 500 error detected - showing Failed state');
+                this._fheDrawDecryptFailed = true;
+
+                // Show "Failed" state on the card slot
+                if (gameLayer && gameLayer.bottomDeckLayer) {
+                  gameLayer.bottomDeckLayer.showFHEDecryptFailedStateOnSlot();
+                }
+
+                // Emit event for bottom bar to show Re-Decrypt button
+                EventBus.getInstance().trigger(EVENTS.fhe_draw_decrypt_failed, { error: error });
+              } else {
+                // Non-500 error - just hide decrypt state
+                if (gameLayer && gameLayer.bottomDeckLayer) {
+                  gameLayer.bottomDeckLayer.hideFHEDecryptStateOnSlot();
+                }
+              }
             }.bind(this));
         }
       }
@@ -679,7 +712,9 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
 
                 // Enable continue button
                 self._fheDecrypting = false;
+                self._fheDecryptFailed = false;
                 if (self.chooseHandView) {
+                  self.chooseHandView.showReDecryptButton(false);
                   self.chooseHandView.setConfirmButtonVisibility(true);
                 }
 
@@ -688,13 +723,15 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
               })
               .catch(function(err) {
                 Logger.module('FHE_UI').error('[FHE] Decrypt failed:', err);
-                // Hide decrypt state even on error
+                // Show Failed state on cards instead of hiding
                 if (gameLayer && gameLayer.bottomDeckLayer) {
-                  gameLayer.bottomDeckLayer.hideFHEDecryptState();
+                  gameLayer.bottomDeckLayer.showFHEDecryptFailedState();
                 }
                 self._fheDecrypting = false;
+                self._fheDecryptFailed = true;
+                // Show Re-Decrypt button instead of Continue
                 if (self.chooseHandView) {
-                  self.chooseHandView.setConfirmButtonVisibility(true);
+                  self.chooseHandView.showReDecryptButton(true);
                 }
               });
 
@@ -722,6 +759,8 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
 
       // listen for submit
       this.chooseHandView.on('confirm', this.showSubmitChosenHand, this);
+      // listen for re-decrypt
+      this.chooseHandView.on('redecrypt', this.retryFHEDecrypt, this);
 
       // show choose hand UI
       allPromises.push(this.middleRegion.show(chooseHandItemView));
@@ -787,6 +826,134 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     }
 
     return Promise.all(allPromises);
+  },
+
+  retryFHEDecrypt: function () {
+    Logger.module('FHE_UI').log('[FHE] Retrying FHE decrypt...');
+    var self = this;
+
+    // Reset failed state
+    this._fheDecryptFailed = false;
+    this._fheDecrypting = true;
+
+    // Hide Re-Decrypt button, show decrypting state again
+    if (this.chooseHandView) {
+      this.chooseHandView.showReDecryptButton(false);
+    }
+
+    // Get gameLayer and show decrypt state
+    var scene = Scene.getInstance();
+    var gameLayer = scene && scene.getGameLayer();
+    if (gameLayer && gameLayer.bottomDeckLayer) {
+      gameLayer.bottomDeckLayer.showFHEDecryptState();
+    }
+
+    // Retry the reveal
+    var fheGameSession = FHEGameSession.getInstance();
+    if (fheGameSession && fheGameSession.gameId) {
+      fheGameSession.revealInitialHand()
+        .then(function(handData) {
+          var revealedCardIds = handData.cardIds || handData;
+          var serverCardIndices = handData.cardIndices || null;
+          Logger.module('FHE_UI').log('[FHE] Retry successful - cardIds:', revealedCardIds);
+
+          var deckRemaining = fheGameSession.getRemainingDeckSize();
+          self._populateFHEHand(revealedCardIds, [], deckRemaining, serverCardIndices);
+
+          if (gameLayer && gameLayer.bottomDeckLayer) {
+            gameLayer.bottomDeckLayer.hideFHEDecryptState();
+          }
+
+          self._fheDecrypting = false;
+          self._fheDecryptFailed = false;
+          if (self.chooseHandView) {
+            self.chooseHandView.showReDecryptButton(false);
+            self.chooseHandView.setConfirmButtonVisibility(true);
+          }
+
+          Scene.getInstance().getGameLayer().showChooseHand();
+        })
+        .catch(function(err) {
+          Logger.module('FHE_UI').error('[FHE] Retry failed:', err);
+          if (gameLayer && gameLayer.bottomDeckLayer) {
+            gameLayer.bottomDeckLayer.showFHEDecryptFailedState();
+          }
+          self._fheDecrypting = false;
+          self._fheDecryptFailed = true;
+          if (self.chooseHandView) {
+            self.chooseHandView.showReDecryptButton(true);
+          }
+        });
+    } else {
+      Logger.module('FHE_UI').error('[FHE] Cannot retry - no FHE game session');
+      this._fheDecrypting = false;
+      this._fheDecryptFailed = true;
+    }
+  },
+
+  /**
+   * Retries FHE decrypt for End Turn card draw after 500 error.
+   * Called from game_bottom_bar.js when user clicks Re-Decrypt button.
+   */
+  retryFHEDrawDecrypt: function () {
+    Logger.module('FHE_UI').log('[FHE] Retrying FHE draw decrypt...');
+    var self = this;
+
+    // Reset failed state
+    this._fheDrawDecryptFailed = false;
+    this._fheDecrypting = true;
+
+    var gameLayer = Scene.getInstance().getGameLayer();
+    var fheSession = FHEGameSession.getInstance();
+
+    // Show decrypting state again
+    if (gameLayer && gameLayer.bottomDeckLayer) {
+      gameLayer.bottomDeckLayer.showFHEDecryptStateOnFirstEmptySlot();
+    }
+
+    // Emit event to hide Re-Decrypt button
+    EventBus.getInstance().trigger(EVENTS.fhe_draw_decrypt_success, {});
+
+    // Retry the reveal
+    fheSession.revealDrawCard()
+      .then(function(cardData) {
+        // Hide decrypt state
+        if (gameLayer && gameLayer.bottomDeckLayer) {
+          gameLayer.bottomDeckLayer.hideFHEDecryptStateOnSlot();
+        }
+
+        if (cardData !== null && cardData.cardId !== null) {
+          if (cardData.burned) {
+            Logger.module('FHE_UI').log('[FHE] Retry draw BURNED (hand full):', cardData.cardId);
+            self._addFHECardToHand(cardData.cardId, cardData.cardIndex);
+          } else {
+            Logger.module('FHE_UI').log('[FHE] Retry draw success:', cardData.cardId);
+            self._addFHECardToHand(cardData.cardId, cardData.cardIndex);
+            EventBus.getInstance().trigger(EVENTS.fhe_card_drawn, { cardId: cardData.cardId });
+          }
+        } else {
+          Logger.module('FHE_UI').warn('[FHE] Retry draw - deck empty (fatigue)');
+        }
+
+        self._fheDecrypting = false;
+        self._fheDrawDecryptFailed = false;
+      })
+      .catch(function(error) {
+        Logger.module('FHE_UI').error('[FHE] Retry draw failed:', error);
+        self._fheDecrypting = false;
+
+        if (error && error.is500Error) {
+          self._fheDrawDecryptFailed = true;
+          if (gameLayer && gameLayer.bottomDeckLayer) {
+            gameLayer.bottomDeckLayer.showFHEDecryptFailedStateOnSlot();
+          }
+          EventBus.getInstance().trigger(EVENTS.fhe_draw_decrypt_failed, { error: error });
+        } else {
+          if (gameLayer && gameLayer.bottomDeckLayer) {
+            gameLayer.bottomDeckLayer.hideFHEDecryptStateOnSlot();
+          }
+        }
+      });
   },
 
   showSubmitChosenHand: function () {

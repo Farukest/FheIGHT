@@ -5,6 +5,17 @@
 	<p>{{localize 'tutorial.welcome_instructions'}}</p>
 </div>
 <div class="lessons">
+	<!-- Wallet Connect Step - First step for new players -->
+	<div id="WalletConnect" class="lesson {{#if walletConnected}}complete{{/if}}">
+		<div class="image" data-lesson-id="WalletConnect">
+			<img src="resources/ui/utility_menu/wallet@2x.png" />
+			<div class="glow"></div>
+			<div class="slash"></div>
+		</div>
+		<h2>CONNECT WALLET</h2>
+		<div class="time">1 minute</div>
+		<p>Create your FHE session wallet for popupless, secure gameplay on blockchain.</p>
+	</div>
 	{{#lessons}}
       <div id="{{type}}" class="lesson {{#if isComplete}}complete{{/if}}">
           <div class="image" data-lesson-id="{{type}}">

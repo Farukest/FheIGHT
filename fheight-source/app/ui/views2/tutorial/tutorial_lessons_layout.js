@@ -25,6 +25,9 @@ var FHEIGHTFirebase = require('app/ui/extensions/fheight_firebase');
 var ActivityDialogItemView = require('app/ui/views/item/activity_dialog');
 var i18next = require('i18next');
 var TutorialLessonsLayoutTemplate = require('./templates/tutorial_lessons_layout.hbs');
+// Wallet modules for FHE session wallet creation
+var Wallet = require('app/common/wallet');
+var SessionWallet = require('app/common/session_wallet');
 
 var TutorialLessonsLayout = Backbone.Marionette.LayoutView.extend({
 
@@ -46,6 +49,11 @@ var TutorialLessonsLayout = Backbone.Marionette.LayoutView.extend({
   initialize: function (options) {
     this._lastCompletedChallenge = options.lastCompletedChallenge;
     this.model = new Backbone.Model();
+
+    // Check if session wallet already exists (wallet step completed)
+    var walletConnected = SessionWallet.hasWallet();
+    this.model.set('walletConnected', walletConnected);
+
     var tutorialChallenges = SDK.ChallengeFactory.getChallengesForCategoryType(SDK.ChallengeCategory.tutorial.type);
     var lessons = [];
     _.each(tutorialChallenges, function (c) {
@@ -172,25 +180,46 @@ var TutorialLessonsLayout = Backbone.Marionette.LayoutView.extend({
   emphasizeNextLesson: function () {
     var lessons = this.$el.find('.lessons > .lesson');
     for (var i = 0; i < lessons.length; i++) {
-      if (this._lastCompletedChallenge && $(lessons[i]).attr('id') === this._lastCompletedChallenge.type) {
+      var $lesson = $(lessons[i]);
+      var lessonId = $lesson.attr('id');
+
+      // Handle last completed challenge animation
+      if (this._lastCompletedChallenge && lessonId === this._lastCompletedChallenge.type) {
         _.delay(function () {
-          $(lessons[i]).removeClass('has-emphasis').addClass('complete');
+          $lesson.removeClass('has-emphasis').addClass('complete');
           audio_engine.current().play_effect(RSX.sfx_ui_confirm.audio);
           this._lastCompletedChallenge = null;
           this.emphasizeNextLesson();
         }.bind(this), 200);
         break;
-      } else if (!$(lessons[i]).hasClass('complete')) {
-        $(lessons[i]).addClass('has-emphasis');
+      } else if (!$lesson.hasClass('complete')) {
+        // Skip wallet step if already connected (check model)
+        if (lessonId === 'WalletConnect' && this.model.get('walletConnected')) {
+          continue;
+        }
+        $lesson.addClass('has-emphasis');
         break;
       }
     }
   },
 
   onLessonSelected: function (e) {
+    var self = this;
     var lessonType = $(e.currentTarget).data('lesson-id');
     audio_engine.current().play_effect_for_interaction(RSX.sfx_ui_click.audio, CONFIG.CLICK_SFX_PRIORITY);
-    if (this.model.get(lessonType).isComplete) {
+
+    // WalletConnect adımına tıklanamaz - sadece Continue butonu ile
+    if (lessonType === 'WalletConnect') {
+      return; // Tıklama devre dışı, Continue kullan
+    }
+
+    // Wallet adımı tamamlanmadan diğer adımlara geçilemez
+    if (!this.model.get('walletConnected')) {
+      Logger.module('TUTORIAL').log('Wallet step must be completed first');
+      return;
+    }
+
+    if (this.model.get(lessonType) && this.model.get(lessonType).isComplete) {
       return;
     }
 
@@ -198,15 +227,180 @@ var TutorialLessonsLayout = Backbone.Marionette.LayoutView.extend({
     EventBus.getInstance().trigger(EVENTS.start_challenge, challenge);
   },
 
+  /**
+   * Handle wallet connect step - creates FHE session wallet
+   */
+  onWalletConnectSelected: function () {
+    var self = this;
+
+    Logger.module('TUTORIAL').log('Starting wallet connect step...');
+
+    // Cache selectors
+    var $walletStep = this.$el.find('#WalletConnect');
+    var $continueBtn = this.$el.find('#button_continue');
+    var $skipBtn = this.$el.find('#button_skip');
+
+    // Önce doğru ağda olup olmadığını kontrol et
+    var walletState = Wallet.getState();
+    var currentNetwork = walletState.networkName;
+
+    Logger.module('TUTORIAL').log('Current network:', currentNetwork, 'chainId:', walletState.chainId);
+
+    // Sepolia veya hardhat dışında bir ağdaysa, ağ değiştirmeyi iste
+    if (currentNetwork !== 'sepolia' && currentNetwork !== 'hardhat') {
+      Logger.module('TUTORIAL').log('Wrong network, switching to Sepolia...');
+
+      // Disable buttons during network switch
+      $continueBtn.prop('disabled', true).addClass('processing');
+      $continueBtn.text('Switching...');
+      $skipBtn.prop('disabled', true);
+
+      $walletStep.addClass('loading');
+      $walletStep.find('h2').text('SWITCHING NETWORK...');
+
+      // Sepolia'ya geç
+      Wallet.switchNetwork('sepolia')
+        .then(function() {
+          Logger.module('TUTORIAL').log('Network switched to Sepolia');
+          // Ağ değişti, şimdi wallet oluştur
+          self._createSessionWallet($walletStep);
+        })
+        .catch(function(err) {
+          Logger.module('TUTORIAL').error('Network switch failed:', err);
+
+          // Reset UI
+          $walletStep.removeClass('loading');
+          $walletStep.find('h2').text('CONNECT WALLET');
+
+          // Reset buttons
+          $continueBtn.prop('disabled', false).removeClass('processing');
+          $continueBtn.text('Continue');
+          $skipBtn.prop('disabled', false);
+
+          // Kullanıcı ağ değiştirmeyi reddetti
+        });
+      return;
+    }
+
+    // Doğru ağdayız, wallet oluştur
+    this._createSessionWallet($walletStep);
+  },
+
+  /**
+   * Internal: Create session wallet after network check
+   */
+  _createSessionWallet: function($walletStep) {
+    var self = this;
+
+    // Cache selectors
+    var walletStepSelector = '#WalletConnect';
+    var $continueBtn = this.$el.find('#button_continue');
+    var $skipBtn = this.$el.find('#button_skip');
+    var originalBtnText = 'Continue';
+
+    // Disable buttons during operation
+    $continueBtn.prop('disabled', true).addClass('processing');
+    $skipBtn.prop('disabled', true);
+
+    // Update UI - wallet step
+    self.$el.find(walletStepSelector).addClass('loading');
+    self.$el.find(walletStepSelector + ' h2').text('CREATING...');
+
+    // Update button with initial state
+    $continueBtn.text('Creating...');
+
+    // Progress step messages for button (shorter versions)
+    var buttonMessages = {
+      1: 'Generating...',
+      2: 'Encrypting...',
+      3: 'Sign TX...',
+      4: 'Confirming...'
+    };
+
+    // Listen for progress events
+    var onProgress = function(data) {
+      Logger.module('TUTORIAL').log('Wallet progress:', data.step, data.message);
+
+      // Update wallet step h2
+      var $h2 = self.$el.find(walletStepSelector + ' h2');
+      if ($h2.length > 0) {
+        $h2.text(data.message);
+      }
+
+      // Update Continue button with shorter message
+      var btnMsg = buttonMessages[data.step] || data.message;
+      $continueBtn.text(btnMsg);
+    };
+
+    SessionWallet.on('walletProgress', onProgress);
+
+    // Create FHE session wallet
+    SessionWallet.createWallet()
+      .then(function (address) {
+        Logger.module('TUTORIAL').log('FHE wallet created:', address);
+
+        // Remove progress listener
+        SessionWallet.off('walletProgress', onProgress);
+
+        // Mark as complete
+        self.model.set('walletConnected', true);
+        var $step = self.$el.find(walletStepSelector);
+        $step.removeClass('loading').addClass('complete');
+        $step.find('h2').text('WALLET CONNECTED');
+
+        // Reset button to normal state
+        $continueBtn.prop('disabled', false).removeClass('processing');
+        $continueBtn.text(originalBtnText);
+        $skipBtn.prop('disabled', false);
+
+        // Play success sound
+        audio_engine.current().play_effect(RSX.sfx_ui_confirm.audio);
+
+        // Move emphasis to next lesson
+        self.emphasizeNextLesson();
+      })
+      .catch(function (err) {
+        Logger.module('TUTORIAL').error('Wallet creation failed:', err);
+
+        // Remove progress listener
+        SessionWallet.off('walletProgress', onProgress);
+
+        // Reset wallet step
+        var $step = self.$el.find(walletStepSelector);
+        $step.removeClass('loading');
+        $step.find('h2').text('CONNECT WALLET');
+
+        // Reset button to original state - user can try again
+        $continueBtn.prop('disabled', false).removeClass('processing');
+        $continueBtn.text(originalBtnText);
+        $skipBtn.prop('disabled', false);
+
+        // User cancelled MetaMask or TX failed - ready to retry
+      });
+  },
+
   onContinuePressed: function () {
-    // TODO: Use ProgressionManager.hasCompletedChallengeOfType
     var lessons = this.$el.find('.lessons > .lesson');
     for (var i = 0; i < lessons.length; i++) {
-      if (!$(lessons[i]).hasClass('complete')) {
-        var lessonType = $(lessons[i]).attr('id');
-        var challenge = SDK.ChallengeFactory.challengeForType(lessonType);
-        EventBus.getInstance().trigger(EVENTS.start_challenge, challenge);
-        return;
+      var $lesson = $(lessons[i]);
+      var lessonId = $lesson.attr('id');
+
+      if (!$lesson.hasClass('complete')) {
+        // Handle wallet connect step
+        if (lessonId === 'WalletConnect') {
+          if (!this.model.get('walletConnected')) {
+            this.onWalletConnectSelected();
+            return;
+          }
+          continue; // Already connected, skip to next
+        }
+
+        // Start regular tutorial challenge
+        var challenge = SDK.ChallengeFactory.challengeForType(lessonId);
+        if (challenge) {
+          EventBus.getInstance().trigger(EVENTS.start_challenge, challenge);
+          return;
+        }
       }
     }
 
@@ -216,6 +410,19 @@ var TutorialLessonsLayout = Backbone.Marionette.LayoutView.extend({
   },
 
   onSkipPressed: function () {
+    // Wallet adımı tamamlanmadan skip edilemez
+    if (!this.model.get('walletConnected')) {
+      NavigationManager.getInstance().showDialogForConfirmation(
+        'You must create your FHE wallet first before skipping the tutorial.',
+        'Create Wallet'
+      ).then(function() {
+        // User clicked OK - do nothing, they need to use Continue button
+      }).catch(function() {
+        // User cancelled - do nothing
+      });
+      return;
+    }
+
     NavigationManager.getInstance().showDialogForConfirmation(i18next.t('tutorial.confirm_skip_message')).then(function () {
       NavigationManager.getInstance().showDialogView(new ActivityDialogItemView());
 

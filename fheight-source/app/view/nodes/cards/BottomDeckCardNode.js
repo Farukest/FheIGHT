@@ -46,6 +46,7 @@ const BottomDeckCardNode = SdkNode.extend({
   _statChangeQueue: null,
   _statsChangeNode: null,
   _showingFHEDecrypt: false,
+  _showingFHEDecryptFailed: false,
   _fheDecryptLabel: null,
   _fheDecryptSpinner: null,
 
@@ -411,6 +412,7 @@ const BottomDeckCardNode = SdkNode.extend({
   showFHEDecryptState() {
     if (!this._showingFHEDecrypt) {
       this._showingFHEDecrypt = true;
+      this._showingFHEDecryptFailed = false;
       const contentSize = this.getContentSize();
 
       // Create decrypt label if not exists
@@ -420,10 +422,16 @@ const BottomDeckCardNode = SdkNode.extend({
         this._fheDecryptLabel.setAnchorPoint(0.5, 0.5);
         this._fheDecryptLabel.setPosition(cc.p(contentSize.width * 0.5, contentSize.height * 0.5));
         this._containerNode.addChild(this._fheDecryptLabel, 10);
+      } else {
+        // Reset label for reuse - stop any running actions first
+        this._fheDecryptLabel.stopAllActions();
+        this._fheDecryptLabel.setString('Decrypting...');
+        this._fheDecryptLabel.setFontFillColor(cc.color(255, 215, 0)); // Gold color
       }
 
       // Show and animate the label
       this._fheDecryptLabel.setOpacity(255);
+      this._fheDecryptLabel.setVisible(true);
       const pulseAction = cc.sequence(
         cc.fadeTo(0.5, 128),
         cc.fadeTo(0.5, 255)
@@ -440,8 +448,9 @@ const BottomDeckCardNode = SdkNode.extend({
    * Hides FHE decrypt loading state.
    */
   hideFHEDecryptState() {
-    if (this._showingFHEDecrypt) {
+    if (this._showingFHEDecrypt || this._showingFHEDecryptFailed) {
       this._showingFHEDecrypt = false;
+      this._showingFHEDecryptFailed = false;
 
       if (this._fheDecryptLabel != null) {
         this._fheDecryptLabel.stopActionByTag(CONFIG.FHE_DECRYPT_TAG || 999);
@@ -453,10 +462,55 @@ const BottomDeckCardNode = SdkNode.extend({
   },
 
   /**
+   * Shows FHE decrypt failed state on the card.
+   */
+  showFHEDecryptFailedState() {
+    // First hide any existing decrypt state
+    if (this._showingFHEDecrypt) {
+      this._showingFHEDecrypt = false;
+      if (this._fheDecryptLabel != null) {
+        this._fheDecryptLabel.stopActionByTag(CONFIG.FHE_DECRYPT_TAG || 999);
+      }
+      this._glowRings.stopSystem();
+    }
+
+    this._showingFHEDecryptFailed = true;
+    const contentSize = this.getContentSize();
+
+    // Create or update decrypt label
+    if (this._fheDecryptLabel == null) {
+      this._fheDecryptLabel = new cc.LabelTTF('Failed', RSX.font_bold.name, 10);
+      this._fheDecryptLabel.setAnchorPoint(0.5, 0.5);
+      this._fheDecryptLabel.setPosition(cc.p(contentSize.width * 0.5, contentSize.height * 0.5));
+      this._containerNode.addChild(this._fheDecryptLabel, 10);
+    }
+
+    // Show red "Failed" text
+    this._fheDecryptLabel.setString('Failed');
+    this._fheDecryptLabel.setFontFillColor(cc.color(255, 80, 80)); // Red color
+    this._fheDecryptLabel.setOpacity(255);
+
+    // Pulse animation for failed state
+    const pulseAction = cc.sequence(
+      cc.fadeTo(0.8, 180),
+      cc.fadeTo(0.8, 255)
+    ).repeatForever();
+    pulseAction.setTag(CONFIG.FHE_DECRYPT_TAG || 999);
+    this._fheDecryptLabel.runAction(pulseAction);
+  },
+
+  /**
    * Returns true if showing FHE decrypt state.
    */
   getIsShowingFHEDecryptState() {
     return this._showingFHEDecrypt;
+  },
+
+  /**
+   * Returns true if showing FHE decrypt failed state.
+   */
+  getIsShowingFHEDecryptFailedState() {
+    return this._showingFHEDecryptFailed;
   },
 
   /* endregion FHE DECRYPT */

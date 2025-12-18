@@ -6315,6 +6315,10 @@ var GameLayer = FXCompositeLayer.extend({
         NavigationManager.getInstance().requestUserTriggeredCancel();
       }
     } else if (this.getIsChooseHand()) {
+      // Block card selection during FHE decrypt
+      if (this.bottomDeckLayer && (this.bottomDeckLayer.getIsFHEDecrypting() || this.bottomDeckLayer.getIsFHEDecryptFailed())) {
+        return; // Don't allow mulligan selection while decrypting or in failed state
+      }
       // toggle cards to be mulliganed from starting hand
       const cardNode = this.getNodeUnderMouse(this.bottomDeckLayer.getCardNodes(), mouseScreenPosition.x, mouseScreenPosition.y);
       if (cardNode) {

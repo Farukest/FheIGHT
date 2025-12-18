@@ -55,13 +55,10 @@
 				position: relative;
 				img {
 					position: relative;
-					width: 10.0rem;
-					height: 10.0rem;
+					width: 9rem;
+					height: 10rem;
 					z-index: 2;
-					border-radius: 12.8rem;
-					border:solid 0.1rem #000;
-					box-shadow: inset 0 0.2rem 0.2rem #fff;
-					margin:1.4rem;
+					margin: 1.4rem;
 					filter: sepia(100%) hue-rotate(180deg);
 				}
 				&:before {
@@ -175,7 +172,19 @@
 					}
 				}
 			}
+			// Loading state for wallet connect
+			&.loading {
+				pointer-events: none;
+				h2 {
+					animation: pulse 1.5s ease-in-out infinite;
+				}
+			}
 		}
+	}
+	// Animations
+	@keyframes pulse {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.5; }
 	}
 	.action-bar {
 		margin:4.0rem 0;
@@ -184,6 +193,27 @@
 			font-size: 2rem;
 			display:block;
 			margin-bottom: 1rem;
+			transition: all 0.2s ease;
+
+			&:disabled {
+				opacity: 0.7;
+				cursor: not-allowed;
+			}
+
+			&.processing {
+				animation: btnPulse 1.5s ease-in-out infinite;
+			}
 		}
+		#button_skip {
+			&:disabled {
+				opacity: 0.4;
+				cursor: not-allowed;
+				pointer-events: none;
+			}
+		}
+	}
+	@keyframes btnPulse {
+		0%, 100% { opacity: 0.9; }
+		50% { opacity: 0.6; }
 	}
 }

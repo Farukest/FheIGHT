@@ -17,10 +17,12 @@ var GameChooseHandItemView = Backbone.Marionette.ItemView.extend({
     $opponentConnected: '.opponent-connected',
     $opponentConnecting: '.opponent-connecting',
     $confirmButton: '.confirm',
+    $reDecryptButton: '.redecrypt',
   },
 
   triggers: {
     'click .confirm': 'confirm',
+    'click .redecrypt': 'redecrypt',
   },
 
   animateIn: Animations.fadeIn,
@@ -63,6 +65,18 @@ var GameChooseHandItemView = Backbone.Marionette.ItemView.extend({
         opacity: 0,
         'pointer-events': 'none',
       });
+    }
+  },
+
+  showReDecryptButton: function (visible) {
+    if (visible) {
+      // Hide confirm button, show re-decrypt button
+      this.ui.$confirmButton.hide();
+      this.ui.$reDecryptButton.show();
+    } else {
+      // Hide re-decrypt button, show confirm button
+      this.ui.$reDecryptButton.hide();
+      this.ui.$confirmButton.show();
     }
   },
 });

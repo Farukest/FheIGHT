@@ -574,7 +574,7 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
       return;
     }
 
-    if (!window.ethereum) {
+    if (!Wallet.isProviderAvailable()) {
       reject(new Error('MetaMask not found'));
       return;
     }
@@ -583,8 +583,8 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
     var signer = null;
     var contracts = Array.isArray(contractAddresses) ? contractAddresses : [contractAddresses];
 
-    // Doğrudan window.ethereum'dan hesap al
-    window.ethereum.request({ method: 'eth_accounts' })
+    // Wallet modülünden hesap al
+    Wallet.getConnectedAccounts()
       .then(function(accounts) {
         if (!accounts || accounts.length === 0) {
           throw new Error('No wallet connected');
@@ -592,9 +592,8 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
 
         userAddress = accounts[0];
 
-        // ethers provider ve signer oluştur
-        var ethersProvider = new window.ethers.providers.Web3Provider(window.ethereum);
-        signer = ethersProvider.getSigner();
+        // Wallet modülünden signer al
+        signer = Wallet.getSigner();
 
         // Timestamp ve duration - bunlar signature ile eslesmeli!
         var startTimeStamp = Math.floor(Date.now() / 1000).toString();
@@ -885,8 +884,8 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
       signatureWithoutPrefix = signatureWithoutPrefix.slice(2);
     }
 
-    // Doğrudan window.ethereum'dan hesap al
-    window.ethereum.request({ method: 'eth_accounts' })
+    // Wallet modülünden hesap al
+    Wallet.getConnectedAccounts()
       .then(function(accounts) {
         if (!accounts || accounts.length === 0) {
           throw new Error('No wallet connected');
@@ -961,8 +960,6 @@ FHESessionManager.prototype._mockDecrypt = function(handles, contractAddress) {
 
   return new Promise(function(resolve, reject) {
     try {
-      var walletManager = Wallet.getInstance();
-
       Logger.module('FHE_SESSION').log('[FHE MOCK] === MOCK DECRYPT START ===');
       Logger.module('FHE_SESSION').log('[FHE MOCK] Contract:', contractAddress);
       Logger.module('FHE_SESSION').log('[FHE MOCK] Number of handles:', handles.length);
@@ -1025,7 +1022,6 @@ FHESessionManager.prototype.getContractAddresses = function(network) {
   }
 
   // Wallet'tan guncel network'u al
-  var walletManager = Wallet.getInstance();
   var currentNet = Wallet.getCurrentNetwork();
 
   // Eger cached network varsa kullan
@@ -1043,9 +1039,8 @@ FHESessionManager.prototype.getContractAddresses = function(network) {
  */
 FHESessionManager.prototype.getContractAddressesAsync = function() {
   var self = this;
-  var walletManager = Wallet.getInstance();
 
-  return walletManager.getCurrentNetwork().then(function(network) {
+  return Wallet.getInstance().getCurrentNetwork().then(function(network) {
     // Cache'e kaydet
     Wallet.setCurrentNetwork(network);
     Logger.module('FHE_SESSION').log('Detected network:', network);

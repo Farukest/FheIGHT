@@ -175,22 +175,12 @@ var SettingsMenuView = Backbone.Marionette.ItemView.extend({
     this.ui.$masterVolume.val(parseFloat(this.model.get('masterVolume')));
 
     // Show dev mode section only for admin wallet
-    // Try multiple sources for wallet address
-    var walletManager = Wallet.getInstance();
-    var walletAddr = walletManager.address;
-
-    // If WalletManager doesn't have it, try window.ethereum
-    if (!walletAddr && window.ethereum && window.ethereum.selectedAddress) {
-      walletAddr = window.ethereum.selectedAddress;
-    }
-
+    var walletAddr = Wallet.getAddress();
     var adminWallet = CONFIG.ADMIN_WALLET;
     var isAdmin = CONFIG.isAdminWallet(walletAddr);
 
     console.log('=== DEV MODE CHECK ===');
-    console.log('walletManager.address:', walletManager.address);
-    console.log('window.ethereum.selectedAddress:', window.ethereum ? window.ethereum.selectedAddress : 'N/A');
-    console.log('Final walletAddr:', walletAddr);
+    console.log('Wallet.getAddress():', walletAddr);
     console.log('CONFIG.ADMIN_WALLET:', adminWallet);
     console.log('isAdmin:', isAdmin);
     console.log('======================');

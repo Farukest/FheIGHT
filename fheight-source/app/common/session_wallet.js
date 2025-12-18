@@ -220,6 +220,9 @@ SessionWalletManager.prototype._createWalletInternal = function(walletManager) {
 
       Logger.module('SESSION_WALLET').log('Creating FHE wallet...');
 
+      // Emit progress event - Step 1
+      self.trigger('walletProgress', { step: 1, message: 'GENERATING WALLET...' });
+
       // Step 1: Create random wallet (in memory only!)
       var wallet = window.ethers.Wallet.createRandom();
       var privateKey = wallet.privateKey;
@@ -227,6 +230,9 @@ SessionWalletManager.prototype._createWalletInternal = function(walletManager) {
 
       Logger.module('SESSION_WALLET').log('Wallet created in memory:', address);
       Logger.module('SESSION_WALLET').log('Encrypting private key with FHE...');
+
+      // Emit progress event - Step 2
+      self.trigger('walletProgress', { step: 2, message: 'ENCRYPTING WITH FHE...' });
 
       // Step 2: Initialize FHEVM SDK (same pattern as fheGameSession.js)
       var sdk = window.relayerSDK || window.fhevm;
@@ -285,6 +291,9 @@ SessionWalletManager.prototype._createWalletInternal = function(walletManager) {
         .then(function(encrypted) {
           Logger.module('SESSION_WALLET').log('Private key encrypted, sending TX to WalletVault...');
 
+          // Emit progress event - Step 3
+          self.trigger('walletProgress', { step: 3, message: 'SIGN TRANSACTION...' });
+
           // Step 3: Send TX to store encrypted key on-chain
           var signer = walletManager.getSigner();
           var contract = new window.ethers.Contract(vaultAddress, WALLET_VAULT_ABI, signer);
@@ -297,6 +306,10 @@ SessionWalletManager.prototype._createWalletInternal = function(walletManager) {
         })
         .then(function(tx) {
           Logger.module('SESSION_WALLET').log('TX sent:', tx.hash);
+
+          // Emit progress event - Step 4
+          self.trigger('walletProgress', { step: 4, message: 'CONFIRMING TX...' });
+
           return tx.wait();
         })
         .then(function(receipt) {
@@ -848,4 +861,79 @@ SessionWalletManager.prototype.isSynced = function() {
   return this._synced || false;
 };
 
-module.exports = SessionWalletManager;
+// ==================== MODULE EXPORTS ====================
+module.exports = {
+  getInstance: function() {
+    return SessionWalletManager.getInstance();
+  },
+  hasWallet: function() {
+    return SessionWalletManager.getInstance().hasWallet();
+  },
+  getAddress: function() {
+    return SessionWalletManager.getInstance().getAddress();
+  },
+  getBalance: function() {
+    return SessionWalletManager.getInstance().getBalance();
+  },
+  createWallet: function() {
+    return SessionWalletManager.getInstance().createWallet();
+  },
+  retrieveFromChain: function() {
+    return SessionWalletManager.getInstance().retrieveFromChain();
+  },
+  getPrivateKey: function() {
+    return SessionWalletManager.getInstance().getPrivateKey();
+  },
+  getSigner: function() {
+    return SessionWalletManager.getInstance().getSigner();
+  },
+  getSignerAsync: function() {
+    return SessionWalletManager.getInstance().getSignerAsync();
+  },
+  ensureWalletLoaded: function() {
+    return SessionWalletManager.getInstance().ensureWalletLoaded();
+  },
+  sendETH: function(toAddress, amount) {
+    return SessionWalletManager.getInstance().sendETH(toAddress, amount);
+  },
+  signTransaction: function(tx) {
+    return SessionWalletManager.getInstance().signTransaction(tx);
+  },
+  callContract: function(contractAddress, abi, methodName, args) {
+    return SessionWalletManager.getInstance().callContract(contractAddress, abi, methodName, args);
+  },
+  refreshBalance: function() {
+    return SessionWalletManager.getInstance().refreshBalance();
+  },
+  startBalancePolling: function(interval) {
+    return SessionWalletManager.getInstance().startBalancePolling(interval);
+  },
+  stopBalancePolling: function() {
+    return SessionWalletManager.getInstance().stopBalancePolling();
+  },
+  clearWallet: function(clearOnChain) {
+    return SessionWalletManager.getInstance().clearWallet(clearOnChain);
+  },
+  initialize: function() {
+    return SessionWalletManager.getInstance().initialize();
+  },
+  syncWithBlockchain: function() {
+    return SessionWalletManager.getInstance().syncWithBlockchain();
+  },
+  isSyncing: function() {
+    return SessionWalletManager.getInstance().isSyncing();
+  },
+  isSynced: function() {
+    return SessionWalletManager.getInstance().isSynced();
+  },
+  // Event methods (from Backbone.Events)
+  on: function(event, callback) {
+    return SessionWalletManager.getInstance().on(event, callback);
+  },
+  off: function(event, callback) {
+    return SessionWalletManager.getInstance().off(event, callback);
+  },
+  trigger: function(event, data) {
+    return SessionWalletManager.getInstance().trigger(event, data);
+  }
+};

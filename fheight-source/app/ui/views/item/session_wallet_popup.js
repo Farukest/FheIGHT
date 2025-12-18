@@ -3,7 +3,7 @@
 var Logger = require('app/common/logger');
 var CONFIG = require('app/common/config');
 var SessionWalletPopupTmpl = require('app/ui/templates/item/session_wallet_popup.hbs');
-var SessionWalletManager = require('app/common/session_wallet');
+var SessionWallet = require('app/common/session_wallet');
 var Wallet = require('app/common/wallet');
 var NavigationManager = require('app/ui/managers/navigation_manager');
 
@@ -65,14 +65,16 @@ var SessionWalletPopupView = Backbone.Marionette.ItemView.extend({
   },
 
   initialize: function() {
-    this.sessionWallet = SessionWalletManager.getInstance();
-    this.mainWallet = Wallet.getInstance();
+    this.sessionWallet = SessionWallet;
+    var self = this;
 
-    // Listen for balance updates
-    this.listenTo(this.sessionWallet, 'balanceChanged', this.onBalanceChanged);
+    // Listen for balance updates (manual binding - listenTo doesn't work with module wrapper)
+    this._onBalanceChanged = function(balance) {
+      self.onBalanceChanged(balance);
+    };
+    SessionWallet.on('balanceChanged', this._onBalanceChanged);
 
     // Listen for chain changes - update network badge and re-sync
-    var self = this;
     this._onChainChanged = function(event) {
       Logger.module('SESSION_WALLET').log('Chain changed, updating wallet popup...');
       self.onNetworkChanged();
@@ -124,6 +126,12 @@ var SessionWalletPopupView = Backbone.Marionette.ItemView.extend({
   onDestroy: function() {
     this.$el.find('[data-toggle="tooltip"]').tooltip('destroy');
     this.sessionWallet.stopBalancePolling();
+
+    // Remove balance change listener
+    if (this._onBalanceChanged) {
+      SessionWallet.off('balanceChanged', this._onBalanceChanged);
+      this._onBalanceChanged = null;
+    }
 
     // Remove chain change listener
     if (this._onChainChanged) {
@@ -261,7 +269,7 @@ var SessionWalletPopupView = Backbone.Marionette.ItemView.extend({
 
     // Use wallet.js sendTransactionAndWait - handles everything via EIP-1193
     // Works with any wallet (MetaMask, Rabby, Coinbase, WalletConnect, etc.)
-    this.mainWallet.sendTransactionAndWait(toAddress, amount)
+    Wallet.sendTransactionAndWait(toAddress, amount)
       .then(function(receipt) {
         Logger.module('SESSION_WALLET').log('Deposit confirmed:', receipt.transactionHash);
         // Refresh balance immediately after TX confirms
@@ -302,7 +310,7 @@ var SessionWalletPopupView = Backbone.Marionette.ItemView.extend({
       return;
     }
 
-    var mainAddress = this.mainWallet.getAddress();
+    var mainAddress = Wallet.getState().address;
     if (!mainAddress) {
       Logger.module('SESSION_WALLET').error('Main wallet not connected');
       return;

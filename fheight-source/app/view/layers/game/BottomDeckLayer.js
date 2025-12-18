@@ -24,6 +24,8 @@ var BottomDeckLayer = BaseLayer.extend({
   _status: null,
   _statusPromises: null,
   _waitingForStatus: null,
+  _fheDecrypting: false,
+  _fheDecryptFailed: false,
 
   cardNodes: null,
 
@@ -558,9 +560,25 @@ var BottomDeckLayer = BaseLayer.extend({
   /* region FHE DECRYPT */
 
   /**
+   * Returns true if currently decrypting FHE cards.
+   */
+  getIsFHEDecrypting() {
+    return this._fheDecrypting;
+  },
+
+  /**
+   * Returns true if FHE decrypt failed.
+   */
+  getIsFHEDecryptFailed() {
+    return this._fheDecryptFailed;
+  },
+
+  /**
    * Shows FHE decrypt state on all starting hand cards.
    */
   showFHEDecryptState() {
+    this._fheDecrypting = true;
+    this._fheDecryptFailed = false;
     const cardNodes = this.getCardNodes();
     const numCards = CONFIG.STARTING_HAND_SIZE;
     for (let i = 0; i < numCards; i++) {
@@ -575,11 +593,84 @@ var BottomDeckLayer = BaseLayer.extend({
    * Hides FHE decrypt state on all cards.
    */
   hideFHEDecryptState() {
+    this._fheDecrypting = false;
+    this._fheDecryptFailed = false;
     const cardNodes = this.getCardNodes();
     for (let i = 0; i < cardNodes.length; i++) {
       const cardNode = cardNodes[i];
       if (cardNode && cardNode.hideFHEDecryptState) {
         cardNode.hideFHEDecryptState();
+      }
+    }
+  },
+
+  /**
+   * Shows FHE decrypt failed state on all starting hand cards.
+   */
+  showFHEDecryptFailedState() {
+    this._fheDecrypting = false;
+    this._fheDecryptFailed = true;
+    const cardNodes = this.getCardNodes();
+    const numCards = CONFIG.STARTING_HAND_SIZE;
+    for (let i = 0; i < numCards; i++) {
+      const cardNode = cardNodes[i];
+      if (cardNode && cardNode.showFHEDecryptFailedState) {
+        cardNode.showFHEDecryptFailedState();
+      }
+    }
+  },
+
+  /**
+   * Shows FHE decrypt state on the first empty card slot (for End Turn draw).
+   * @returns {number} The index of the slot showing decrypt state, or -1 if hand is full.
+   */
+  showFHEDecryptStateOnFirstEmptySlot() {
+    this._fheDecrypting = true;
+    this._fheDecryptFailed = false;
+    const cardNodes = this.getCardNodes();
+    const myPlayer = SDK.GameSession.getInstance().getMyPlayer();
+    const deck = myPlayer && myPlayer.getDeck();
+
+    // Find first empty slot in hand
+    for (let i = 0; i < cardNodes.length; i++) {
+      const cardInHand = deck && deck.getCardInHandAtIndex(i);
+      if (!cardInHand) {
+        const cardNode = cardNodes[i];
+        if (cardNode && cardNode.showFHEDecryptState) {
+          cardNode.showFHEDecryptState();
+          this._decryptingSlotIndex = i;
+          return i;
+        }
+      }
+    }
+    return -1; // Hand is full
+  },
+
+  /**
+   * Hides FHE decrypt state on the currently decrypting slot.
+   */
+  hideFHEDecryptStateOnSlot() {
+    this._fheDecrypting = false;
+    this._fheDecryptFailed = false;
+    if (this._decryptingSlotIndex != null && this._decryptingSlotIndex >= 0) {
+      const cardNode = this.getCardNodes()[this._decryptingSlotIndex];
+      if (cardNode && cardNode.hideFHEDecryptState) {
+        cardNode.hideFHEDecryptState();
+      }
+      this._decryptingSlotIndex = null;
+    }
+  },
+
+  /**
+   * Shows FHE decrypt failed state on the currently decrypting slot.
+   */
+  showFHEDecryptFailedStateOnSlot() {
+    this._fheDecrypting = false;
+    this._fheDecryptFailed = true;
+    if (this._decryptingSlotIndex != null && this._decryptingSlotIndex >= 0) {
+      const cardNode = this.getCardNodes()[this._decryptingSlotIndex];
+      if (cardNode && cardNode.showFHEDecryptFailedState) {
+        cardNode.showFHEDecryptFailedState();
       }
     }
   },

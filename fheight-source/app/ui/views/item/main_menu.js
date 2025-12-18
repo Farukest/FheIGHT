@@ -30,7 +30,7 @@ var PlayLayout = require('app/ui/views/layouts/play');
 var CosmeticsFactory = require('app/sdk/cosmetics/cosmeticsFactory');
 var ShopManager = require('app/ui/managers/shop_manager');
 var ShopData = require('app/data/shop.json');
-var SessionWalletManager = require('app/common/session_wallet');
+var SessionWallet = require('app/common/session_wallet');
 
 var moment = require('moment');
 
@@ -750,22 +750,21 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
    */
   _syncAndCheckSessionWallet: function () {
     var self = this;
-    var sessionWallet = SessionWalletManager.getInstance();
     var Wallet = require('app/common/wallet');
 
     // Log current wallet state
     var walletState = Wallet.getState();
     Logger.module('UI').log('=== MAIN MENU WALLET DEBUG ===');
     Logger.module('UI').log('Wallet.getState():', JSON.stringify(walletState));
-    Logger.module('UI').log('window.ethereum:', !!window.ethereum);
-    Logger.module('UI').log('window.ethereum.selectedAddress:', window.ethereum ? window.ethereum.selectedAddress : 'N/A');
-    Logger.module('UI').log('SessionWallet.hasWallet():', sessionWallet.hasWallet());
-    Logger.module('UI').log('SessionWallet.getAddress():', sessionWallet.getAddress());
+    Logger.module('UI').log('Wallet.isProviderAvailable():', Wallet.isProviderAvailable());
+    Logger.module('UI').log('Wallet.getAddress():', walletState.address || 'N/A');
+    Logger.module('UI').log('SessionWallet.hasWallet():', SessionWallet.hasWallet());
+    Logger.module('UI').log('SessionWallet.getAddress():', SessionWallet.getAddress());
     Logger.module('UI').log('==============================');
 
     // First check localStorage immediately (fast path)
     // This prevents flash of overlay for users who already have wallet
-    if (sessionWallet.hasWallet()) {
+    if (SessionWallet.hasWallet()) {
       Logger.module('UI').log('MainMenu: Found wallet in localStorage, unlocking immediately');
       self._unlockMenus();
       self._hideGuideOverlay();
@@ -776,15 +775,15 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
 
     // On page refresh, MetaMask doesn't auto-expose selectedAddress
     // Use eth_accounts to check for previously authorized accounts (doesn't prompt user)
-    if (window.ethereum) {
-      window.ethereum.request({ method: 'eth_accounts' })
+    if (Wallet.isProviderAvailable()) {
+      Wallet.getConnectedAccounts()
         .then(function(accounts) {
           if (self.isDestroyed) return;
 
           if (accounts && accounts.length > 0) {
             Logger.module('UI').log('MainMenu: Found previously connected account:', accounts[0]);
             // We have a previously connected account, sync with blockchain
-            sessionWallet.syncWithBlockchain()
+            SessionWallet.syncWithBlockchain()
               .then(function (address) {
                 if (self.isDestroyed) return;
                 Logger.module('UI').log('MainMenu: Sync complete, session wallet: ' + (address || 'none'));
@@ -826,9 +825,7 @@ var MainMenuItemView = Backbone.Marionette.ItemView.extend({
    * Check if user has session wallet and lock/unlock menus accordingly
    */
   _checkSessionWalletStatus: function () {
-    var sessionWallet = SessionWalletManager.getInstance();
-
-    if (!sessionWallet.hasWallet()) {
+    if (!SessionWallet.hasWallet()) {
       // No session wallet - lock menus and show guide
       this._lockMenus();
       this._showGuideOverlay();

@@ -19,7 +19,7 @@
 var Promise = require('bluebird');
 var Logger = require('app/common/logger');
 var Wallet = require('app/common/wallet');
-var SessionWalletManager = require('app/common/session_wallet');
+var SessionWallet = require('app/common/session_wallet');
 var ethers = require('ethers');
 
 // ============ CONTRACT ABI ============
@@ -47,7 +47,7 @@ function FHEGameSession() {
   this.serverGameId = null;    // Server-side game ID (Redis)
   this.blockchainGameId = null; // Blockchain game ID (same as gameId for contract)
   this.network = 'sepolia';
-  this.sessionWallet = SessionWalletManager.getInstance();
+  this.sessionWallet = SessionWallet;
 
   // Deck ve kart state (client-side)
   this.deck = [];              // 40 kartlik deste (server'dan gelir)
@@ -703,7 +703,29 @@ FHEGameSession.prototype._publicDecrypt = function(handles) {
       })
       .catch(function(error) {
         Logger.module('FHE_GAME').error('[KMS] Decrypt failed:', error);
-        reject(error);
+
+        // Check for 500 error specifically (Gateway not ready)
+        var is500Error = false;
+        if (error && error.message) {
+          // Check error message for 500 status
+          if (error.message.indexOf('500') !== -1 ||
+              error.message.indexOf('Internal Server Error') !== -1 ||
+              error.message.indexOf('Gateway') !== -1) {
+            is500Error = true;
+          }
+        }
+        if (error && error.status === 500) {
+          is500Error = true;
+        }
+        if (error && error.response && error.response.status === 500) {
+          is500Error = true;
+        }
+
+        // Create a typed error for UI handling
+        var typedError = new Error(error.message || 'Decrypt failed');
+        typedError.is500Error = is500Error;
+        typedError.originalError = error;
+        reject(typedError);
       });
   });
 };

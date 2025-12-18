@@ -24,7 +24,7 @@ var BosterPackUnlockView = require('../layouts/booster_pack_collection');
 var UtilityMenuItemView = require('./utility_menu');
 var Wallet = require('app/common/wallet');
 // Session wallet imports are done lazily to avoid load-time issues
-var SessionWalletManager = null;
+var SessionWallet = null;
 var SessionWalletPopupView = null;
 
 /**
@@ -128,7 +128,6 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
 
     // Listen for chain changes from wallet
     var self = this;
-    var walletManager = Wallet.getInstance();
 
     // Store bound handlers for cleanup
     this._onChainChanged = function() {
@@ -140,8 +139,8 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
       Session.logout();
     };
 
-    walletManager.on('chainChanged', this._onChainChanged);
-    walletManager.on('disconnected', this._onWalletDisconnected);
+    Wallet.on('chainChanged', this._onChainChanged);
+    Wallet.on('disconnected', this._onWalletDisconnected);
 
     // Listen to wallet custom events for chain and account changes
     this._onWalletChainChanged = function(event) {
@@ -175,12 +174,11 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
     this._cleanupSessionWalletSyncListeners();
 
     // Cleanup wallet event listeners
-    var walletManager = Wallet.getInstance();
     if (this._onChainChanged) {
-      walletManager.off('chainChanged', this._onChainChanged);
+      Wallet.off('chainChanged', this._onChainChanged);
     }
     if (this._onWalletDisconnected) {
-      walletManager.off('disconnected', this._onWalletDisconnected);
+      Wallet.off('disconnected', this._onWalletDisconnected);
     }
 
     // Cleanup wallet event listeners
@@ -436,13 +434,12 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
 
     // Lazy load session wallet modules on first use
     if (!SessionWalletPopupView) {
-      SessionWalletManager = require('app/common/session_wallet');
+      SessionWallet = require('app/common/session_wallet');
       SessionWalletPopupView = require('./session_wallet_popup');
     }
 
     // Check if sync is in progress - don't open popup if syncing
-    var sessionWalletManager = SessionWalletManager.getInstance();
-    if (sessionWalletManager.isSyncing()) {
+    if (SessionWallet.isSyncing()) {
       Logger.module('UI').log('Session wallet sync in progress, cannot open popup');
       return;
     }
@@ -478,12 +475,10 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
   _setupSessionWalletSyncListeners: function() {
     var self = this;
 
-    // Lazy load SessionWalletManager
-    if (!SessionWalletManager) {
-      SessionWalletManager = require('app/common/session_wallet');
+    // Lazy load SessionWallet
+    if (!SessionWallet) {
+      SessionWallet = require('app/common/session_wallet');
     }
-
-    var sessionWalletManager = SessionWalletManager.getInstance();
 
     // Store handlers for cleanup
     this._onSyncStarted = function() {
@@ -494,13 +489,13 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
       self._setWalletButtonLoading(false);
     };
 
-    sessionWalletManager.on('syncStarted', this._onSyncStarted);
-    sessionWalletManager.on('syncCompleted', this._onSyncCompleted);
+    SessionWallet.on('syncStarted', this._onSyncStarted);
+    SessionWallet.on('syncCompleted', this._onSyncCompleted);
 
     // Check current sync state - if already syncing, show loading state
-    if (sessionWalletManager.isSyncing()) {
+    if (SessionWallet.isSyncing()) {
       this._setWalletButtonLoading(true);
-    } else if (!sessionWalletManager.isSynced()) {
+    } else if (!SessionWallet.isSynced()) {
       // If not synced yet and not syncing, show loading state until sync happens
       this._setWalletButtonLoading(true);
     }
@@ -545,17 +540,15 @@ var UtilityMainMenuItemView = UtilityMenuItemView.extend({
    * Clean up session wallet sync listeners
    */
   _cleanupSessionWalletSyncListeners: function() {
-    if (!SessionWalletManager) return;
-
-    var sessionWalletManager = SessionWalletManager.getInstance();
+    if (!SessionWallet) return;
 
     if (this._onSyncStarted) {
-      sessionWalletManager.off('syncStarted', this._onSyncStarted);
+      SessionWallet.off('syncStarted', this._onSyncStarted);
       this._onSyncStarted = null;
     }
 
     if (this._onSyncCompleted) {
-      sessionWalletManager.off('syncCompleted', this._onSyncCompleted);
+      SessionWallet.off('syncCompleted', this._onSyncCompleted);
       this._onSyncCompleted = null;
     }
   },

@@ -36,6 +36,36 @@ var TARGET_NETWORK = (typeof process !== 'undefined' && process.env && process.e
   ? process.env.WALLET_NETWORK
   : 'sepolia';
 
+// Private helper - Get active RPC URL based on current network
+// Used by both instance methods and module.exports
+function _getActiveRpcUrl() {
+  var network = currentNetwork || TARGET_NETWORK;
+  if (network === 'sepolia') {
+    return SEPOLIA_RPC_URL;
+  } else if (network === 'hardhat' || network === 'localhost') {
+    return 'http://127.0.0.1:8545';
+  }
+  // Fallback to Sepolia
+  return SEPOLIA_RPC_URL;
+}
+
+// Private helper - Get active RPC provider based on current network
+function _getActiveRpcProvider() {
+  return new ethers.providers.JsonRpcProvider(_getActiveRpcUrl());
+}
+
+// Private helper - Get active chain ID based on current network
+function _getActiveChainId() {
+  var network = currentNetwork || TARGET_NETWORK;
+  if (network === 'sepolia') {
+    return 11155111;
+  } else if (network === 'hardhat' || network === 'localhost') {
+    return 31337;
+  }
+  // Fallback to Sepolia
+  return 11155111;
+}
+
 /**
  * Wallet Manager Class - uses Backbone.Events for event handling
  */
@@ -338,6 +368,30 @@ WalletManager.prototype.getFormattedAddress = function() {
 };
 
 /**
+ * Get previously connected accounts without prompting user
+ * Uses eth_accounts (not eth_requestAccounts which prompts)
+ * @returns {Promise<string[]>} Array of account addresses
+ */
+WalletManager.prototype.getConnectedAccounts = function() {
+  if (!this.provider) {
+    return Promise.resolve([]);
+  }
+  return this.provider.request({ method: 'eth_accounts' })
+    .catch(function(err) {
+      console.warn('[Wallet] eth_accounts failed:', err.message);
+      return [];
+    });
+};
+
+/**
+ * Get ethers Web3Provider wrapper
+ * @returns {object} ethers.providers.Web3Provider or null
+ */
+WalletManager.prototype.getEthersProvider = function() {
+  return this.ethersProvider;
+};
+
+/**
  * Get ethers.js signer for signing transactions and typed data
  * @returns {object} ethers Signer object
  */
@@ -457,10 +511,10 @@ WalletManager.prototype.getBalanceViaRPC = function(address) {
     return Promise.resolve('0');
   }
 
-  Logger.module('WALLET').log('Fetching balance via Alchemy RPC for:', targetAddress);
+  Logger.module('WALLET').log('Fetching balance via RPC for:', targetAddress);
 
-  // Create a JsonRpcProvider with Alchemy endpoint
-  var rpcProvider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
+  // Use active network RPC provider
+  var rpcProvider = _getActiveRpcProvider();
 
   return rpcProvider.getBalance(targetAddress)
     .then(function(balanceWei) {
@@ -521,9 +575,9 @@ WalletManager.prototype.sendTransactionAndWait = function(to, valueEth) {
 
   return this.sendTransaction(to, valueEth)
     .then(function(txHash) {
-      Logger.module('WALLET').log('Waiting for TX confirmation via Alchemy...');
-      // Use Alchemy RPC to wait for confirmation (fast, reliable)
-      var rpcProvider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
+      Logger.module('WALLET').log('Waiting for TX confirmation via RPC...');
+      // Use active network RPC provider for confirmation
+      var rpcProvider = _getActiveRpcProvider();
       return rpcProvider.waitForTransaction(txHash);
     })
     .then(function(receipt) {
@@ -642,7 +696,10 @@ module.exports = {
     return instance;
   },
   isProviderAvailable: function() {
-    return typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.isProviderAvailable();
   },
   NETWORKS: NETWORKS,
   TARGET_NETWORK: TARGET_NETWORK,
@@ -665,37 +722,17 @@ module.exports = {
     return instance.getBalanceViaRPC(address);
   },
   // Get active RPC URL based on current network
-  // Bu method dinamik olarak aktif network'e gore RPC URL dondurur
-  // Sepolia -> Alchemy RPC (hizli)
-  // Hardhat -> localhost
-  // Diger -> null (desteklenmiyor)
+  // Sepolia -> Alchemy RPC, Hardhat -> localhost
   getActiveRpcUrl: function() {
-    var network = currentNetwork || TARGET_NETWORK;
-    if (network === 'sepolia') {
-      return SEPOLIA_RPC_URL;
-    } else if (network === 'hardhat' || network === 'localhost') {
-      return 'http://127.0.0.1:8545';
-    }
-    // Fallback to Sepolia for unknown networks
-    Logger.module('WALLET').warn('Unknown network for RPC:', network, '- falling back to Sepolia');
-    return SEPOLIA_RPC_URL;
+    return _getActiveRpcUrl();
   },
-  // Aktif network icin RPC provider olusturur (getActiveRpcUrl() kullanir)
+  // Aktif network icin RPC provider olusturur
   getActiveRpcProvider: function() {
-    var rpcUrl = module.exports.getActiveRpcUrl();
-    return new ethers.providers.JsonRpcProvider(rpcUrl);
+    return _getActiveRpcProvider();
   },
   // Aktif network icin chainId dondurur (number)
   getActiveChainId: function() {
-    var network = currentNetwork || TARGET_NETWORK;
-    if (network === 'sepolia') {
-      return 11155111;
-    } else if (network === 'hardhat' || network === 'localhost') {
-      return 31337;
-    }
-    // Fallback to Sepolia
-    Logger.module('WALLET').warn('Unknown network for chainId:', network, '- falling back to Sepolia');
-    return 11155111;
+    return _getActiveChainId();
   },
   // Aktif network ismini dondurur (string)
   getActiveNetwork: function() {
@@ -720,5 +757,145 @@ module.exports = {
       instance = new WalletManager();
     }
     return instance.switchNetwork(networkName);
+  },
+  // Send TX via MetaMask (no wait)
+  sendTransaction: function(to, valueEth) {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.sendTransaction(to, valueEth);
+  },
+  // Send TX via MetaMask + wait for confirmation via RPC
+  sendTransactionAndWait: function(to, valueEth) {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.sendTransactionAndWait(to, valueEth);
+  },
+  // Get ethereum provider (window.ethereum)
+  getProvider: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getProvider();
+  },
+  // Connect to wallet
+  connect: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.connect();
+  },
+  // Disconnect wallet
+  disconnect: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.disconnect();
+  },
+  // Sign a message
+  signMessage: function(message) {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.signMessage(message);
+  },
+  // Generate login message
+  generateLoginMessage: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.generateLoginMessage();
+  },
+  // Get current chain ID (hex)
+  getChainId: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getChainId();
+  },
+  // Check if on correct network
+  isCorrectNetwork: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.isCorrectNetwork();
+  },
+  // Format address for display (0x1234...5678)
+  formatAddress: function(address) {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.formatAddress(address);
+  },
+  // Get connected wallet address
+  getAddress: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getAddress();
+  },
+  // Get formatted address for display
+  getFormattedAddress: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getFormattedAddress();
+  },
+  // Get ethers signer for TX signing
+  getSigner: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getSigner();
+  },
+  // Get network name from chain ID
+  getNetworkName: function(chainId) {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getNetworkName(chainId);
+  },
+  // Check if FHE is supported on current network
+  isFHESupported: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.isFHESupported();
+  },
+  // Get balance via ethers.js
+  getBalanceEthers: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getBalanceEthers();
+  },
+  // Event listener - on
+  on: function(event, callback) {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.on(event, callback);
+  },
+  // Event listener - off
+  off: function(event, callback) {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.off(event, callback);
+  },
+  // Get previously connected accounts without prompting
+  getConnectedAccounts: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getConnectedAccounts();
+  },
+  // Get ethers Web3Provider wrapper
+  getEthersProvider: function() {
+    if (!instance) {
+      instance = new WalletManager();
+    }
+    return instance.getEthersProvider();
   }
 };

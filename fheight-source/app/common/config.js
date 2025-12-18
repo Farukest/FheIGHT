@@ -34,11 +34,11 @@ CONFIG.RESOURCE_SCALES = [2];
 CONFIG.RESOLUTION_AUTO = 1;
 CONFIG.RESOLUTION_EXACT = 2;
 CONFIG.RESOLUTION_PIXEL_PERFECT = 9999;
-CONFIG.RESOLUTION_DEFAULT = CONFIG.RESOLUTION_AUTO;
+CONFIG.RESOLUTION_DEFAULT = CONFIG.RESOLUTION_PIXEL_PERFECT;
 CONFIG.RESOLUTIONS = [ // TODO: localize
-  { value: CONFIG.RESOLUTION_AUTO, description: 'settings.best_fit', selected: true },
+  { value: CONFIG.RESOLUTION_AUTO, description: 'settings.best_fit' },
   { value: CONFIG.RESOLUTION_EXACT, description: 'settings.tightest_fit' },
-  { value: CONFIG.RESOLUTION_PIXEL_PERFECT, description: 'settings.pixel_perfect' },
+  { value: CONFIG.RESOLUTION_PIXEL_PERFECT, description: 'settings.pixel_perfect', selected: true },
   /*
   {value: 2, description: "1280 x 720 (pixel perfect)"},
   {value: 3, description: "1280 x 768"},

@@ -84,7 +84,7 @@ const StreamManager = (window.StreamManager = require('app/ui/managers/stream_ma
 const FHE = require('app/sdk/fhe');
 const FHESession = require('app/common/fhe_session');
 const Wallet = require('app/common/wallet');
-const SessionWalletManager = require('app/common/session_wallet');
+const SessionWallet = require('app/common/session_wallet');
 
 // Views
 const Helpers = require('app/ui/views/helpers');
@@ -1095,7 +1095,7 @@ App.onLogin = function(data) {
   EventBus.getInstance().trigger(EVENTS.session_logged_in);
 
   // Sync session wallet with blockchain (automatic recovery)
-  SessionWalletManager.getInstance().syncWithBlockchain()
+  SessionWallet.syncWithBlockchain()
     .then(function(address) {
       if (address) {
         Logger.module('APP').log('Session wallet synced from blockchain:', address);
@@ -1935,14 +1935,13 @@ App._startSinglePlayerGameFHE = function(myPlayerDeck, myPlayerFactionId, myPlay
 
   // Get FHE session and contract addresses
   const fheSession = FHESession.getInstance();
-  const walletManager = Wallet.getInstance();
 
   // FHE game creation promise
   App._singlePlayerGamePromise = new Promise(function(resolve, reject) {
     // Step 1: Ensure wallet is connected
-    if (!walletManager.connected) {
+    if (!Wallet.getState().connected) {
       Logger.module("APPLICATION").log("FHE: Wallet not connected, connecting...");
-      walletManager.connect()
+      Wallet.connect()
         .then(function() {
           return proceedWithFHEGame();
         })
@@ -1991,7 +1990,7 @@ App._startSinglePlayerGameFHE = function(myPlayerDeck, myPlayerFactionId, myPlay
               fhe_enabled: true,
               fhe_game_id: gameId,
               fhe_contract_address: gameSessionAddress,
-              fhe_player_wallet: walletManager.address
+              fhe_player_wallet: Wallet.getAddress()
             }),
             type: 'POST',
             contentType: 'application/json',
@@ -2060,7 +2059,7 @@ App._startSinglePlayerGameFHE = function(myPlayerDeck, myPlayerFactionId, myPlay
     // Check for INSUFFICIENT_FUNDS error and show user-friendly message
     var errorStr = String(errorMessage || '');
     if (errorStr.includes('INSUFFICIENT_FUNDS') || errorStr.includes('insufficient funds')) {
-      var sessionWalletAddress = SessionWalletManager.getInstance().getAddress() || 'unknown';
+      var sessionWalletAddress = SessionWallet.getAddress() || 'unknown';
       var networkName = Wallet.getCurrentNetwork() || 'Sepolia';
       var userFriendlyMessage = 'Insufficient ETH for gas fees.\n\n' +
         'Your session wallet needs ' + networkName + ' ETH to submit blockchain transactions.\n\n' +

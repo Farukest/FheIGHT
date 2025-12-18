@@ -100,6 +100,8 @@ const EVENTS = {
   fhe_card_drawn: 'fhe_card_drawn',
   fhe_card_burned: 'fhe_card_burned',
   fhe_starting_hand_ready: 'fhe_starting_hand_ready',
+  fhe_draw_decrypt_failed: 'fhe_draw_decrypt_failed',
+  fhe_draw_decrypt_success: 'fhe_draw_decrypt_success',
   session_wallet_created: 'session_wallet_created',
 
   // show ui

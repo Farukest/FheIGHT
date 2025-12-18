@@ -1256,6 +1256,35 @@ $major-size: 100% - $minor-size * 2;
 		}
 	}
 
+	/* ---------- RE-DECRYPT TURN (FHE 500 Error) ---------- */
+	.redecrypt-turn {
+		pointer-events: auto;
+		position: absolute;
+		z-index: 1;
+		width: 25.5rem;
+		height: 10.2rem;
+		bottom: 1.5rem;
+		left: 0;
+		margin: 0;
+		background-repeat: no-repeat;
+		@include headerFullStyle();
+		line-height: 10.2rem;
+		font-size: 1.9rem;
+		text-align: center;
+		white-space:nowrap;
+		color: rgba(255, 255, 255, 1);
+		text-shadow: 0 0.1rem 0.1rem rgba(0, 0, 0, 0.4);
+		background-size: cover;
+		cursor: pointer;
+		@include backgroundImage("resources/ui/button_end_turn_mine.png");
+		&:hover, &:focus, &:active, &:active:focus {
+			@include backgroundImage("resources/ui/button_end_turn_mine_glow.png");
+		}
+		> div {
+			display:inline;
+		}
+	}
+
 	/* ---------- SUBMIT TURN ---------- */
 
 	.replay-control {

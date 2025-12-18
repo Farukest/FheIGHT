@@ -155,16 +155,15 @@ var LoginMenuItemView = Backbone.Marionette.ItemView.extend({
     this.ui.$connectWallet.prop('disabled', true).text('Connecting...');
 
     // Connect using wallet module
-    var walletManager = Wallet.getInstance();
-    walletManager.connect()
+    Wallet.connect()
       .then(function(address) {
         Logger.module('UI').log('Wallet connected:', address);
 
         // Generate login message and sign it
-        var message = walletManager.generateLoginMessage();
+        var message = Wallet.generateLoginMessage();
         Logger.module('UI').log('Signing message for authentication...');
 
-        return walletManager.signMessage(message)
+        return Wallet.signMessage(message)
           .then(function(signature) {
             Logger.module('UI').log('Message signed, authenticating with backend...');
 
