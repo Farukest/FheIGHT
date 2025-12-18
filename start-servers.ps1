@@ -44,6 +44,9 @@ Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd '$pro
 # Single Player Server (sessiz)
 Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd '$projectPath'; node -r dotenv/config ./bin/single_player"
 
+# Worker (Kue job processor - oyun sonu islemleri icin ZORUNLU)
+Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd '$projectPath'; node -r dotenv/config ./bin/worker"
+
 # Dev Server (sessiz)
 Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd '$projectPath'; npm run dev"
 
@@ -57,7 +60,8 @@ npx gulp js
 Write-Host "`nTamamlandi!" -ForegroundColor Green
 Write-Host "`nSunucular:" -ForegroundColor Cyan
 Write-Host "  API Server:    http://localhost:3000" -ForegroundColor White
-Write-Host "  Game Server:   http://localhost:18000 (Single Player)" -ForegroundColor White
+Write-Host "  Game Server:   http://localhost:8000 (Single Player)" -ForegroundColor White
+Write-Host "  Worker:        Kue job processor (oyun sonu islemleri)" -ForegroundColor White
 Write-Host "  Dev Server:    http://localhost:3001  <-- BURAYI AC" -ForegroundColor Green
 Write-Host "`nTarayicida http://localhost:3001 adresini ac." -ForegroundColor Yellow
 

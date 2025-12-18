@@ -2927,6 +2927,8 @@ App._startLoadingGameOverData = function(){
     const gameSession = SDK.GameSession.getInstance();
     const lastGameModel = GamesManager.getInstance().playerGames.first();
 
+    // Network games (including SinglePlayer) wait for backend job completion
+    // Worker process (bin/worker) must be running for jobs to be processed
     if ((lastGameModel != null) && SDK.GameType.isNetworkGameType(gameSession.getGameType())) {
       // lastGameModel.onSyncOrReady().then ()->
       if (isGameReady(lastGameModel.attributes,lastGameModel.attributes.job_status || {})) {

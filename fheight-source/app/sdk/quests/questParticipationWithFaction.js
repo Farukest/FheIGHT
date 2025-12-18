@@ -20,11 +20,11 @@ class QuestParticipationWithFaction extends Quest {
   }
 
   constructor(id,typesIn,reward,factionId){
-    this.getFactionId = this.getFactionId.bind(this);
-    this.factionId = factionId;
-    const faction = FactionFactory.factionForIdentifier(this.factionId);
+    const faction = FactionFactory.factionForIdentifier(factionId);
     const name = i18next.t("quests.quest_faction_games_title", { faction_name: faction.short_name });
     super(id,name,typesIn,reward);
+    this.getFactionId = this.getFactionId.bind(this);
+    this.factionId = factionId;
     this.params["factionId"] = this.factionId;
     this.params["completionProgress"] = 4;
   }
