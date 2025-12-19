@@ -1837,9 +1837,11 @@ onFHEInitialHandRevealed = (requestData) ->
     drawPile = playerDeck.getDrawPile()
     handSlotIndex = 0
 
-    # Start buffering events to prevent syncState() being called on each applyCardToHand
-    # This avoids null card reference errors in modifiers during syncState
-    game.session.p_startBufferingEvents()
+    # Temporarily disable syncState during card application
+    # This prevents null card reference errors in modifiers during syncState
+    # We manually set the flag without calling p_startBufferingEvents() to avoid side effects
+    wasBuffering = game.session.getIsBufferingEvents()
+    game.session._private.isBufferingEvents = true
 
     try
       for cardId in verifiedCards
@@ -1864,8 +1866,8 @@ onFHEInitialHandRevealed = (requestData) ->
         else
           cardIndicesForClient.push(null)
     finally
-      # Stop buffering events - this will flush buffered events
-      game.session.p_stopBufferingEvents()
+      # Restore buffering state
+      game.session._private.isBufferingEvents = wasBuffering
 
     # Update FHE state
     fheState.revealedCount = verifiedCards.length
@@ -1990,12 +1992,16 @@ onFHECardDrawn = (requestData) ->
             drawPile.splice(drawPileIndex, 1)
           cardBurned = true
         else
-          # Buffer events to prevent syncState() null card errors in modifiers
-          game.session.p_startBufferingEvents()
+          # Temporarily disable syncState during card application
+          # This prevents null card reference errors in modifiers during syncState
+          # We manually set the flag without calling p_startBufferingEvents() to avoid side effects
+          wasBuffering = game.session.getIsBufferingEvents()
+          game.session._private.isBufferingEvents = true
           try
             game.session.applyCardToHand(playerDeck, appliedCardIndex, card)
           finally
-            game.session.p_stopBufferingEvents()
+            # Restore buffering state
+            game.session._private.isBufferingEvents = wasBuffering
       else
         Logger.module("FHE").warn "[G:#{gameId}]", "Card at index #{appliedCardIndex} is null, skipping"
 

@@ -61,6 +61,10 @@ function FHEGameSession() {
 
   // Socket reference for server notifications (FLOW.MD)
   this._socket = null;
+
+  // Cache for retry mechanism - stores successful decrypt results
+  // If server fails after blockchain success, we can retry without re-decrypt
+  this._cachedInitialHandData = null;
 }
 
 // ============ SOCKET INTEGRATION ============
@@ -227,6 +231,9 @@ FHEGameSession.prototype.createSinglePlayerGame = function(gameId, deck) {
  * Ilk eli cek ve reveal et (5 kart)
  * FLOW Steps 7-13: Handle al -> Decrypt -> Reveal -> Kart hesapla
  *
+ * If blockchain operations were successful but server failed,
+ * use retryNotifyServer() instead to avoid "Exceeds allowed reveals" error.
+ *
  * @returns {Promise<number[]>} 5 kartlik ilk el
  */
 FHEGameSession.prototype.revealInitialHand = function() {
@@ -235,6 +242,16 @@ FHEGameSession.prototype.revealInitialHand = function() {
   return new Promise(function(resolve, reject) {
     if (self.gameId === null) {
       reject(new Error('Not in a game'));
+      return;
+    }
+
+    // CHECK: If we have cached data, use retryNotifyServer instead
+    if (self._cachedInitialHandData) {
+      Logger.module('FHE_GAME').log('=== REVEAL INITIAL HAND (USING CACHE) ===');
+      Logger.module('FHE_GAME').log('Cached hand found, skipping blockchain operations');
+      self.retryNotifyServer()
+        .then(resolve)
+        .catch(reject);
       return;
     }
 
@@ -290,38 +307,20 @@ FHEGameSession.prototype.revealInitialHand = function() {
         Logger.module('FHE_GAME').log('=== INITIAL HAND READY ===');
         Logger.module('FHE_GAME').log('Hand:', self.myHand);
 
-        // FLOW Step 14: Server'a bildir ve RESPONSE BEKLE!
-        // Server kartlari olusturur ve cardIndices doner - KRITIK SYNC ICIN!
-        return new Promise(function(innerResolve, innerReject) {
-          // Listen for server response BEFORE emitting
-          self._socket.once('fhe_initial_hand_revealed_response', function(response) {
-            Logger.module('FHE_GAME').log('Server response:', JSON.stringify(response));
-            if (response.success && response.cardIndices) {
-              Logger.module('FHE_GAME').log('Server cardIndices:', response.cardIndices);
-              // Store server cardIndices for client use
-              self.serverCardIndices = response.cardIndices;
-              innerResolve(response.cardIndices);
-            } else if (response.success) {
-              // Old server without cardIndices support
-              Logger.module('FHE_GAME').warn('Server did not return cardIndices - sync may fail!');
-              innerResolve(null);
-            } else {
-              Logger.module('FHE_GAME').error('Server error:', response.error);
-              innerReject(new Error(response.error || 'Server error'));
-            }
-          });
+        // CACHE: Save successful blockchain result for retry
+        self._cachedInitialHandData = {
+          hand: self.myHand.slice(),
+          revealedIndices: self.revealedIndices.slice()
+        };
+        Logger.module('FHE_GAME').log('Cached hand data for potential retry');
 
-          // Now emit to server
-          self._socket.emit('fhe_initial_hand_revealed', {
-            gameId: self.serverGameId,
-            blockchainGameId: self.gameId,
-            hand: self.myHand,
-            revealedIndices: self.revealedIndices.slice()
-          });
-          Logger.module('FHE_GAME').log('Server notified: fhe_initial_hand_revealed');
-        });
+        // FLOW Step 14: Server'a bildir ve RESPONSE BEKLE!
+        return self._notifyServerInitialHand();
       })
       .then(function(serverCardIndices) {
+        // Success - clear cache since we don't need retry anymore
+        self._cachedInitialHandData = null;
+
         // Step 13: Return hand AND cardIndices to caller
         resolve({
           cardIds: self.myHand.slice(),
@@ -330,9 +329,105 @@ FHEGameSession.prototype.revealInitialHand = function() {
       })
       .catch(function(error) {
         Logger.module('FHE_GAME').error('revealInitialHand failed:', error);
+        // DON'T clear cache on error - we may need to retry
         reject(error);
       });
   });
+};
+
+/**
+ * Notify server about initial hand (internal helper)
+ * @private
+ * @returns {Promise<Array>} Server card indices
+ */
+FHEGameSession.prototype._notifyServerInitialHand = function() {
+  var self = this;
+
+  return new Promise(function(resolve, reject) {
+    // Listen for server response BEFORE emitting
+    self._socket.once('fhe_initial_hand_revealed_response', function(response) {
+      Logger.module('FHE_GAME').log('Server response:', JSON.stringify(response));
+      if (response.success && response.cardIndices) {
+        Logger.module('FHE_GAME').log('Server cardIndices:', response.cardIndices);
+        // Store server cardIndices for client use
+        self.serverCardIndices = response.cardIndices;
+        resolve(response.cardIndices);
+      } else if (response.success) {
+        // Old server without cardIndices support
+        Logger.module('FHE_GAME').warn('Server did not return cardIndices - sync may fail!');
+        resolve(null);
+      } else {
+        Logger.module('FHE_GAME').error('Server error:', response.error);
+        reject(new Error(response.error || 'Server error'));
+      }
+    });
+
+    // Now emit to server
+    self._socket.emit('fhe_initial_hand_revealed', {
+      gameId: self.serverGameId,
+      blockchainGameId: self.gameId,
+      hand: self.myHand,
+      revealedIndices: self.revealedIndices.slice()
+    });
+    Logger.module('FHE_GAME').log('Server notified: fhe_initial_hand_revealed');
+  });
+};
+
+/**
+ * Retry notifying server with cached hand data
+ * Use this when blockchain succeeded but server failed
+ * This avoids "Exceeds allowed reveals" error on retry
+ *
+ * @returns {Promise<Object>} Hand data with cardIds and cardIndices
+ */
+FHEGameSession.prototype.retryNotifyServer = function() {
+  var self = this;
+
+  return new Promise(function(resolve, reject) {
+    if (!self._cachedInitialHandData) {
+      reject(new Error('No cached hand data - must call revealInitialHand first'));
+      return;
+    }
+
+    Logger.module('FHE_GAME').log('=== RETRY NOTIFY SERVER (CACHED) ===');
+    Logger.module('FHE_GAME').log('Using cached hand:', self._cachedInitialHandData.hand);
+
+    // Restore from cache
+    self.myHand = self._cachedInitialHandData.hand.slice();
+    self.revealedIndices = self._cachedInitialHandData.revealedIndices.slice();
+
+    self._notifyServerInitialHand()
+      .then(function(serverCardIndices) {
+        // Success - clear cache
+        self._cachedInitialHandData = null;
+        Logger.module('FHE_GAME').log('Retry successful, cache cleared');
+
+        resolve({
+          cardIds: self.myHand.slice(),
+          cardIndices: serverCardIndices
+        });
+      })
+      .catch(function(error) {
+        Logger.module('FHE_GAME').error('Retry notify server failed:', error);
+        // Keep cache for another retry
+        reject(error);
+      });
+  });
+};
+
+/**
+ * Check if we have cached hand data for retry
+ * @returns {boolean} True if cached data exists
+ */
+FHEGameSession.prototype.hasCachedHandData = function() {
+  return this._cachedInitialHandData !== null;
+};
+
+/**
+ * Clear cached hand data (use when starting new game)
+ */
+FHEGameSession.prototype.clearCachedHandData = function() {
+  this._cachedInitialHandData = null;
 };
 
 // ============ TURN INCREMENT (FLOW Step 29) ============
