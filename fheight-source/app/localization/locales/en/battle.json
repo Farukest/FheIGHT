@@ -24,6 +24,7 @@
 	"battle_log_label": "Battlelog",
 	"turn_button_label_enemy_turn": "Verifying Opponent",
 	"turn_button_label_end_turn": "Submit Proof",
+	"turn_button_label_submitting": "Submitting",
 	"turn_button_label_restart_turn": "Restart Turn",
 	"menu_button_label": "Menu",
 	"esc_menu_end_game_label": "End Game",

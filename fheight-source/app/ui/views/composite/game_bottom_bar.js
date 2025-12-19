@@ -122,6 +122,8 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
     // FHE decrypt events - show/hide Re-Decrypt button on 500 error
     this.listenTo(EventBus.getInstance(), EVENTS.fhe_draw_decrypt_failed, this._onFHEDecryptFailed);
     this.listenTo(EventBus.getInstance(), EVENTS.fhe_draw_decrypt_success, this._onFHEDecryptSuccess);
+    // FHE card drawn - decrypt completed, clear submitting state
+    this.listenTo(EventBus.getInstance(), EVENTS.fhe_card_drawn, this._onFHECardDrawn);
 
     this._updateControls();
 
@@ -156,6 +158,12 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
       audio_engine.current().play_effect_for_interaction(RSX.sfx_ui_confirm.audio, CONFIG.CONFIRM_SFX_PRIORITY);
       gameSession.getChallenge().challengeReset();
     } else if (gameLayer && gameLayer.getIsMyTurn() && !gameLayer.getPlayerSelectionLocked()) {
+      // FHE MODE: Immediately show submitting state before decrypt starts
+      var fheEnabled = gameSession.fheEnabled || CONFIG.fheEnabled;
+      if (fheEnabled && !gameSession.getIsDeveloperMode()) {
+        this._fheSubmitting = true;
+        this._setSubmitTurnButtonToSubmittingState();
+      }
       gameSession.submitExplicitAction(gameSession.actionEndTurn());
     } else {
       audio_engine.current().play_effect_for_interaction(RSX.sfx_ui_error.audio, CONFIG.ERROR_SFX_PRIORITY);
@@ -243,6 +251,11 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
 
   _updateSubmitTurnState: function () {
     if (!SDK.GameSession.getInstance().getIsSpectateMode()) {
+      // FHE: Don't update if we're in submitting state (waiting for decrypt)
+      if (this._fheSubmitting) {
+        return;
+      }
+
       var gameLayer = Scene.getInstance().getGameLayer();
       var gameSession = SDK.GameSession.getInstance();
 
@@ -323,8 +336,26 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
   },
 
   _setSubmitTurnButtonToEnemyState: function () {
+    // FHE: Don't update if we're in submitting state (waiting for decrypt)
+    if (this._fheSubmitting) {
+      return;
+    }
     this.ui.$submitTurnType.text(i18next.t('battle.turn_button_label_enemy_turn'));
     this.ui.$submitTurn.addClass('enemy-turn');
+    this.ui.$submitTurn.removeClass('my-turn');
+    this.ui.$submitTurn.removeClass('finished');
+    this.ui.$submitTurn.removeClass('submitting');
+  },
+
+  _setSubmitTurnButtonToSubmittingState: function () {
+    var label = i18next.t('battle.turn_button_label_submitting');
+    // Fallback if i18next key not loaded
+    if (!label || label === 'battle.turn_button_label_submitting') {
+      label = 'Submitting';
+    }
+    this.ui.$submitTurnType.text(label);
+    this.ui.$submitTurn.addClass('enemy-turn');
+    this.ui.$submitTurn.addClass('submitting');
     this.ui.$submitTurn.removeClass('my-turn');
     this.ui.$submitTurn.removeClass('finished');
   },
@@ -339,6 +370,7 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
    */
   _onFHEDecryptFailed: function (event) {
     this._fheDecryptFailed = true;
+    this._fheSubmitting = false;
     // Hide submit-turn, show redecrypt-turn
     this.ui.$submitTurn.hide();
     this.ui.$reDecryptButton.show();
@@ -353,6 +385,15 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
     // Hide redecrypt-turn, show submit-turn
     this.ui.$reDecryptButton.hide();
     this.ui.$submitTurn.show();
+  },
+
+  /**
+   * Called when FHE card is drawn (decrypt completed).
+   * Clears submitting state and updates button.
+   */
+  _onFHECardDrawn: function (event) {
+    this._fheSubmitting = false;
+    this._updateSubmitTurnState();
   },
 
   /**

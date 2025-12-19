@@ -6,8 +6,12 @@
 |----------|-------|
 | CLIENT/deck_select | app/ui/views/composite/deck_select.js |
 | CLIENT/games_manager | app/ui/managers/games_manager.js |
-| CLIENT/fhe_session | app/common/fheGameSession.js |
-| CLIENT/game | app/ui/views2/layouts/game.js |
+| CLIENT/fhe_session | app/sdk/fhe/fheGameSession.js |
+| CLIENT/game_layout | app/ui/views2/layouts/game.js |
+| CLIENT/game_bottom_bar | app/ui/views/composite/game_bottom_bar.js |
+| CLIENT/game_choose_hand | app/ui/views/item/game_choose_hand.js |
+| CLIENT/localization | app/localization/locales/en/battle.json |
+| CLIENT/event_types | app/common/event_types.js |
 | SERVER/matchmaker | server/routes/matchmaker.coffee |
 | SERVER/tokenmanager | server/redis/r-tokenmanager.coffee |
 | SERVER/worker | worker/creategame.coffee |
@@ -283,6 +287,24 @@ if game.pendingStartTurnStep?
 ### Sorun 4: stepCount desync hatasi
 **Cozum:** `pendingStartTurnStep` varsa turn_time event'inde stepCount'tan 1 cikarildi
 
+### Sorun 5: Continue butonu decrypt bitmeden gorunuyordu
+**Cozum:**
+- game_choose_hand.js onRender()'da FHE modunda buton gizleniyor
+- Decrypt basarili olunca setConfirmButtonVisibility(true) ile gosteriliyor
+
+### Sorun 6: Submit Proof butonu decrypt sirasinda aktif gorunuyordu
+**Cozum:**
+- `_fheSubmitting` flag eklendi
+- onClickSubmitTurn()'de flag set + "Submitting" state
+- SDK event'leri flag kontroluyle engellendi
+- Decrypt basarili/basarisiz olunca flag temizlendi
+
+### Sorun 7: "Exceeds allowed reveals" hatasi retry'da
+**Cozum:**
+- fheGameSession.js'de `_cachedInitialHandData` cache mekanizmasi
+- Blockchain basarili oldugunda cache'e kaydet
+- Retry'da cache varsa blockchain'e gitme, sadece server'a bildir
+
 ---
 
 ## AKIS DIYAGRAMI
@@ -332,3 +354,305 @@ Player2 CLIENT:
 | game.coffee:1292-1330 | onStep() | EndTurn + StartTurn hold |
 | game.coffee:884-888 | onGameTimeTick() | stepCount fix |
 | game.coffee:1991-2002 | onFHECardDrawn | pending step emit |
+| game_bottom_bar.js:162 | onClickSubmitTurn() | _fheSubmitting = true |
+| game_bottom_bar.js:252-254 | _updateSubmitTurnState() | _fheSubmitting check |
+| game_bottom_bar.js:337-340 | _setSubmitTurnButtonToEnemyState() | _fheSubmitting check |
+| game_bottom_bar.js:348-354 | _setSubmitTurnButtonToSubmittingState() | Submitting state |
+| game_bottom_bar.js:371-378 | _onFHEDecryptSuccess() | _fheSubmitting = false |
+| game_choose_hand.js:46-52 | onRender() | FHE hide button |
+| fheGameSession.js:~450 | _cachedInitialHandData | Retry cache |
+
+---
+
+## ASAMA 8: UI State Management (FHE Decrypt Sirasinda)
+
+### 8.1 Initial Hand - Continue Button Gizleme
+
+#### 8.1.1 Oyun basladiginda Continue butonu gizlenir
+```
+DOSYA: game_choose_hand.js -> onRender()
+OYUNCU: P1 ve P2 (kendi clientlarinda)
+```
+```javascript
+// FHE MODE: Hide confirm button initially
+var fheEnabled = gameSession.fheEnabled || CONFIG.fheEnabled;
+if (fheEnabled && !isDeveloperMode && !isSpectateMode) {
+  this.ui.$confirmButton.css({
+    opacity: 0,
+    'pointer-events': 'none',
+  });
+}
+```
+**NEDEN:** Decrypt tamamlanmadan kullanici "Continue" basilabilir gorunuyordu.
+
+#### 8.1.2 Decrypt tamamlaninca Continue butonu gosterilir
+```
+DOSYA: game_choose_hand.js -> setConfirmButtonVisibility()
+DOSYA: game.js (game_layout) -> _showInitialHand() icerisinde cagrilir
+```
+```javascript
+setConfirmButtonVisibility: function (visible) {
+  if (visible) {
+    this.ui.$confirmButton.css({
+      opacity: '',
+      'pointer-events': '',
+    });
+  }
+}
+```
+
+---
+
+### 8.2 Turn Sonu - Submit Proof Button State
+
+#### 8.2.1 Submit Proof'a basilinca "Submitting" state'e gecer
+```
+DOSYA: game_bottom_bar.js -> onClickSubmitTurn()
+OYUNCU: P1 (turn'u bitiren oyuncu)
+```
+```javascript
+// FHE MODE: Immediately show submitting state before decrypt starts
+var fheEnabled = gameSession.fheEnabled || CONFIG.fheEnabled;
+if (fheEnabled && !gameSession.getIsDeveloperMode()) {
+  this._fheSubmitting = true;  // FLAG SET!
+  this._setSubmitTurnButtonToSubmittingState();
+}
+gameSession.submitExplicitAction(gameSession.actionEndTurn());
+```
+
+#### 8.2.2 Submitting state buton gorunumu
+```
+DOSYA: game_bottom_bar.js -> _setSubmitTurnButtonToSubmittingState()
+```
+```javascript
+_setSubmitTurnButtonToSubmittingState: function () {
+  this.ui.$submitTurnType.text(i18next.t('battle.turn_button_label_submitting'));
+  this.ui.$submitTurn.addClass('enemy-turn');
+  this.ui.$submitTurn.addClass('submitting');
+  this.ui.$submitTurn.removeClass('my-turn');
+  this.ui.$submitTurn.removeClass('finished');
+}
+```
+**LOCALIZATION:** `battle.turn_button_label_submitting` = "Submitting"
+
+#### 8.2.3 SDK event'leri buton state'ini degistirmeye calisir (ENGELLENIR)
+```
+DOSYA: game_bottom_bar.js -> onShow() icinde listener'lar
+```
+```javascript
+// Bu event'ler tetiklenir ama _fheSubmitting flag'i sayesinde engellenir:
+this.listenTo(SDK.GameSession.getInstance().getEventBus(), EVENTS.end_turn, this._setSubmitTurnButtonToEnemyState);
+this.listenTo(gameLayer.getEventBus(), EVENTS.show_end_turn, this.onShowEndTurn);
+```
+
+#### 8.2.4 _updateSubmitTurnState - Flag kontrolu
+```
+DOSYA: game_bottom_bar.js -> _updateSubmitTurnState()
+```
+```javascript
+_updateSubmitTurnState: function () {
+  if (!SDK.GameSession.getInstance().getIsSpectateMode()) {
+    // FHE: Don't update if we're in submitting state (waiting for decrypt)
+    if (this._fheSubmitting) {
+      return;  // ERKEN CIKIS - state degismez!
+    }
+    // ... normal state logic
+  }
+}
+```
+
+#### 8.2.5 _setSubmitTurnButtonToEnemyState - Flag kontrolu
+```
+DOSYA: game_bottom_bar.js -> _setSubmitTurnButtonToEnemyState()
+```
+```javascript
+_setSubmitTurnButtonToEnemyState: function () {
+  // FHE: Don't update if we're in submitting state (waiting for decrypt)
+  if (this._fheSubmitting) {
+    return;  // ERKEN CIKIS - state degismez!
+  }
+  // ... "Verifying Opponent" state logic
+}
+```
+**KRITIK:** Bu fonksiyon dogrudan `EVENTS.end_turn` event'inden cagriliyordu, `_updateSubmitTurnState` uzerinden gecmiyordu!
+
+#### 8.2.6 Decrypt tamamlaninca flag temizlenir
+```
+DOSYA: game_bottom_bar.js -> _onFHEDecryptSuccess()
+EVENT: EVENTS.fhe_draw_decrypt_success
+```
+```javascript
+_onFHEDecryptSuccess: function (event) {
+  this._fheDecryptFailed = false;
+  this._fheSubmitting = false;  // FLAG TEMIZLENDI!
+  this.ui.$reDecryptButton.hide();
+  this.ui.$submitTurn.show();
+  this._updateSubmitTurnState();  // Simdi normal state'e gec
+}
+```
+
+#### 8.2.7 Decrypt basarisiz olursa da flag temizlenir
+```
+DOSYA: game_bottom_bar.js -> _onFHEDecryptFailed()
+EVENT: EVENTS.fhe_draw_decrypt_failed
+```
+```javascript
+_onFHEDecryptFailed: function (event) {
+  this._fheDecryptFailed = true;
+  this._fheSubmitting = false;  // FLAG TEMIZLENDI!
+  this.ui.$submitTurn.hide();
+  this.ui.$reDecryptButton.show();  // Re-Decrypt butonu goster
+}
+```
+
+---
+
+### 8.3 Re-Decrypt Retry Mekanizmasi (Cache)
+
+#### 8.3.1 Basarili decrypt sonucu cache'lenir
+```
+DOSYA: fheGameSession.js -> revealInitialHand()
+OYUNCU: P1 veya P2 (initial hand reveal yapan)
+```
+```javascript
+// Blockchain decrypt basarili olduktan sonra:
+self._cachedInitialHandData = {
+  hand: self.myHand.slice(),
+  revealedIndices: self.revealedIndices.slice()
+};
+```
+**NEDEN:** Blockchain TX basarili ama server bildirim basarisiz olursa, retry'da blockchain'e tekrar gitmek "Exceeds allowed reveals" hatasina neden olur.
+
+#### 8.3.2 Retry'da cache kontrol edilir
+```
+DOSYA: fheGameSession.js -> revealInitialHand()
+```
+```javascript
+// Fonksiyon basinda cache kontrolu:
+if (self._cachedInitialHandData) {
+  Logger.module('FHE_GAME').log('Cached hand found, skipping blockchain operations');
+  self.retryNotifyServer().then(resolve).catch(reject);
+  return;  // Blockchain'e GITME, sadece server'a bildir
+}
+```
+
+#### 8.3.3 Sadece server bildirim retry edilir
+```
+DOSYA: fheGameSession.js -> retryNotifyServer()
+```
+```javascript
+retryNotifyServer: function() {
+  var self = this;
+  return new Promise(function(resolve, reject) {
+    if (!self._cachedInitialHandData) {
+      reject(new Error('No cached hand data for retry'));
+      return;
+    }
+    // Cache'den veriyi al
+    self.myHand = self._cachedInitialHandData.hand.slice();
+    self.revealedIndices = self._cachedInitialHandData.revealedIndices.slice();
+    // Sadece server'a bildir
+    self._notifyServerInitialHand().then(resolve).catch(reject);
+  });
+}
+```
+
+---
+
+## ASAMA 8 AKIS DIYAGRAMI - P1 Turn Sonu
+
+```
+P1 CLIENT: Submit Proof butonuna tiklar
+    |
+    v
+game_bottom_bar.js -> onClickSubmitTurn()
+    |-- _fheSubmitting = true
+    |-- _setSubmitTurnButtonToSubmittingState()
+    |   |-- text = "Submitting"
+    |   |-- addClass('enemy-turn', 'submitting')
+    |   |-- removeClass('my-turn', 'finished')
+    |
+    |-- gameSession.submitExplicitAction(EndTurnAction)
+    v
+SDK: EndTurnAction isler
+    |-- EVENTS.end_turn tetiklenir
+    v
+game_bottom_bar.js -> _setSubmitTurnButtonToEnemyState() (EVENT LISTENER)
+    |-- if (_fheSubmitting) return;  // ENGELLENDI!
+    v
+SDK: StartTurnAction (P2 turn) step olusur
+    |-- EVENTS.show_end_turn tetiklenir
+    v
+game_bottom_bar.js -> onShowEndTurn()
+    |-- _updateSubmitTurnState()
+        |-- if (_fheSubmitting) return;  // ENGELLENDI!
+    v
+P1 CLIENT: fheGameSession.js -> revealDrawCard()
+    |-- incrementTurn TX
+    |-- getDrawHandles()
+    |-- KMS decrypt
+    |-- revealDrawBatch TX
+    |-- socket.emit("fhe_card_drawn")
+    v
+SERVER: onFHECardDrawn()
+    |-- blockchain verify
+    |-- SDK'ya kart uygula
+    |-- emit pendingStartTurnStep
+    |-- EventBus.emit(EVENTS.fhe_draw_decrypt_success)
+    v
+game_bottom_bar.js -> _onFHEDecryptSuccess()
+    |-- _fheSubmitting = false  // FLAG TEMIZLENDI!
+    |-- _updateSubmitTurnState()
+        |-- _setSubmitTurnButtonToEnemyState()
+            |-- text = "Verifying Opponent"
+    v
+P2 CLIENT: StartTurnAction step alir
+    |-- Oynamaya hazir!
+```
+
+---
+
+## ASAMA 8 AKIS DIYAGRAMI - Initial Hand Retry
+
+```
+P1 CLIENT: revealInitialHand()
+    |
+    v
+Blockchain: getDrawHandles() + revealDrawBatch()
+    |-- BASARILI
+    v
+Cache: _cachedInitialHandData = { hand, revealedIndices }
+    |
+    v
+Server: socket.emit("fhe_initial_hand_revealed")
+    |-- 500 ERROR!
+    v
+EventBus: EVENTS.fhe_draw_decrypt_failed
+    |
+    v
+game_choose_hand.js: showReDecryptButton(true)
+    |-- Continue butonu gizlenir
+    |-- Re-Decrypt butonu gosterilir
+    v
+P1: Re-Decrypt butonuna tiklar
+    |
+    v
+game_layout.js: retryFHEDrawDecrypt()
+    |
+    v
+fheGameSession.js: revealInitialHand()
+    |-- if (_cachedInitialHandData) {
+    |     // CACHE VAR - blockchain'e GITME!
+    |     retryNotifyServer()
+    |   }
+    v
+Server: socket.emit("fhe_initial_hand_revealed")
+    |-- BASARILI
+    v
+EventBus: EVENTS.fhe_draw_decrypt_success
+    |
+    v
+game_choose_hand.js: showReDecryptButton(false)
+    |-- Re-Decrypt butonu gizlenir
+    |-- Continue butonu gosterilir
+```
