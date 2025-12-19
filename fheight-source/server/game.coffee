@@ -505,6 +505,17 @@ onGameEvent = (eventData) ->
         # the reason is that we want to re-generate and re-validate all the game logic that happens as a result of this FIRST explicit action in the step
         action.resetForAuthoritativeExecution()
 
+        # FHE: Block actions if current player's FHE draw is pending (same logic as ai_canStartTurn in single_player)
+        currentPlayerId = gameSession.getCurrentPlayerId()
+        currentPlayerFhe = getFHEStateForPlayer(@gameId, currentPlayerId)
+        Logger.module("FHE").log "[G:#{@gameId}]", "onGameEvent:: currentPlayerId=#{currentPlayerId}, fheEnabled=#{currentPlayerFhe?.enabled}, turnDrawComplete=#{currentPlayerFhe?.turnDrawComplete}"
+        if currentPlayerFhe?.enabled and not currentPlayerFhe.turnDrawComplete
+          Logger.module("FHE").log "[G:#{@gameId}]", "onGameEvent:: FHE draw pending, BLOCKING action from #{@.playerId}"
+          @emit EVENTS.network_game_error,
+            code: 400
+            message: "FHE draw pending - please wait for decrypt to complete"
+          return
+
         # execute the action
         gameSession.executeAction(action)
 
@@ -871,6 +882,9 @@ onGameTimeTick = (gameId) ->
     else
       # if the turn timer has not expired, just send the time tick over to all clients
       totalStepCount = gameSession.getStepCount() - games[gameId].opponentEventDataBuffer.length
+      # FHE MODE: If there's a pending StartTurnAction step that hasn't been sent yet, subtract 1
+      if games[gameId].pendingStartTurnStep?
+        totalStepCount = totalStepCount - 1
       emitGameEvent(null,gameId,{type: EVENTS.turn_time, time: turnTimeRemainingInSeconds, timestamp: Date.now(), stepCount: totalStepCount})
 
 ###*
@@ -1159,6 +1173,7 @@ initGameSession = (gameId,onComplete) ->
         network: 'sepolia'
         revealedCount: 0
         initialHandRevealComplete: false
+        turnDrawComplete: true  # starts true, set false on StartTurn, set true after fhe_card_drawn
       }
 
     if player2SetupData?.fhe_enabled
@@ -1171,6 +1186,7 @@ initGameSession = (gameId,onComplete) ->
         network: 'sepolia'
         revealedCount: 0
         initialHandRevealComplete: false
+        turnDrawComplete: true  # starts true, set false on StartTurn, set true after fhe_card_drawn
       }
 
     saveGameCount(++gameCount)
@@ -1270,27 +1286,63 @@ onStep = (event) ->
   if game?
     step = event.step
     if step? and step.timestamp? and step.action?
-      # send out step events
-      stepEventData = {type: EVENTS.step, step: JSON.parse(game.session.serializeToJSON(step))}
-      emitGameEvent(null, gameId, stepEventData)
-
-      # special action cases
       action = step.action
-      if action instanceof SDK.EndTurnAction
+      stepEventData = {type: EVENTS.step, step: JSON.parse(game.session.serializeToJSON(step))}
+
+      # FHE MODE: Check if we need to hold StartTurnAction step
+      # When a player ends turn, they need to decrypt their draw card
+      # We hold the StartTurnAction step until decrypt completes
+      if action instanceof SDK.StartTurnAction
+        # StartTurnAction's ownerId is the player whose turn is STARTING
+        # We need to check if the PREVIOUS player (who just ended turn) has pending FHE decrypt
+        startingPlayerId = action.getOwnerId()
+        # Get the other player's ID (the one who just ended turn)
+        player1Id = gameSession.getPlayer1().getPlayerId()
+        player2Id = gameSession.getPlayer2().getPlayerId()
+        endingPlayerId = if startingPlayerId == player1Id then player2Id else player1Id
+        endingPlayerFhe = getFHEStateForPlayer(gameId, endingPlayerId)
+
+        if endingPlayerFhe?.enabled and not endingPlayerFhe.turnDrawComplete
+          # Hold this step until FHE decrypt completes
+          Logger.module("FHE").log "[G:#{gameId}]", "StartTurnAction: HOLDING step - player #{endingPlayerId} FHE decrypt pending"
+          game.pendingStartTurnStep = stepEventData
+          # Don't emit the step, don't restart timer yet
+          return
+        else
+          # No FHE pending, send normally and restart timer
+          emitGameEvent(null, gameId, stepEventData)
+          restartTurnTimer(gameId)
+
+      else if action instanceof SDK.EndTurnAction
+        # FHE MODE: Set turnDrawComplete = false BEFORE emit
+        # This ensures StartTurnAction (which comes right after) will be held
+        endingPlayerId = action.getOwnerId()
+        endingPlayerFhe = getFHEStateForPlayer(gameId, endingPlayerId)
+        if endingPlayerFhe?.enabled
+          endingPlayerFhe.turnDrawComplete = false
+          Logger.module("FHE").log "[G:#{gameId}]", "EndTurnAction: FHE player #{endingPlayerId} ended turn - turnDrawComplete=false, will hold StartTurnAction"
+
+        # Send EndTurnAction step immediately
+        emitGameEvent(null, gameId, stepEventData)
+
         # save game on end turn
         # delay so that we don't block sending the step back to the players
         _.delay((()->
           if games[gameId]? and games[gameId].session?
             GameManager.saveGameSession(gameId, games[gameId].session.serializeToJSON(games[gameId].session))
         ), 500)
-      else if action instanceof SDK.StartTurnAction
-        # restart the turn timer whenever a turn starts
-        restartTurnTimer(gameId)
+
       else if action instanceof SDK.DrawStartingHandAction
+        # Send DrawStartingHandAction step
+        emitGameEvent(null, gameId, stepEventData)
         # restart turn timer if both players have a starting hand and this step is for a DrawStartingHandAction
         bothPlayersHaveStartingHand = _.reduce(game.session.players,((memo,player)-> memo && player.getHasStartingHand()),true)
         if bothPlayersHaveStartingHand
           restartTurnTimer(gameId)
+
+      else
+        # All other steps - send normally
+        emitGameEvent(null, gameId, stepEventData)
 
       if action.getIsAutomatic() and !game.session.getIsFollowupActive()
         # add bonus to turn time for every automatic step
@@ -1929,6 +1981,7 @@ onFHECardDrawn = (requestData) ->
 
     # Update FHE state
     fheState.revealedCount = indices.length
+    fheState.turnDrawComplete = true
 
     socket.emit "fhe_card_drawn_response", {
       success: true
@@ -1937,6 +1990,19 @@ onFHECardDrawn = (requestData) ->
       cardIndex: appliedCardIndex
       burned: cardBurned
     }
+
+    # Notify all clients that FHE draw is complete, turn can proceed
+    Logger.module("FHE").log "[G:#{gameId}]", "FHE draw complete for player #{playerId}"
+
+    # FHE MULTIPLAYER: Send the pending StartTurnAction step that was held
+    if game.pendingStartTurnStep?
+      Logger.module("FHE").log "[G:#{gameId}]", "Sending held StartTurnAction step now that FHE decrypt is complete"
+      emitGameEvent(null, gameId, game.pendingStartTurnStep)
+      game.pendingStartTurnStep = null
+      # Now start the turn timer
+      restartTurnTimer(gameId)
+
+    emitGameEvent(null, gameId, {type: EVENTS.fhe_draw_complete, playerId: playerId, turn: turn})
 
   .catch (error) ->
     Logger.module("FHE").error "[G:#{gameId}]", "Blockchain error: #{error.message}"

@@ -102,6 +102,8 @@ const EVENTS = {
   fhe_starting_hand_ready: 'fhe_starting_hand_ready',
   fhe_draw_decrypt_failed: 'fhe_draw_decrypt_failed',
   fhe_draw_decrypt_success: 'fhe_draw_decrypt_success',
+  fhe_draw_started: 'fhe_draw_started',      // FHE player started decrypting draw card
+  fhe_draw_complete: 'fhe_draw_complete',    // FHE player finished decrypting, turn can proceed
   session_wallet_created: 'session_wallet_created',
 
   // show ui
