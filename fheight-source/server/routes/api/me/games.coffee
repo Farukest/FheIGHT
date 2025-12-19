@@ -474,7 +474,18 @@ router.post "/boss_battle", (req, res, next) ->
     aiUsername = ai_username || (aiGeneralCard?.getName()) || "Opponent"
 
     # get custom game setup options for boss
-    gameSetupOptions = GameSetups[aiGeneralId]
+    gameSetupOptions = GameSetups[aiGeneralId] || {}
+
+    # add developer mode if requested
+    if result.value.isDeveloperMode
+      gameSetupOptions.isDeveloperMode = true
+      Logger.module("BOSS BATTLE").debug "Developer mode ENABLED - adding to gameSetupOptions"
+
+    # add FHE mode if requested
+    if result.value.fhe_enabled
+      gameSetupOptions.fheEnabled = true
+      gameSetupOptions.fheGameId = result.value.fhe_game_id  # Blockchain game ID
+      Logger.module("BOSS BATTLE").debug "FHE mode ENABLED - fheGameId: #{result.value.fhe_game_id}"
 
     # create game
     return createSinglePlayerGame(userId,"You",GameType.BossBattle,deck,cardBackId,battleMapId,aiPlayerId,aiUsername,aiGeneralId,aiDeckId,1.0,0,null,gameSetupOptions)

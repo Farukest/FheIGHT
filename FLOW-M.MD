@@ -12,7 +12,11 @@
 | CLIENT/game_choose_hand | app/ui/views/item/game_choose_hand.js |
 | CLIENT/localization | app/localization/locales/en/battle.json |
 | CLIENT/event_types | app/common/event_types.js |
+| CLIENT/application | app/application.js |
+| CLIENT/deck_select_boss | app/ui/views/composite/deck_select_boss_battle.js |
 | SERVER/matchmaker | server/routes/matchmaker.coffee |
+| SERVER/games_api | server/routes/api/me/games.coffee |
+| SERVER/validators | server/validators/index.js |
 | SERVER/tokenmanager | server/redis/r-tokenmanager.coffee |
 | SERVER/worker | worker/creategame.coffee |
 | SERVER/gameSetup | app/sdk/gameSetup.js |
@@ -656,3 +660,282 @@ game_choose_hand.js: showReDecryptButton(false)
     |-- Re-Decrypt butonu gizlenir
     |-- Continue butonu gosterilir
 ```
+
+---
+
+## ASAMA 9: Boss Battle FHE Entegrasyonu
+
+Boss Battle, Single Player'in ozel bir turudur. FHE modunda ayni blockchain mekanizmasini kullanir.
+
+### 9.1 Boss Battle vs Single Player Farklari
+
+| Ozellik | Single Player | Boss Battle |
+|---------|---------------|-------------|
+| Endpoint | `/api/me/games/single_player` | `/api/me/games/boss_battle` |
+| AI Difficulty | Dinamik (win count'a gore) | Sabit (1.0 - max) |
+| AI Deck | Random | Boss'a ozel (GameSetups) |
+| GameType | `SDK.GameType.SinglePlayer` | `SDK.GameType.BossBattle` |
+| Client Fonksiyon | `_startSinglePlayerGame` | `_startBossBattleGame` |
+| FHE Fonksiyon | `_startSinglePlayerGameFHE` | `_startBossBattleGameFHE` |
+
+### 9.2 Boss Battle FHE Akisi
+
+#### 9.2.1 Kullanici Boss secip BOSS FHEIGHT butonuna basar
+```
+DOSYA: deck_select_boss_battle.js -> getConfirmSelectionEvent()
+RETURN: EVENTS.start_boss_battle
+```
+
+#### 9.2.2 Event listener tetiklenir
+```
+DOSYA: application.js:3881
+```
+```javascript
+EventBus.getInstance().on(EVENTS.start_boss_battle, App._startBossBattleGame, App);
+```
+
+#### 9.2.3 FHE kontrolu yapilir
+```
+DOSYA: application.js -> _startBossBattleGame()
+SATIR: 2084-2088
+```
+```javascript
+// Check if FHE mode is enabled
+if (CONFIG.fheEnabled) {
+  Logger.module("APPLICATION").log("App._startBossBattleGame -> FHE mode enabled, using blockchain flow");
+  return App._startBossBattleGameFHE(myPlayerDeck, myPlayerFactionId, myPlayerGeneralId, myPlayerCardBackId, myPlayerBattleMapId, aiGeneralId);
+}
+```
+
+---
+
+### 9.3 _startBossBattleGameFHE Fonksiyonu
+
+```
+DOSYA: application.js
+SATIR: 2079-2214
+```
+
+#### 9.3.1 Wallet baglantisi kontrolu
+```javascript
+if (!Wallet.getState().connected) {
+  Logger.module("APPLICATION").log("FHE Boss Battle: Wallet not connected, connecting...");
+  Wallet.connect()
+    .then(function() {
+      return proceedWithFHEGame();
+    })
+    .catch(reject);
+} else {
+  proceedWithFHEGame().catch(reject);
+}
+```
+
+#### 9.3.2 FHE GameMode initialize
+```javascript
+const fheGameMode = FHE.GameMode.getInstance();
+const contractAddresses = fheSession.getContractAddresses();
+const gameSessionAddress = contractAddresses.GameSession;
+
+return fheGameMode.initialize(gameSessionAddress)
+```
+
+#### 9.3.3 Blockchain'de oyun olusturma
+```javascript
+// Boss Battle ayni createSinglePlayerGame fonksiyonunu kullanir
+return fheGameMode.createSinglePlayerGame(myPlayerGeneralId, deckCardIds);
+```
+**NOT:** Blockchain seviyesinde Boss Battle ve Single Player ayni - sadece backend farkli!
+
+#### 9.3.4 Backend'e FHE parametreleri gonderilir
+```javascript
+const request = $.ajax({
+  url: process.env.API_URL + '/api/me/games/boss_battle',
+  data: JSON.stringify({
+    deck: myPlayerDeck,
+    cardBackId: myPlayerCardBackId,
+    battleMapId: myPlayerBattleMapId,
+    ai_general_id: aiGeneralId,
+    ai_username: aiGeneralName,
+    isDeveloperMode: CONFIG.DEV_MODE_ENABLED,
+    // FHE specific data
+    fhe_enabled: true,
+    fhe_game_id: gameId
+  }),
+  type: 'POST',
+  contentType: 'application/json',
+  dataType: 'json'
+});
+```
+
+#### 9.3.5 GameSession'a FHE bilgileri kaydedilir
+```javascript
+if (gameListingData.fhe_enabled) {
+  SDK.GameSession.getInstance().fheEnabled = true;
+  SDK.GameSession.getInstance().fheGameId = gameListingData.fhe_game_id;
+  SDK.GameSession.getInstance().fheContractAddress = gameListingData.fhe_contract_address;
+  Logger.module("APPLICATION").log("FHE Boss Battle: Game session configured with FHE data");
+}
+```
+
+---
+
+### 9.4 Server Tarafinda Boss Battle FHE
+
+#### 9.4.1 Validator - FHE parametreleri kabul edilir
+```
+DOSYA: server/validators/index.js
+SATIR: 99-108
+```
+```javascript
+const bossBattleInput = t.struct({
+  deck: types.Deck,
+  cardBackId: t.maybe(t.Num),
+  battleMapId: t.maybe(t.Num),
+  ai_general_id: t.Number,
+  ai_username: t.maybe(t.Str),
+  isDeveloperMode: t.maybe(t.Bool),    // EKLENDI
+  fhe_enabled: t.maybe(t.Bool),        // EKLENDI
+  fhe_game_id: t.maybe(t.Number),      // EKLENDI
+});
+```
+
+#### 9.4.2 Endpoint - FHE gameSetupOptions'a eklenir
+```
+DOSYA: server/routes/api/me/games.coffee
+SATIR: 476-491
+```
+```coffee
+router.post "/boss_battle", (req, res, next) ->
+  # ... deck validation ...
+
+  .then ()->
+    # get custom game setup options for boss
+    gameSetupOptions = GameSetups[aiGeneralId] || {}
+
+    # add developer mode if requested
+    if result.value.isDeveloperMode
+      gameSetupOptions.isDeveloperMode = true
+      Logger.module("BOSS BATTLE").debug "Developer mode ENABLED"
+
+    # add FHE mode if requested
+    if result.value.fhe_enabled
+      gameSetupOptions.fheEnabled = true
+      gameSetupOptions.fheGameId = result.value.fhe_game_id
+      Logger.module("BOSS BATTLE").debug "FHE mode ENABLED - fheGameId: #{result.value.fhe_game_id}"
+
+    # create game
+    return createSinglePlayerGame(userId,"You",GameType.BossBattle,deck,cardBackId,battleMapId,aiPlayerId,aiUsername,aiGeneralId,aiDeckId,1.0,0,null,gameSetupOptions)
+```
+
+---
+
+### 9.5 Boss Battle FHE Akis Diyagrami
+
+```
+KULLANICI: Boss secimi yapar
+    |
+    v
+deck_select_boss_battle.js: getConfirmSelectionEvent()
+    |-- EVENTS.start_boss_battle return eder
+    v
+EventBus: EVENTS.start_boss_battle tetiklenir
+    |
+    v
+application.js: _startBossBattleGame()
+    |-- if (CONFIG.fheEnabled) ?
+    |   |-- EVET: _startBossBattleGameFHE() cagir
+    |   |-- HAYIR: Normal boss battle flow
+    v
+application.js: _startBossBattleGameFHE()
+    |
+    |-- [1] Wallet.connect() (gerekirse)
+    |
+    |-- [2] FHE.GameMode.getInstance().initialize()
+    |
+    |-- [3] fheGameMode.createSinglePlayerGame()
+    |       |-- contract.createSinglePlayerGame(gameId) TX
+    |       |-- 40 FHE random uretilir (blockchain)
+    |       |-- gameId return edilir
+    |
+    |-- [4] POST /api/me/games/boss_battle
+    |       {
+    |         deck, cardBackId, battleMapId,
+    |         ai_general_id, ai_username,
+    |         isDeveloperMode,
+    |         fhe_enabled: true,
+    |         fhe_game_id: gameId
+    |       }
+    v
+SERVER: games.coffee -> /boss_battle endpoint
+    |
+    |-- validators.bossBattleInput ile validate
+    |
+    |-- gameSetupOptions = GameSetups[aiGeneralId] || {}
+    |-- if fhe_enabled:
+    |       gameSetupOptions.fheEnabled = true
+    |       gameSetupOptions.fheGameId = fhe_game_id
+    |
+    |-- createSinglePlayerGame(..., gameSetupOptions)
+    v
+WORKER: creategame.coffee
+    |-- gameSetupOptions.fheEnabled kontrol
+    |-- player1DataForGame.fhePlayer = true
+    |-- player1DataForGame.startingHandSize = 0
+    v
+SERVER: game.coffee -> initGameSession()
+    |-- games[gameId].fhe.player1.enabled = true
+    |-- games[gameId].fhe.player1.blockchainGameId = fheGameId
+    v
+CLIENT: _joinGame(gameListingData)
+    |-- SDK.GameSession.getInstance().fheEnabled = true
+    |-- SDK.GameSession.getInstance().fheGameId = gameId
+    v
+OYUN BASLAR (ASAMA 5+ ayni akis devam eder)
+```
+
+---
+
+### 9.6 Boss Battle FHE Kritik Dosya/Satirlar
+
+| Dosya | Method/Satir | Aciklama |
+|-------|--------------|----------|
+| deck_select_boss_battle.js:75 | getConfirmSelectionEvent() | EVENTS.start_boss_battle |
+| application.js:3881 | Event listener | start_boss_battle -> _startBossBattleGame |
+| application.js:2084-2088 | _startBossBattleGame() | FHE kontrolu ve yonlendirme |
+| application.js:2079-2214 | _startBossBattleGameFHE() | Tum FHE boss battle akisi |
+| application.js:2130-2135 | createSinglePlayerGame() | Blockchain TX (single player ile ayni) |
+| application.js:2143-2159 | POST /boss_battle | FHE parametreleri ile request |
+| application.js:2188-2194 | GameSession FHE config | fheEnabled, fheGameId, fheContractAddress |
+| validators/index.js:99-108 | bossBattleInput | FHE parametreleri validator'a eklendi |
+| games.coffee:476-491 | /boss_battle endpoint | FHE gameSetupOptions eklendi |
+
+---
+
+### 9.7 Boss Battle ve Single Player Ortak FHE Yapisi
+
+Her iki mod da ayni temel FHE altyapisini kullanir:
+
+```
+createSinglePlayerGame (contract)  <-- Her ikisi de AYNI fonksiyonu kullanir
+         |
+         v
+  +------+------+
+  |             |
+  v             v
+Single       Boss
+Player       Battle
+  |             |
+  v             v
+/single_player  /boss_battle   <-- Farkli endpoint'ler
+endpoint        endpoint
+  |             |
+  +------+------+
+         |
+         v
+createSinglePlayerGame (server)  <-- Ayni server fonksiyonu
+         |
+         v
+    GameSession (fheEnabled = true)
+```
+
+**SONUC:** Boss Battle FHE, Single Player FHE'nin ozel bir turu. Blockchain seviyesinde ayni, backend'de sadece AI konfigurasyonu farkli.

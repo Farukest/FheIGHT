@@ -2072,6 +2072,147 @@ App._startSinglePlayerGameFHE = function(myPlayerDeck, myPlayerFactionId, myPlay
   });
 };
 
+/**
+ * FHE-enabled Boss Battle Game
+ * Uses smart contract for encrypted game state
+ */
+App._startBossBattleGameFHE = function(myPlayerDeck, myPlayerFactionId, myPlayerGeneralId, myPlayerCardBackId, myPlayerBattleMapId, aiGeneralId) {
+  Logger.module("APPLICATION").log("App._startBossBattleGameFHE");
+
+  // analytics call
+  Analytics.page("Boss Battle Game (FHE)",{ path: "/#boss_battle_fhe" });
+
+  // don't allow user triggered navigation
+  NavigationManager.getInstance().requestUserTriggeredNavigationLocked(App._userNavLockId);
+
+  // set user as in game
+  ChatManager.getInstance().setStatus(ChatManager.STATUS_GAME);
+
+  let aiGeneralName = null;
+  const aiGeneralCard = SDK.GameSession.getCardCaches().getCardById(aiGeneralId);
+  if (aiGeneralCard != null) {
+    aiGeneralName = aiGeneralCard.getName();
+  }
+
+  // Extract card IDs from deck (deck is array of {id: cardId})
+  // IMPORTANT: In normal flow, deck[0] is the general card which is placed on board, not in deck
+  // We need to skip the first card (general) for FHE deck
+  const deckCardIds = myPlayerDeck.slice(1).map(function(card) {
+    return card.id;
+  });
+  Logger.module("APPLICATION").log("FHE Boss Battle: Deck card count (excluding general):", deckCardIds.length);
+
+  // Get FHE session and contract addresses
+  const fheSession = FHESession.getInstance();
+
+  // FHE game creation promise
+  const bossBattleGamePromise = new Promise(function(resolve, reject) {
+    // Step 1: Ensure wallet is connected
+    if (!Wallet.getState().connected) {
+      Logger.module("APPLICATION").log("FHE Boss Battle: Wallet not connected, connecting...");
+      Wallet.connect()
+        .then(function() {
+          return proceedWithFHEGame();
+        })
+        .catch(reject);
+    } else {
+      proceedWithFHEGame().catch(reject);
+    }
+
+    function proceedWithFHEGame() {
+      // Step 2: Initialize FHE Game Mode
+      const fheGameMode = FHE.GameMode.getInstance();
+      const contractAddresses = fheSession.getContractAddresses();
+      const gameSessionAddress = contractAddresses.GameSession;
+
+      Logger.module("APPLICATION").log("FHE Boss Battle: Initializing with contract:", gameSessionAddress);
+
+      return fheGameMode.initialize(gameSessionAddress)
+        .then(function() {
+          Logger.module("APPLICATION").log("FHE Boss Battle: Creating game on blockchain...");
+
+          // Step 3: Create single player game on contract (Boss Battle uses same contract function)
+          return fheGameMode.createSinglePlayerGame(myPlayerGeneralId, deckCardIds);
+        })
+        .then(function(gameId) {
+          Logger.module("APPLICATION").log("FHE Boss Battle: Game created with ID:", gameId);
+
+          // Step 4: Now we need to start the game with traditional backend
+          // But with FHE flag so backend knows to use contract state
+          Logger.module("APPLICATION").log("FHE Boss Battle: Sending to server - isDeveloperMode:", CONFIG.DEV_MODE_ENABLED);
+          const request = $.ajax({
+            url: process.env.API_URL + '/api/me/games/boss_battle',
+            data: JSON.stringify({
+              deck: myPlayerDeck,
+              cardBackId: myPlayerCardBackId,
+              battleMapId: myPlayerBattleMapId,
+              ai_general_id: aiGeneralId,
+              ai_username: aiGeneralName,
+              isDeveloperMode: CONFIG.DEV_MODE_ENABLED,
+              // FHE specific data
+              fhe_enabled: true,
+              fhe_game_id: gameId
+            }),
+            type: 'POST',
+            contentType: 'application/json',
+            dataType: 'json'
+          });
+
+          request.done(function(res) {
+            // Add FHE data to response
+            res.fhe_enabled = true;
+            res.fhe_game_id = gameId;
+            res.fhe_contract_address = gameSessionAddress;
+            resolve(res);
+          });
+
+          request.fail(function(jqXHR) {
+            reject((jqXHR && jqXHR.responseJSON && (jqXHR.responseJSON.error || jqXHR.responseJSON.message)) || "Connection error. Please retry.");
+          });
+        });
+    }
+  });
+
+  // get ui promise
+  let ui_promise;
+  if (CONFIG.LOAD_ALL_AT_START) {
+    ui_promise = Promise.resolve();
+  } else {
+    ui_promise = NavigationManager.getInstance().showDialogForLoad();
+  }
+
+  return Promise.all([
+    bossBattleGamePromise,
+    ui_promise
+  ]).spread(function(gameListingData) {
+    // Store FHE info in game session
+    if (gameListingData.fhe_enabled) {
+      SDK.GameSession.getInstance().fheEnabled = true;
+      SDK.GameSession.getInstance().fheGameId = gameListingData.fhe_game_id;
+      SDK.GameSession.getInstance().fheContractAddress = gameListingData.fhe_contract_address;
+      Logger.module("APPLICATION").log("FHE Boss Battle: Game session configured with FHE data");
+    }
+    return App._joinGame(gameListingData);
+  }).catch(function(errorMessage) {
+    // Shutdown FHE on error
+    FHE.GameMode.getInstance().shutdown();
+
+    // Check for INSUFFICIENT_FUNDS error and show user-friendly message
+    var errorStr = String(errorMessage || '');
+    if (errorStr.includes('INSUFFICIENT_FUNDS') || errorStr.includes('insufficient funds')) {
+      var sessionWalletAddress = SessionWallet.getAddress() || 'unknown';
+      var networkName = Wallet.getCurrentNetwork() || 'Sepolia';
+      var userFriendlyMessage = 'Insufficient ETH for gas fees.\n\n' +
+        'Your session wallet needs ' + networkName + ' ETH to submit blockchain transactions.\n\n' +
+        'Session Wallet Address:\n' + sessionWalletAddress + '\n\n' +
+        'Please send some ' + networkName + ' ETH to this address and try again.';
+      return App._error(userFriendlyMessage);
+    }
+
+    return App._error((errorMessage != null) ? "Failed to start FHE boss battle game: " + errorMessage : undefined);
+  });
+};
+
 App._startBossBattleGame = function(myPlayerDeck, myPlayerFactionId, myPlayerGeneralId, myPlayerCardBackId, myPlayerBattleMapId, aiGeneralId) {
   let ui_promise;
   if (ChatManager.getInstance().getStatusIsInBattle()) {
@@ -2080,6 +2221,12 @@ App._startBossBattleGame = function(myPlayerDeck, myPlayerFactionId, myPlayerGen
   }
 
   Logger.module("APPLICATION").log("App._startBossBattleGame");
+
+  // Check if FHE mode is enabled
+  if (CONFIG.fheEnabled) {
+    Logger.module("APPLICATION").log("App._startBossBattleGame -> FHE mode enabled, using blockchain flow");
+    return App._startBossBattleGameFHE(myPlayerDeck, myPlayerFactionId, myPlayerGeneralId, myPlayerCardBackId, myPlayerBattleMapId, aiGeneralId);
+  }
 
   // analytics call
   Analytics.page("Boss Battle Game",{ path: "/#boss_battle" });

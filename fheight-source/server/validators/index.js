@@ -102,6 +102,9 @@ const bossBattleInput = t.struct({
   battleMapId: t.maybe(t.Num),
   ai_general_id: t.Number,
   ai_username: t.maybe(t.Str),
+  isDeveloperMode: t.maybe(t.Bool),
+  fhe_enabled: t.maybe(t.Bool),
+  fhe_game_id: t.maybe(t.Number),
 });
 
 const reportPlayerInput = t.struct({
