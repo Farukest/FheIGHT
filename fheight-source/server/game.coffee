@@ -23,6 +23,7 @@ UtilsGameSession = require '../app/common/utils/utils_game_session'
 
 # lib Modules
 Consul = require './lib/consul'
+BlockchainModule = require './lib/blockchain'
 
 # Configuration object
 config = require '../config/config.js'
@@ -142,6 +143,11 @@ d.run () ->
     socket.on EVENTS.leave_game, onGameLeave
     socket.on EVENTS.network_game_event, onGameEvent
     socket.on "disconnect", onGameDisconnect
+
+    # FHE Multiplayer Event handlers
+    socket.on "fhe_game_created", onFHEGameCreated
+    socket.on "fhe_initial_hand_revealed", onFHEInitialHandRevealed
+    socket.on "fhe_card_drawn", onFHECardDrawn
 
 getConnectedSpectatorsDataForGamePlayer = (gameId,playerId)->
   spectators = []
@@ -834,6 +840,15 @@ onGameTimeTick = (gameId) ->
       stopTurnTimer(gameId)
 
       if gameSession.status == SDK.GameStatus.new
+        # FHE MODE: Don't auto-mulligan if any FHE player hasn't completed initial hand reveal
+        fheState = games[gameId]?.fhe
+        if fheState?.player1?.enabled and not fheState.player1.initialHandRevealComplete
+          Logger.module("FHE").debug "[G:#{gameId}]", "onGameTimeTick:: FHE mode - player1 waiting for initial hand reveal, skipping auto-mulligan"
+          return
+        if fheState?.player2?.enabled and not fheState.player2.initialHandRevealComplete
+          Logger.module("FHE").debug "[G:#{gameId}]", "onGameTimeTick:: FHE mode - player2 waiting for initial hand reveal, skipping auto-mulligan"
+          return
+
         # force draw starting hand with current cards
         for player in gameSession.players
           if not player.getHasStartingHand()
@@ -841,6 +856,14 @@ onGameTimeTick = (gameId) ->
             drawStartingHandAction = player.actionDrawStartingHand([])
             gameSession.executeAction(drawStartingHandAction)
       else if gameSession.status == SDK.GameStatus.active
+        # FHE MODE: Don't auto-end-turn if any FHE player hasn't completed turn draw
+        fheStateActive = games[gameId]?.fhe
+        currentPlayerId = gameSession.getCurrentPlayerId()
+        currentPlayerFhe = getFHEStateForPlayer(gameId, currentPlayerId)
+        if currentPlayerFhe?.enabled and not currentPlayerFhe.turnDrawComplete
+          Logger.module("FHE").debug "[G:#{gameId}]", "onGameTimeTick:: FHE mode - waiting for draw decrypt, skipping auto-end-turn"
+          return
+
         # force end turn
         Logger.module("IO").log "[G:#{gameId}]", "onGameTimeTick:: turn timer up, submitting player #{gameSession.getCurrentPlayerId().blue} turn".red
         endTurnAction = gameSession.actionEndTurn()
@@ -1116,6 +1139,40 @@ initGameSession = (gameId,onComplete) ->
     # store mouse and ui event data
     games[gameId].mouseAndUIEvents = mouseData
 
+    # FHE Multiplayer: Read FHE data from player setup data
+    player1SetupData = gameSession.getPlayer1SetupData()
+    player2SetupData = gameSession.getPlayer2SetupData()
+
+    # Initialize FHE state for each player (if they have FHE enabled)
+    games[gameId].fhe = {
+      player1: null
+      player2: null
+    }
+
+    if player1SetupData?.fhe_enabled
+      Logger.module("FHE").log "[G:#{gameId}]", "Player 1 has FHE enabled - gameId: #{player1SetupData.fhe_game_id}"
+      games[gameId].fhe.player1 = {
+        enabled: true
+        blockchainGameId: player1SetupData.fhe_game_id
+        contractAddress: player1SetupData.fhe_contract_address
+        wallet: player1SetupData.fhe_player_wallet
+        network: 'sepolia'
+        revealedCount: 0
+        initialHandRevealComplete: false
+      }
+
+    if player2SetupData?.fhe_enabled
+      Logger.module("FHE").log "[G:#{gameId}]", "Player 2 has FHE enabled - gameId: #{player2SetupData.fhe_game_id}"
+      games[gameId].fhe.player2 = {
+        enabled: true
+        blockchainGameId: player2SetupData.fhe_game_id
+        contractAddress: player2SetupData.fhe_contract_address
+        wallet: player2SetupData.fhe_player_wallet
+        network: 'sepolia'
+        revealedCount: 0
+        initialHandRevealComplete: false
+      }
+
     saveGameCount(++gameCount)
 
      # in case the server restarted or loading data for first time, set the last action at timestamp for both players to now
@@ -1128,7 +1185,13 @@ initGameSession = (gameId,onComplete) ->
     subscribeToGameSessionEvents(gameId)
 
     # start the turn timer
-    restartTurnTimer(gameId)
+    # FHE MODE: Don't start turn timer until initial hand reveal is complete for FHE players
+    fheState = games[gameId].fhe
+    hasFHEPlayer = fheState?.player1?.enabled or fheState?.player2?.enabled
+    if hasFHEPlayer
+      Logger.module("FHE").debug "[G:#{gameId}]", "FHE mode - turn timer will start after initial hand reveal"
+    else
+      restartTurnTimer(gameId)
 
     return Promise.resolve([
       games[gameId].session
@@ -1542,3 +1605,339 @@ process.on "SIGTERM", shutdownHandler
 process.on "SIGINT", shutdownHandler
 process.on "SIGHUP", shutdownHandler
 process.on "SIGQUIT", shutdownHandler
+
+###
+# FHE MULTIPLAYER HANDLERS
+# Per FLOW-M.MD: Server verifies via blockchain, never trusts client
+###
+
+# Helper to get FHE state for a player
+getFHEStateForPlayer = (gameId, playerId) ->
+  game = games[gameId]
+  if !game?.fhe
+    return null
+
+  player1Id = game.session?.getPlayer1Id()
+  player2Id = game.session?.getPlayer2Id()
+
+  if playerId == player1Id
+    return game.fhe.player1
+  else if playerId == player2Id
+    return game.fhe.player2
+  return null
+
+# Helper to get deck order for a player (stored during game setup)
+getFHEDeckOrderForPlayer = (gameId, playerId) ->
+  game = games[gameId]
+  if !game?.session
+    return null
+
+  player1Id = game.session.getPlayer1Id()
+  player2Id = game.session.getPlayer2Id()
+
+  # For multiplayer, each player may have their own deck order
+  # Get player's setup data and original deck
+  if playerId == player1Id
+    setupData = game.session.getPlayer1SetupData()
+  else if playerId == player2Id
+    setupData = game.session.getPlayer2SetupData()
+  else
+    return null
+
+  # Deck order is the deck without the general (first card)
+  if setupData?.deck
+    return setupData.deck.slice(1).map((c) -> c.id)
+  return null
+
+###*
+# Handler: Client notifies that FHE blockchain game was created
+# FLOW-M.MD Step 13: Store FHE state for this player
+# @param {Object} requestData - {gameId, blockchainGameId, network}
+###
+onFHEGameCreated = (requestData) ->
+  Logger.module("FHE").log ">>> fhe_game_created HANDLER CALLED with data:", JSON.stringify(requestData)
+
+  socket = @
+  gameId = requestData.gameId
+  blockchainGameId = requestData.blockchainGameId
+  network = requestData.network or 'sepolia'
+  playerId = @.playerId
+
+  Logger.module("FHE").log "[G:#{gameId}]", "fhe_game_created from player #{playerId} - blockchainGameId: #{blockchainGameId}"
+
+  if !gameId or !games[gameId]
+    socket.emit "fhe_game_created_response", { error: "Game not found" }
+    return
+
+  # Initialize FHE state object if not exists
+  if !games[gameId].fhe
+    games[gameId].fhe = {
+      player1: null
+      player2: null
+    }
+
+  # Determine which player slot to use
+  game = games[gameId]
+  if !game.session?
+    socket.emit "fhe_game_created_response", { error: "No game session" }
+    return
+
+  player1Id = game.session.getPlayer1Id()
+  player2Id = game.session.getPlayer2Id()
+
+  playerKey = null
+  if playerId == player1Id
+    playerKey = 'player1'
+  else if playerId == player2Id
+    playerKey = 'player2'
+  else
+    socket.emit "fhe_game_created_response", { error: "Player not in game" }
+    return
+
+  # Get player's deck for verification
+  player = game.session.getPlayerById(playerId)
+  playerDeck = getFHEDeckOrderForPlayer(gameId, playerId)
+
+  # Store FHE state for this player
+  games[gameId].fhe[playerKey] = {
+    enabled: true
+    blockchainGameId: blockchainGameId
+    network: network
+    wallet: null  # Will be set from player setup data if available
+    revealedCount: 0
+    initialHandRevealComplete: false
+    playerDeck: playerDeck
+    turnDrawComplete: true
+  }
+
+  Logger.module("FHE").log "[G:#{gameId}]", "FHE state created for #{playerKey} - blockchainGameId: #{blockchainGameId}, deck: #{playerDeck?.length or 0} cards"
+
+  socket.emit "fhe_game_created_response", { success: true }
+
+###*
+# Handler: Client completed initial hand reveal (5 cards)
+# FLOW-M.MD: Server verifies via blockchain
+# @param {Object} requestData - {gameId, blockchainGameId}
+###
+onFHEInitialHandRevealed = (requestData) ->
+  Logger.module("FHE").log ">>> fhe_initial_hand_revealed HANDLER CALLED"
+
+  socket = @
+  gameId = requestData.gameId
+  playerId = @.playerId
+  clientBlockchainGameId = requestData.blockchainGameId
+
+  Logger.module("FHE").log "[G:#{gameId}]", "fhe_initial_hand_revealed from player #{playerId}"
+
+  if !gameId or !games[gameId]
+    socket.emit "fhe_initial_hand_revealed_response", { error: "Game not found" }
+    return
+
+  fheState = getFHEStateForPlayer(gameId, playerId)
+  if !fheState?.enabled
+    socket.emit "fhe_initial_hand_revealed_response", { error: "FHE not enabled for this player" }
+    return
+
+  # Update blockchain game ID from client if needed
+  if clientBlockchainGameId and !fheState.blockchainGameId
+    fheState.blockchainGameId = clientBlockchainGameId
+
+  blockchainGameId = fheState.blockchainGameId
+  if !blockchainGameId
+    socket.emit "fhe_initial_hand_revealed_response", { error: "No blockchain game ID" }
+    return
+
+  game = games[gameId]
+  if !game.session?
+    socket.emit "fhe_initial_hand_revealed_response", { error: "No game session" }
+    return
+
+  player = game.session.getPlayerById(playerId)
+  if !player?
+    socket.emit "fhe_initial_hand_revealed_response", { error: "Player not found" }
+    return
+
+  # Get deck order for this player
+  fheDeckOrder = getFHEDeckOrderForPlayer(gameId, playerId)
+  if !fheDeckOrder or fheDeckOrder.length == 0
+    socket.emit "fhe_initial_hand_revealed_response", { error: "No FHE deck order" }
+    return
+
+  network = fheState.network or 'sepolia'
+  INITIAL_HAND_SIZE = 5
+
+  Logger.module("FHE").log "[G:#{gameId}]", "Verifying via blockchain - gameId: #{blockchainGameId}"
+
+  # BLOCKCHAIN VERIFICATION - Never trust client!
+  BlockchainModule.verifyAndCalculateCards(network, blockchainGameId, fheDeckOrder, INITIAL_HAND_SIZE)
+  .then (result) ->
+    if !result.verified
+      Logger.module("FHE").error "[G:#{gameId}]", "Blockchain verification FAILED: #{result.error}"
+      socket.emit "fhe_initial_hand_revealed_response", { error: "Verification failed: #{result.error}" }
+      return
+
+    Logger.module("FHE").log "[G:#{gameId}]", "Blockchain verified! Cards: #{JSON.stringify(result.cards)}"
+
+    verifiedCards = result.cards
+    cardIndicesForClient = []
+
+    playerDeck = player.getDeck()
+    drawPile = playerDeck.getDrawPile()
+    handSlotIndex = 0
+
+    for cardId in verifiedCards
+      foundDrawPilePos = -1
+      for i in [0...drawPile.length]
+        cardIndex = drawPile[i]
+        card = game.session.getCardByIndex(cardIndex)
+        if card? and card.getId() == cardId
+          foundDrawPilePos = i
+          break
+
+      if foundDrawPilePos >= 0
+        cardIndex = drawPile[foundDrawPilePos]
+        card = game.session.getCardByIndex(cardIndex)
+        game.session.applyCardToHand(playerDeck, cardIndex, card, handSlotIndex)
+        cardIndicesForClient.push(cardIndex)
+        handSlotIndex++
+      else
+        cardIndicesForClient.push(null)
+
+    # Update FHE state
+    fheState.revealedCount = verifiedCards.length
+    fheState.initialHandRevealComplete = true
+    fheState.lastVerifiedIndices = result.indices
+
+    Logger.module("FHE").log "[G:#{gameId}]", "Player hand now has #{playerDeck.getNumCardsInHand()} cards"
+
+    socket.emit "fhe_initial_hand_revealed_response", {
+      success: true
+      verified: true
+      revealedCount: verifiedCards.length
+      cardIndices: cardIndicesForClient
+    }
+
+    socket.emit "fhe_ready_to_play", { gameId: gameId }
+
+    # Check if all FHE players have completed initial hand reveal, then start timer
+    allFheDone = true
+    fheGameState = games[gameId].fhe
+    if fheGameState?.player1?.enabled and not fheGameState.player1.initialHandRevealComplete
+      allFheDone = false
+    if fheGameState?.player2?.enabled and not fheGameState.player2.initialHandRevealComplete
+      allFheDone = false
+
+    if allFheDone
+      Logger.module("FHE").log "[G:#{gameId}]", "All FHE players completed initial hand reveal - starting turn timer"
+      restartTurnTimer(gameId)
+
+  .catch (error) ->
+    Logger.module("FHE").error "[G:#{gameId}]", "Blockchain error: #{error.message}"
+    socket.emit "fhe_initial_hand_revealed_response", { error: "Blockchain error: #{error.message}" }
+
+###*
+# Handler: Client completed a draw card reveal (1 card per turn)
+# FLOW-M.MD: Server reads from blockchain, never trusts client
+# @param {Object} requestData - {gameId, turn}
+###
+onFHECardDrawn = (requestData) ->
+  Logger.module("FHE").log ">>> fhe_card_drawn HANDLER CALLED"
+
+  socket = @
+  gameId = requestData.gameId
+  turn = requestData.turn or 0
+  playerId = @.playerId
+
+  Logger.module("FHE").log "[G:#{gameId}]", "fhe_card_drawn for turn #{turn} from player #{playerId}"
+
+  if !gameId or !games[gameId]
+    socket.emit "fhe_card_drawn_response", { error: "Game not found" }
+    return
+
+  fheState = getFHEStateForPlayer(gameId, playerId)
+  if !fheState?.enabled
+    socket.emit "fhe_card_drawn_response", { error: "FHE not enabled for this player" }
+    return
+
+  blockchainGameId = fheState.blockchainGameId
+  if !blockchainGameId
+    socket.emit "fhe_card_drawn_response", { error: "No blockchain game ID" }
+    return
+
+  game = games[gameId]
+  if !game.session?
+    socket.emit "fhe_card_drawn_response", { error: "No game session" }
+    return
+
+  player = game.session.getPlayerById(playerId)
+  if !player?
+    socket.emit "fhe_card_drawn_response", { error: "Player not found" }
+    return
+
+  fheDeckOrder = getFHEDeckOrderForPlayer(gameId, playerId)
+  if !fheDeckOrder or fheDeckOrder.length == 0
+    socket.emit "fhe_card_drawn_response", { error: "No FHE deck order" }
+    return
+
+  network = fheState.network or 'sepolia'
+  previousRevealCount = fheState.revealedCount or 5
+  expectedNewRevealCount = previousRevealCount + 1
+
+  # BLOCKCHAIN VERIFICATION - Never trust client!
+  BlockchainModule.getVerifiedDrawOrder(network, blockchainGameId)
+  .then (indices) ->
+    if indices.length < expectedNewRevealCount
+      socket.emit "fhe_card_drawn_response", { error: "Reveal not yet on blockchain" }
+      return
+
+    # Calculate ALL cards using full indices array
+    result = BlockchainModule.calculateCardsFromIndices(fheDeckOrder, indices)
+
+    # The last drawn card is the new one
+    cardId = result.drawnCards[result.drawnCards.length - 1]
+
+    Logger.module("FHE").log "[G:#{gameId}]", "Blockchain verified! New cardId: #{cardId}"
+
+    playerDeck = player.getDeck()
+    drawPile = playerDeck.getDrawPile()
+    appliedCardIndex = null
+    cardBurned = false
+
+    foundDrawPilePos = -1
+    for i in [0...drawPile.length]
+      idx = drawPile[i]
+      card = game.session.getCardByIndex(idx)
+      if card? and card.getId() == cardId
+        foundDrawPilePos = i
+        break
+
+    if foundDrawPilePos >= 0
+      appliedCardIndex = drawPile[foundDrawPilePos]
+      card = game.session.getCardByIndex(appliedCardIndex)
+
+      handSize = playerDeck.getNumCardsInHand()
+      maxHandSize = CONFIG.MAX_HAND_SIZE || 6
+
+      if handSize >= maxHandSize
+        Logger.module("FHE").log "[G:#{gameId}]", "BURN: Hand full, card #{cardId} burned"
+        drawPileIndex = drawPile.indexOf(appliedCardIndex)
+        if drawPileIndex >= 0
+          drawPile.splice(drawPileIndex, 1)
+        cardBurned = true
+      else
+        game.session.applyCardToHand(playerDeck, appliedCardIndex, card)
+
+    # Update FHE state
+    fheState.revealedCount = indices.length
+
+    socket.emit "fhe_card_drawn_response", {
+      success: true
+      turn: turn
+      cardId: cardId
+      cardIndex: appliedCardIndex
+      burned: cardBurned
+    }
+
+  .catch (error) ->
+    Logger.module("FHE").error "[G:#{gameId}]", "Blockchain error: #{error.message}"
+    socket.emit "fhe_card_drawn_response", { error: "Blockchain error: #{error.message}" }

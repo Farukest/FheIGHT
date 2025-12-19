@@ -628,12 +628,12 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
         return this.showStartingHand();
       } else {
         // FHE MODE: Decrypt and populate hand BEFORE showing choose hand UI
+        // Works for BOTH single player AND multiplayer (each player has own FHE session)
         var gameSession = SDK.GameSession.getInstance();
         var fheEnabled = gameSession.fheEnabled || CONFIG.fheEnabled;
         var isDeveloperMode = gameSession.getIsDeveloperMode();
-        var isSinglePlayerGame = gameSession.isSinglePlayer() || gameSession.isBossBattle() || gameSession.isChallenge() || gameSession.isSandbox();
 
-        if (fheEnabled && !isDeveloperMode && isSinglePlayerGame) {
+        if (fheEnabled && !isDeveloperMode) {
           Logger.module('FHE_UI').log('[FHE] showNextStepInGameSetup: FHE mode detected');
 
           var fheGameSession = FHEGameSession.getInstance();

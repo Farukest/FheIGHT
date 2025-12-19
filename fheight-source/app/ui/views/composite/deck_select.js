@@ -38,6 +38,11 @@ var ArenaRunDeckView = require('app/ui/views2/arena/arena_run_deck');
 const Chroma = require('app/common/chroma');
 var SlidingPanelSelectCompositeView = require('./sliding_panel_select');
 
+// FHE imports
+var FHE = require('app/sdk/fhe/fheGameMode');
+var FHESession = require('app/common/fhe_session');
+var Wallet = require('app/common/wallet');
+
 var DeckSelectEmptyView = Backbone.Marionette.ItemView.extend({
   tagName: 'li',
   template: DeckSelectEmptyTmpl,
@@ -629,14 +634,21 @@ var DeckSelectCompositeView = SlidingPanelSelectCompositeView.extend({
       this.ui.$deckSelectConfirm.addClass('disabled');
       this.ui.$deckSelectConfirmCasual.addClass('disabled');
       audio_engine.current().play_effect_for_interaction(RSX.sfx_ui_confirm.audio, CONFIG.CONFIRM_SFX_PRIORITY);
-      GamesManager.getInstance().findNewGame(
-        UtilsJavascript.deepCopy(this._selectedDeckModel.get('cards')),
-        this._selectedDeckModel.get('faction_id'),
-        SDK.GameType.Ranked,
-        this._selectedDeckModel.get('cards')[0].id,
-        this._selectedDeckModel.get('card_back_id'),
-        ProfileManager.getInstance().get('battle_map_id'),
-      );
+
+      var self = this;
+      var deck = UtilsJavascript.deepCopy(this._selectedDeckModel.get('cards'));
+      var factionId = this._selectedDeckModel.get('faction_id');
+      var generalId = this._selectedDeckModel.get('cards')[0].id;
+      var cardBackId = this._selectedDeckModel.get('card_back_id');
+      var battleMapId = ProfileManager.getInstance().get('battle_map_id');
+
+      // FHE mode check - same as single player
+      if (CONFIG.fheEnabled) {
+        Logger.module('DECK_SELECT').log('FHE mode enabled, initializing before matchmaking...');
+        this._initFHEAndFindGame(deck, factionId, SDK.GameType.Ranked, generalId, cardBackId, battleMapId);
+      } else {
+        GamesManager.getInstance().findNewGame(deck, factionId, SDK.GameType.Ranked, generalId, cardBackId, battleMapId);
+      }
     } else {
       audio_engine.current().play_effect_for_interaction(RSX.sfx_ui_error.audio, CONFIG.ERROR_SFX_PRIORITY);
       this._showSelectDeckWarningPopover(this.ui.$deckSelectConfirm);
@@ -647,14 +659,22 @@ var DeckSelectCompositeView = SlidingPanelSelectCompositeView.extend({
     if (this._selectedDeckModel != null) {
       this.ui.$deckSelectConfirm.addClass('disabled');
       this.ui.$deckSelectConfirmCasual.addClass('disabled');
-      GamesManager.getInstance().findNewGame(
-        UtilsJavascript.deepCopy(this._selectedDeckModel.get('cards')),
-        this._selectedDeckModel.get('faction_id'),
-        SDK.GameType.Casual,
-        this._selectedDeckModel.get('cards')[0].id,
-        this._selectedDeckModel.get('card_back_id'),
-        ProfileManager.getInstance().get('battle_map_id'),
-      );
+      audio_engine.current().play_effect_for_interaction(RSX.sfx_ui_confirm.audio, CONFIG.CONFIRM_SFX_PRIORITY);
+
+      var self = this;
+      var deck = UtilsJavascript.deepCopy(this._selectedDeckModel.get('cards'));
+      var factionId = this._selectedDeckModel.get('faction_id');
+      var generalId = this._selectedDeckModel.get('cards')[0].id;
+      var cardBackId = this._selectedDeckModel.get('card_back_id');
+      var battleMapId = ProfileManager.getInstance().get('battle_map_id');
+
+      // FHE mode check - same as single player
+      if (CONFIG.fheEnabled) {
+        Logger.module('DECK_SELECT').log('FHE mode enabled, initializing before matchmaking...');
+        this._initFHEAndFindGame(deck, factionId, SDK.GameType.Casual, generalId, cardBackId, battleMapId);
+      } else {
+        GamesManager.getInstance().findNewGame(deck, factionId, SDK.GameType.Casual, generalId, cardBackId, battleMapId);
+      }
     } else {
       // show select deck warning
       this._showSelectDeckWarningPopover(this.ui.$deckSelectConfirmCasual);
@@ -666,6 +686,97 @@ var DeckSelectCompositeView = SlidingPanelSelectCompositeView.extend({
     this.listenToOnce(dialog, 'success', this.updateSelectedBattlemapIcon);
     this.listenToOnce(dialog, 'cancel', function () { this.stopListening(dialog); }.bind(this));
     NavigationManager.getInstance().showDialogView(dialog);
+  },
+
+  /**
+   * Initialize FHE and create game before matchmaking
+   * Follows same flow as single player _startSinglePlayerGameFHE
+   */
+  _initFHEAndFindGame: function (deck, factionId, gameType, generalId, cardBackId, battleMapId) {
+    var self = this;
+
+    // Extract card IDs from deck (deck[0] is general, skip it)
+    var deckCardIds = deck.slice(1).map(function(card) {
+      return card.id;
+    });
+    Logger.module('DECK_SELECT').log('FHE: Deck card count (excluding general):', deckCardIds.length);
+
+    // Get FHE session and contract addresses
+    var fheSession = FHESession.getInstance();
+
+    // Step 1: Ensure wallet is connected (same as single player)
+    var walletPromise;
+    if (!Wallet.getState().connected) {
+      Logger.module('DECK_SELECT').log('FHE: Wallet not connected, connecting...');
+      walletPromise = Wallet.connect();
+    } else {
+      walletPromise = Promise.resolve();
+    }
+
+    walletPromise
+      .then(function() {
+        // Step 2: Initialize FHE Game Mode (this shows PIN dialog if needed)
+        var fheGameMode = FHE.getInstance();
+        var contractAddresses = fheSession.getContractAddresses();
+        var gameSessionAddress = contractAddresses.GameSession;
+
+        Logger.module('DECK_SELECT').log('FHE: Initializing with contract:', gameSessionAddress);
+
+        return fheGameMode.initialize(gameSessionAddress)
+          .then(function() {
+            Logger.module('DECK_SELECT').log('FHE: Creating game on blockchain...');
+
+            // Step 3: Create game on contract (same as single player createSinglePlayerGame)
+            return fheGameMode.createSinglePlayerGame(generalId, deckCardIds);
+          })
+          .then(function(fheGameId) {
+            Logger.module('DECK_SELECT').log('FHE: Game created with ID:', fheGameId);
+
+            // Step 4: Now proceed with matchmaking, passing FHE data
+            // GamesManager will include this in matchRequest
+            GamesManager.getInstance().findNewGameWithFHE(
+              deck,
+              factionId,
+              gameType,
+              generalId,
+              cardBackId,
+              battleMapId,
+              {
+                fhe_enabled: true,
+                fhe_game_id: fheGameId,
+                fhe_contract_address: gameSessionAddress,
+                fhe_player_wallet: Wallet.getAddress()
+              }
+            );
+          });
+      })
+      .catch(function(error) {
+        Logger.module('DECK_SELECT').error('FHE: Initialization failed:', error);
+
+        // Re-enable buttons on error
+        self.ui.$deckSelectConfirm.removeClass('disabled');
+        self.ui.$deckSelectConfirmCasual.removeClass('disabled');
+
+        // Shutdown FHE on error
+        FHE.getInstance().shutdown();
+
+        // Show error to user
+        var errorStr = String(error.message || error || '');
+        if (errorStr.includes('PIN entry cancelled')) {
+          // User cancelled PIN - just re-enable buttons, no error message needed
+          Logger.module('DECK_SELECT').log('FHE: PIN entry cancelled by user');
+        } else if (errorStr.includes('INSUFFICIENT_FUNDS') || errorStr.includes('insufficient funds')) {
+          var sessionWalletAddress = require('app/common/session_wallet').getAddress() || 'unknown';
+          var networkName = Wallet.getCurrentNetwork() || 'Sepolia';
+          NavigationManager.getInstance().showDialogForError(
+            'Insufficient ETH for gas fees.\n\n' +
+            'Your session wallet needs ' + networkName + ' ETH.\n\n' +
+            'Session Wallet: ' + sessionWalletAddress
+          );
+        } else {
+          NavigationManager.getInstance().showDialogForError('FHE initialization failed: ' + errorStr);
+        }
+      });
   },
 
   _showSelectDeckWarningPopover: function ($target, message) {

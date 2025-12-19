@@ -76,6 +76,11 @@ const matchmakingInput = t.struct({
   battleMapId: t.maybe(t.Num),
   ticketId: t.maybe(t.Str),
   hasPremiumBattleMaps: t.maybe(t.Bool),
+  // FHE multiplayer fields
+  fhe_enabled: t.maybe(t.Bool),
+  fhe_game_id: t.maybe(t.Number),
+  fhe_contract_address: t.maybe(t.Str),
+  fhe_player_wallet: t.maybe(t.Str),
 });
 
 const singlePlayerInput = t.struct({

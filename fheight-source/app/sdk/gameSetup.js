@@ -163,9 +163,24 @@ GameSetup.setupDeck = function(gameSession, player) {
 };
 
 GameSetup.addCardsToDeck = function(gameSession, player, playerData, playerCardsData) {
+  // DEBUG: Log playerData to see FHE fields
+  console.log('[GAME SETUP DEBUG] playerData.fhe_enabled:', playerData.fhe_enabled);
+  console.log('[GAME SETUP DEBUG] playerData.fhePlayer:', playerData.fhePlayer);
+  console.log('[GAME SETUP DEBUG] gameSession.fheEnabled:', gameSession.fheEnabled);
+  console.log('[GAME SETUP DEBUG] playerData keys:', Object.keys(playerData));
+
   // FHE MODE: Add cards to deck in ORIGINAL ORDER (no shuffle, no starting hand)
   // Per FLOW.MD: Server will populate hand after reading from blockchain
-  if (gameSession.fheEnabled && playerData.fhePlayer) {
+  // Check BOTH fhePlayer flag AND fhe_enabled from token (multiplayer passes fhe_enabled directly)
+  const isFhePlayer = playerData.fhePlayer || playerData.fhe_enabled;
+  const isFheEnabled = gameSession.fheEnabled || playerData.fhe_enabled;
+
+  if (isFheEnabled && isFhePlayer) {
+    // Set fheEnabled on session if not already set (for multiplayer)
+    if (!gameSession.fheEnabled && playerData.fhe_enabled) {
+      gameSession.fheEnabled = true;
+      console.log('[GAME SETUP] FHE MODE: Set gameSession.fheEnabled = true from playerData.fhe_enabled');
+    }
     console.log('[GAME SETUP] FHE MODE: Adding deck cards in ORIGINAL ORDER (no hand)');
     console.log('[GAME SETUP] FHE player ID:', player.getPlayerId());
 
@@ -177,11 +192,17 @@ GameSetup.addCardsToDeck = function(gameSession, player, playerData, playerCards
       playerCardsData = UtilsJavascript.deepCopy(playerCardsData);
       playerCardsData.shift();
 
-      // Store original deck order for blockchain index calculation
+      // Store original deck order for blockchain index calculation (per player for multiplayer)
       // Server will use this with getVerifiedDrawOrder indices
-      gameSession.fheDeckOrder = playerCardsData.map(function(c) { return c.id; });
-      gameSession.fhePlayerId = player.getPlayerId();
-      console.log('[GAME SETUP] FHE deck order stored:', gameSession.fheDeckOrder.length, 'cards');
+      const playerId = player.getPlayerId();
+      if (!gameSession.fheDeckOrders) {
+        gameSession.fheDeckOrders = {};
+      }
+      gameSession.fheDeckOrders[playerId] = playerCardsData.map(function(c) { return c.id; });
+      // Keep legacy fields for single player compatibility
+      gameSession.fheDeckOrder = gameSession.fheDeckOrders[playerId];
+      gameSession.fhePlayerId = playerId;
+      console.log('[GAME SETUP] FHE deck order stored for player', playerId, ':', gameSession.fheDeckOrders[playerId].length, 'cards');
 
       // Add ALL cards to deck in ORIGINAL ORDER (no hand, no shuffle)
       for (const cardData of playerCardsData) {
@@ -407,6 +428,13 @@ GameSetup.createGameSetupDataForPlayer = function(gameSession, player, playerDat
   }
   if (playerData.riftRating != null) {
     playerGameSetupData.riftRating = playerData.riftRating;
+  }
+  // FHE multiplayer data - store in setup data for game.coffee to read
+  if (playerData.fhe_enabled) {
+    playerGameSetupData.fhe_enabled = playerData.fhe_enabled;
+    playerGameSetupData.fhe_game_id = playerData.fhe_game_id;
+    playerGameSetupData.fhe_contract_address = playerData.fhe_contract_address;
+    playerGameSetupData.fhe_player_wallet = playerData.fhe_player_wallet;
   }
 
   // store copies of decks to preserve original data

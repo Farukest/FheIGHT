@@ -65,6 +65,11 @@ class RedisTokenManager
     if opts.battleMapIndexes
       token.battleMapIndexes = opts.battleMapIndexes
     token.riftRating = opts.riftRating or null
+    # FHE multiplayer fields
+    token.fhe_enabled = opts.fhe_enabled or null
+    token.fhe_game_id = opts.fhe_game_id or null
+    token.fhe_contract_address = opts.fhe_contract_address or null
+    token.fhe_player_wallet = opts.fhe_player_wallet or null
     return token
 
   ###*

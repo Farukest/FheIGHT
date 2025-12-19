@@ -322,6 +322,11 @@ router.post "/matchmaking", (req, res, next) ->
             deckValue: deckSpiritValue
             lastOpponentId: last_opponent_id
             riftRating: @.riftRunRating
+            # FHE multiplayer fields
+            fhe_enabled: result.value.fhe_enabled
+            fhe_game_id: result.value.fhe_game_id
+            fhe_contract_address: result.value.fhe_contract_address
+            fhe_player_wallet: result.value.fhe_player_wallet
           }
 
           if inviteId?

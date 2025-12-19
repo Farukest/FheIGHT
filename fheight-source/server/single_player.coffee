@@ -2272,222 +2272,261 @@ onFHEInitialHandRevealed = (requestData) ->
   # VERY FIRST LINE - must see this log
   Logger.module("FHE").log ">>> fhe_initial_hand_revealed HANDLER CALLED with data:", JSON.stringify(requestData)
 
+  socket = @
   gameId = requestData.gameId
   playerId = @.playerId
-  # NEW: Client now sends hand cards directly
-  clientHand = requestData.hand  # Array of card IDs [10021, 20066, ...]
   clientBlockchainGameId = requestData.blockchainGameId
-  clientIndices = requestData.revealedIndices
 
   Logger.module("FHE").log "[G:#{gameId}]", "fhe_initial_hand_revealed received from player #{playerId}"
-  Logger.module("FHE").log "[G:#{gameId}]", "Client sent hand: #{JSON.stringify(clientHand)}, blockchainGameId: #{clientBlockchainGameId}"
 
   if !gameId or !games[gameId]
     Logger.module("FHE").log "[G:#{gameId}]", "ERROR: Game not found"
-    @emit "fhe_initial_hand_revealed_response", { error: "Game not found" }
+    socket.emit "fhe_initial_hand_revealed_response", { error: "Game not found" }
     return
 
   fheState = games[gameId].fhe
   if !fheState?.enabled
     Logger.module("FHE").log "[G:#{gameId}]", "ERROR: FHE not enabled - fheState:", JSON.stringify(fheState or 'null')
-    @emit "fhe_initial_hand_revealed_response", { error: "FHE not enabled for this game" }
+    socket.emit "fhe_initial_hand_revealed_response", { error: "FHE not enabled for this game" }
     return
 
-  # NEW: Update FHE state with client's blockchain game ID if missing
+  # Update FHE state with client's blockchain game ID if missing
   if clientBlockchainGameId and !fheState.blockchainGameId
     Logger.module("FHE").log "[G:#{gameId}]", "Setting blockchainGameId from client: #{clientBlockchainGameId}"
     fheState.blockchainGameId = clientBlockchainGameId
 
-  # NEW: Use client-sent hand cards directly (trust client for now)
-  # This fixes the sync issue where blockchain verification fails
-  if clientHand?.length > 0
-    Logger.module("FHE").log "[G:#{gameId}]", "Using client-sent hand cards: #{clientHand.length} cards"
+  blockchainGameId = fheState.blockchainGameId
+  if !blockchainGameId
+    Logger.module("FHE").error "[G:#{gameId}]", "ERROR: No blockchain game ID"
+    socket.emit "fhe_initial_hand_revealed_response", { error: "No blockchain game ID" }
+    return
 
-    game = games[gameId]
-    cardIndicesForClient = []  # Track cardIndices to send back to client
+  game = games[gameId]
+  if !game.session?
+    Logger.module("FHE").error "[G:#{gameId}]", "ERROR: No game session"
+    socket.emit "fhe_initial_hand_revealed_response", { error: "No game session" }
+    return
 
-    if game.session?
-      player = game.session.getPlayerById(playerId)
-      if player?
-        playerDeck = player.getDeck()
-        drawPile = playerDeck.getDrawPile()  # Array of integers (card indices)
-        handSlotIndex = 0
+  # Get player's deck for card calculation
+  player = game.session.getPlayerById(playerId)
+  if !player?
+    Logger.module("FHE").error "[G:#{gameId}]", "ERROR: Player not found"
+    socket.emit "fhe_initial_hand_revealed_response", { error: "Player not found" }
+    return
 
-        for cardId in clientHand
-          # Find the position in drawPile where the card with this ID exists
-          foundDrawPilePos = -1
-          for i in [0...drawPile.length]
-            cardIndex = drawPile[i]
-            card = game.session.getCardByIndex(cardIndex)
-            if card? and card.getId() == cardId
-              foundDrawPilePos = i
-              break
+  # Get deck order stored at game setup
+  fheDeckOrder = game.session.fheDeckOrder
+  if !fheDeckOrder or fheDeckOrder.length == 0
+    Logger.module("FHE").error "[G:#{gameId}]", "ERROR: No FHE deck order stored"
+    socket.emit "fhe_initial_hand_revealed_response", { error: "No FHE deck order" }
+    return
 
-          if foundDrawPilePos >= 0
-            # Get the card index and card object
-            cardIndex = drawPile[foundDrawPilePos]
-            card = game.session.getCardByIndex(cardIndex)
-            # Use SDK method to properly move card from deck to hand
-            game.session.applyCardToHand(playerDeck, cardIndex, card, handSlotIndex)
-            # IMPORTANT: Track this cardIndex for client sync!
-            cardIndicesForClient.push(cardIndex)
-            handSlotIndex++
-            Logger.module("FHE").debug "[G:#{gameId}]", "Moved card #{cardId} (index #{cardIndex}) to hand slot #{handSlotIndex - 1}"
-          else
-            Logger.module("FHE").warn "[G:#{gameId}]", "Card #{cardId} not found in draw pile - may already be in hand or removed"
-            # Still need to push something to maintain index alignment
-            cardIndicesForClient.push(null)
+  network = fheState.network or 'sepolia'
+  INITIAL_HAND_SIZE = 5
 
-        Logger.module("FHE").log "[G:#{gameId}]", "Player hand now has #{playerDeck.getNumCardsInHand()} cards"
-        Logger.module("FHE").log "[G:#{gameId}]", "Card indices for client: #{JSON.stringify(cardIndicesForClient)}"
+  Logger.module("FHE").log "[G:#{gameId}]", "Verifying via blockchain - gameId: #{blockchainGameId}, network: #{network}"
 
-        # Update FHE state
-        fheState.revealedCount = clientHand.length
-        fheState.verifiedHand = clientHand
-        if clientIndices
-          fheState.lastVerifiedIndices = clientIndices
+  # BLOCKCHAIN VERIFICATION - Never trust client!
+  BlockchainModule.verifyAndCalculateCards(network, blockchainGameId, fheDeckOrder, INITIAL_HAND_SIZE)
+  .then (result) ->
+    if !result.verified
+      Logger.module("FHE").error "[G:#{gameId}]", "Blockchain verification FAILED: #{result.error}"
+      socket.emit "fhe_initial_hand_revealed_response", { error: "Blockchain verification failed: #{result.error}" }
+      return
 
-    # CRITICAL: Send cardIndices back to client for sync!
-    @emit "fhe_initial_hand_revealed_response", {
+    Logger.module("FHE").log "[G:#{gameId}]", "Blockchain verified! Cards: #{JSON.stringify(result.cards)}"
+
+    # result.cards = array of card IDs from blockchain
+    verifiedCards = result.cards
+    cardIndicesForClient = []
+
+    playerDeck = player.getDeck()
+    drawPile = playerDeck.getDrawPile()
+    handSlotIndex = 0
+
+    for cardId in verifiedCards
+      # Find the position in drawPile where the card with this ID exists
+      foundDrawPilePos = -1
+      for i in [0...drawPile.length]
+        cardIndex = drawPile[i]
+        card = game.session.getCardByIndex(cardIndex)
+        if card? and card.getId() == cardId
+          foundDrawPilePos = i
+          break
+
+      if foundDrawPilePos >= 0
+        cardIndex = drawPile[foundDrawPilePos]
+        card = game.session.getCardByIndex(cardIndex)
+        game.session.applyCardToHand(playerDeck, cardIndex, card, handSlotIndex)
+        cardIndicesForClient.push(cardIndex)
+        handSlotIndex++
+        Logger.module("FHE").debug "[G:#{gameId}]", "Moved card #{cardId} (index #{cardIndex}) to hand slot #{handSlotIndex - 1}"
+      else
+        Logger.module("FHE").warn "[G:#{gameId}]", "Card #{cardId} not found in draw pile"
+        cardIndicesForClient.push(null)
+
+    Logger.module("FHE").log "[G:#{gameId}]", "Player hand now has #{playerDeck.getNumCardsInHand()} cards"
+    Logger.module("FHE").log "[G:#{gameId}]", "Card indices for client: #{JSON.stringify(cardIndicesForClient)}"
+
+    # Update FHE state
+    fheState.revealedCount = verifiedCards.length
+    fheState.verifiedHand = verifiedCards
+    fheState.lastVerifiedIndices = result.indices
+
+    # Send response to client
+    socket.emit "fhe_initial_hand_revealed_response", {
       success: true
       verified: true
-      revealedCount: clientHand.length
-      cardIndices: cardIndicesForClient  # Client MUST use these indices!
+      revealedCount: verifiedCards.length
+      cardIndices: cardIndicesForClient
     }
 
     # Signal that the game can start
-    @emit "fhe_ready_to_play", { gameId: gameId }
+    socket.emit "fhe_ready_to_play", { gameId: gameId }
 
-    # FHE MODE: Now start the turn timer (was delayed until reveal complete)
+    # Start turn timer
     Logger.module("FHE").debug "[G:#{gameId}]", "Initial hand reveal complete - starting turn timer"
     fheState.initialHandRevealComplete = true
     restartTurnTimer(gameId)
 
-  else
-    # Fallback: No hand from client, return error
-    Logger.module("FHE").error "[G:#{gameId}]", "No hand cards received from client"
-    @emit "fhe_initial_hand_revealed_response", { error: "No hand cards received" }
+  .catch (error) ->
+    Logger.module("FHE").error "[G:#{gameId}]", "Blockchain verification error: #{error.message}"
+    socket.emit "fhe_initial_hand_revealed_response", { error: "Blockchain error: #{error.message}" }
 
 ###*
 # Handler: Client completed a draw card reveal (1 card per turn)
-# FHE trust model: Client decrypts card via FHE contract, sends cardId to server
-# Server trusts the cardId and applies it directly (just like initial hand)
-# @param {Object} requestData - {gameId, turn, cardId}
+# FLOW.MD Step 38-39: Server reads from blockchain, never trusts client
+# @param {Object} requestData - {gameId, turn}
 ###
 onFHECardDrawn = (requestData) ->
   # VERY FIRST LINE - must see this log
   Logger.module("FHE").log ">>> fhe_card_drawn HANDLER CALLED with data:", JSON.stringify(requestData)
 
+  socket = @
   gameId = requestData.gameId
   turn = requestData.turn or 0
-  cardId = requestData.cardId  # FHE-revealed card ID from client
   playerId = @.playerId
-  socket = @
 
-  Logger.module("FHE").log "[G:#{gameId}]", "fhe_card_drawn received for turn #{turn}, cardId: #{cardId} from player #{playerId}"
+  Logger.module("FHE").log "[G:#{gameId}]", "fhe_card_drawn received for turn #{turn} from player #{playerId}"
 
   if !gameId or !games[gameId]
     Logger.module("FHE").log "[G:#{gameId}]", "ERROR: Game not found"
-    @emit "fhe_card_drawn_response", { error: "Game not found" }
+    socket.emit "fhe_card_drawn_response", { error: "Game not found" }
     return
 
   fheState = games[gameId].fhe
   if !fheState?.enabled
-    Logger.module("FHE").log "[G:#{gameId}]", "ERROR: FHE not enabled - fheState:", JSON.stringify(fheState or 'null')
-    @emit "fhe_card_drawn_response", { error: "FHE not enabled for this game" }
+    Logger.module("FHE").log "[G:#{gameId}]", "ERROR: FHE not enabled"
+    socket.emit "fhe_card_drawn_response", { error: "FHE not enabled for this game" }
     return
 
-  if !cardId?
-    Logger.module("FHE").log "[G:#{gameId}]", "ERROR: No cardId received from client"
-    @emit "fhe_card_drawn_response", { error: "No cardId received" }
+  blockchainGameId = fheState.blockchainGameId
+  if !blockchainGameId
+    Logger.module("FHE").error "[G:#{gameId}]", "ERROR: No blockchain game ID"
+    socket.emit "fhe_card_drawn_response", { error: "No blockchain game ID" }
     return
 
-  # FHE Trust Model: Client reveals card via blockchain, server applies directly
-  # No blockchain verification - same trust model as initial hand
-  Logger.module("FHE").debug "[G:#{gameId}]", "FHE trust mode: applying card #{cardId} directly"
-
-  # Track card index for response - client needs this to sync with server
-  appliedCardIndex = null
-  cardBurned = false  # True if hand was full and card was burned
-
-  # Apply drawn card to SDK game session
   game = games[gameId]
-  if game.session?
-    player = game.session.getPlayerById(playerId)
-    if player?
-      playerDeck = player.getDeck()
-      drawPile = playerDeck.getDrawPile()  # Array of integers (card indices)
+  if !game.session?
+    Logger.module("FHE").error "[G:#{gameId}]", "ERROR: No game session"
+    socket.emit "fhe_card_drawn_response", { error: "No game session" }
+    return
 
-      Logger.module("FHE").debug "[G:#{gameId}]", "Looking for cardId #{cardId} in drawPile (#{drawPile.length} cards)"
+  player = game.session.getPlayerById(playerId)
+  if !player?
+    Logger.module("FHE").error "[G:#{gameId}]", "ERROR: Player not found"
+    socket.emit "fhe_card_drawn_response", { error: "Player not found" }
+    return
 
-      # Find the position in drawPile where the card with this ID exists
-      foundDrawPilePos = -1
-      for i in [0...drawPile.length]
-        idx = drawPile[i]
-        card = game.session.getCardByIndex(idx)
-        if card? and card.getId() == cardId
-          foundDrawPilePos = i
-          Logger.module("FHE").debug "[G:#{gameId}]", "Found card #{cardId} at drawPile[#{i}], cardIndex=#{idx}"
-          break
+  fheDeckOrder = game.session.fheDeckOrder
+  if !fheDeckOrder or fheDeckOrder.length == 0
+    Logger.module("FHE").error "[G:#{gameId}]", "ERROR: No FHE deck order stored"
+    socket.emit "fhe_card_drawn_response", { error: "No FHE deck order" }
+    return
 
-      if foundDrawPilePos >= 0
-        # Get the card index and card object
-        appliedCardIndex = drawPile[foundDrawPilePos]
-        card = game.session.getCardByIndex(appliedCardIndex)
+  network = fheState.network or 'sepolia'
+  previousRevealCount = fheState.revealedCount or 5  # Initial hand = 5
+  expectedNewRevealCount = previousRevealCount + 1
 
-        # Check if hand is full before adding
-        handSize = playerDeck.getNumCardsInHand()
-        maxHandSize = CONFIG.MAX_HAND_SIZE || 6
+  Logger.module("FHE").log "[G:#{gameId}]", "Verifying draw via blockchain - expecting #{expectedNewRevealCount} total reveals"
 
-        if handSize >= maxHandSize
-          # Hand is full - "burn" the card (remove from draw pile but don't add to hand)
-          # SDK applyCardToHand handles this by not adding if hand is full, but let's be explicit
-          Logger.module("FHE").log "[G:#{gameId}]", "BURN: Hand is full (#{handSize}/#{maxHandSize}), card #{cardId} burned (turn #{turn})"
-          # Still need to remove from draw pile to keep sync
-          drawPileIndex = drawPile.indexOf(appliedCardIndex)
-          if drawPileIndex >= 0
-            drawPile.splice(drawPileIndex, 1)
-            Logger.module("FHE").log "[G:#{gameId}]", "Removed burned card from draw pile, #{drawPile.length} cards remaining"
-          # Mark as burned for client
-          cardBurned = true
-        else
-          # Use SDK method to properly move card from deck to hand
-          game.session.applyCardToHand(playerDeck, appliedCardIndex, card)
-          Logger.module("FHE").log "[G:#{gameId}]", "SUCCESS: Moved card #{cardId} (index #{appliedCardIndex}) to hand (turn #{turn})"
+  # BLOCKCHAIN VERIFICATION - Never trust client!
+  BlockchainModule.getVerifiedDrawOrder(network, blockchainGameId)
+  .then (indices) ->
+    if indices.length < expectedNewRevealCount
+      Logger.module("FHE").error "[G:#{gameId}]", "Not enough reveals: expected #{expectedNewRevealCount}, got #{indices.length}"
+      socket.emit "fhe_card_drawn_response", { error: "Reveal not yet on blockchain" }
+      return
+
+    # Calculate ALL cards using full indices array (same algorithm as client)
+    # This ensures remaining deck is properly calculated after each draw
+    result = BlockchainModule.calculateCardsFromIndices(fheDeckOrder, indices)
+
+    # The last drawn card is the new one for this turn
+    cardId = result.drawnCards[result.drawnCards.length - 1]
+    newIndex = indices[indices.length - 1]
+
+    Logger.module("FHE").log "[G:#{gameId}]", "Blockchain verified! New card index: #{newIndex}, cardId: #{cardId}"
+
+    # Apply card to game session
+    playerDeck = player.getDeck()
+    drawPile = playerDeck.getDrawPile()
+    appliedCardIndex = null
+    cardBurned = false
+
+    # Find the card in drawPile
+    foundDrawPilePos = -1
+    for i in [0...drawPile.length]
+      idx = drawPile[i]
+      card = game.session.getCardByIndex(idx)
+      if card? and card.getId() == cardId
+        foundDrawPilePos = i
+        break
+
+    if foundDrawPilePos >= 0
+      appliedCardIndex = drawPile[foundDrawPilePos]
+      card = game.session.getCardByIndex(appliedCardIndex)
+
+      handSize = playerDeck.getNumCardsInHand()
+      maxHandSize = CONFIG.MAX_HAND_SIZE || 6
+
+      if handSize >= maxHandSize
+        Logger.module("FHE").log "[G:#{gameId}]", "BURN: Hand full, card #{cardId} burned"
+        drawPileIndex = drawPile.indexOf(appliedCardIndex)
+        if drawPileIndex >= 0
+          drawPile.splice(drawPileIndex, 1)
+        cardBurned = true
       else
-        Logger.module("FHE").warn "[G:#{gameId}]", "Card #{cardId} not found in draw pile for turn #{turn}"
-        # Log all cards in drawPile for debugging
-        for i in [0...Math.min(drawPile.length, 5)]
-          idx = drawPile[i]
-          card = game.session.getCardByIndex(idx)
-          Logger.module("FHE").debug "[G:#{gameId}]", "  drawPile[#{i}] = index #{idx}, cardId: #{card?.getId()}"
+        game.session.applyCardToHand(playerDeck, appliedCardIndex, card)
+        Logger.module("FHE").log "[G:#{gameId}]", "SUCCESS: Moved card #{cardId} to hand (turn #{turn})"
     else
-      Logger.module("FHE").warn "[G:#{gameId}]", "Player #{playerId} not found in session"
-  else
-    Logger.module("FHE").warn "[G:#{gameId}]", "Game session not found"
+      Logger.module("FHE").warn "[G:#{gameId}]", "Card #{cardId} not found in draw pile"
 
-  # FHE MODE: Mark turn draw as complete - now AI can start
-  fheState.turnDrawComplete = true
-  Logger.module("FHE").log "[G:#{gameId}]", "Turn draw complete - turnDrawComplete=true"
+    # Update FHE state
+    fheState.revealedCount = indices.length
+    fheState.turnDrawComplete = true
 
-  # CRITICAL: FHE decrypt took time, turn timer may have expired.
-  # Restart turn timer to give AI a fresh turn duration.
-  restartTurnTimer(gameId)
-  Logger.module("FHE").log "[G:#{gameId}]", "Turn timer restarted after FHE draw"
+    Logger.module("FHE").log "[G:#{gameId}]", "Turn draw complete - turnDrawComplete=true"
 
-  # CRITICAL: AI was blocked waiting for FHE draw, now trigger it
-  # Use setTimeout to allow step queue to flush and current call stack to complete
-  setTimeout((()->
-    Logger.module("FHE").log "[G:#{gameId}]", "Triggering AI turn after FHE draw delay"
-    ai_updateTurn(gameId)
-  ), 500)
+    # Restart turn timer
+    restartTurnTimer(gameId)
 
-  socket.emit "fhe_card_drawn_response", {
-    success: true
-    turn: turn
-    cardId: cardId
-    cardIndex: appliedCardIndex  # Client uses this to sync with server
-    burned: cardBurned  # True if hand was full and card was discarded
-  }
+    # Trigger AI
+    setTimeout((()->
+      Logger.module("FHE").log "[G:#{gameId}]", "Triggering AI turn after FHE draw"
+      ai_updateTurn(gameId)
+    ), 500)
+
+    socket.emit "fhe_card_drawn_response", {
+      success: true
+      turn: turn
+      cardId: cardId
+      cardIndex: appliedCardIndex
+      burned: cardBurned
+    }
+
+  .catch (error) ->
+    Logger.module("FHE").error "[G:#{gameId}]", "Blockchain verification error: #{error.message}"
+    socket.emit "fhe_card_drawn_response", { error: "Blockchain error: #{error.message}" }
 
 # endregion FHE Handlers

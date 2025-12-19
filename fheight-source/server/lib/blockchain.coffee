@@ -9,6 +9,7 @@
 { ethers } = require 'ethers'
 Logger = require '../../app/common/logger'
 config = require '../../config/config'
+Wallet = require '../../app/common/wallet'
 
 # GameSession contract ABI - VIEW FUNCTIONS ONLY
 # Server asla TX göndermez!
@@ -71,13 +72,8 @@ GAME_SESSION_ABI = [
 
 # Contract addresses
 CONTRACT_ADDRESSES =
-  sepolia: '0x0Cc86698f008a6b86d1469Dcc8929E4FF7c28dBD'  # v19 - FHE.allowThis() added
+  sepolia: process.env.FHE_CONTRACT_ADDRESS or '0x0Cc86698f008a6b86d1469Dcc8929E4FF7c28dBD'  # v19 - FHE.allowThis() added
   hardhat: '0x68B1D87F95878fE05B998F19b66F4baba5De1aed'
-
-# RPC URLs
-RPC_URLS =
-  sepolia: process.env.SEPOLIA_RPC_URL or 'https://eth-sepolia.g.alchemy.com/v2/zx-gKGneFq4SkfpYLlFIEf7mVPMXxjdV'
-  hardhat: 'http://127.0.0.1:8545'
 
 class BlockchainModule
 
@@ -86,15 +82,16 @@ class BlockchainModule
 
   ###*
   # Get provider for network (cached)
+  # Uses Wallet module's RPC URL configuration
   # @param {string} network - 'sepolia' or 'hardhat'
-  # @return {ethers.JsonRpcProvider}
+  # @return {ethers.providers.JsonRpcProvider}
   ###
   @_getProvider: (network) ->
     if !@_providers[network]
-      rpcUrl = RPC_URLS[network]
-      if !rpcUrl
-        throw new Error("Unknown network: #{network}")
-      @_providers[network] = new ethers.JsonRpcProvider(rpcUrl)
+      # Use Wallet module's RPC URL
+      rpcUrl = Wallet.getActiveRpcUrl()
+      Logger.module("BLOCKCHAIN").debug "Using RPC URL: #{rpcUrl}"
+      @_providers[network] = new ethers.providers.JsonRpcProvider(rpcUrl)
     return @_providers[network]
 
   ###*

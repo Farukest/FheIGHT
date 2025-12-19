@@ -3,24 +3,11 @@
 
 Write-Host "=== FHEIGHT Server Starter ===" -ForegroundColor Cyan
 
-# 1. Portlari temizle
-Write-Host "`n[1/4] Portlar temizleniyor..." -ForegroundColor Yellow
-3000..3008 | ForEach-Object {
-    Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue |
-    Select-Object -ExpandProperty OwningProcess -Unique |
-    ForEach-Object { taskkill /PID $_ /F /T 2>$null }
-}
-8000..8008 | ForEach-Object {
-    Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue |
-    Select-Object -ExpandProperty OwningProcess -Unique |
-    ForEach-Object { taskkill /PID $_ /F /T 2>$null }
-}
-18000..18008 | ForEach-Object {
-    Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue |
-    Select-Object -ExpandProperty OwningProcess -Unique |
-    ForEach-Object { taskkill /PID $_ /F /T 2>$null }
-}
-Write-Host "Portlar temizlendi." -ForegroundColor Green
+# 1. TUM NODE PROCESSLERINI OLDUR (Worker dahil!)
+Write-Host "`n[1/4] Tum Node processleri durduruluyor..." -ForegroundColor Yellow
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
+Write-Host "Tum Node processleri durduruldu." -ForegroundColor Green
 
 # 2. Redis kontrol
 Write-Host "`n[2/4] Redis kontrol ediliyor..." -ForegroundColor Yellow
@@ -44,6 +31,9 @@ Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd '$pro
 # Single Player Server (sessiz)
 Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd '$projectPath'; node -r dotenv/config ./bin/single_player"
 
+# Multiplayer Game Server (port 8001 - GAME_PORT)
+Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd '$projectPath'; node -r dotenv/config ./bin/game"
+
 # Worker (Kue job processor - oyun sonu islemleri icin ZORUNLU)
 Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd '$projectPath'; node -r dotenv/config ./bin/worker"
 
@@ -59,10 +49,11 @@ npx gulp js
 
 Write-Host "`nTamamlandi!" -ForegroundColor Green
 Write-Host "`nSunucular:" -ForegroundColor Cyan
-Write-Host "  API Server:    http://localhost:3000" -ForegroundColor White
-Write-Host "  Game Server:   http://localhost:8000 (Single Player)" -ForegroundColor White
-Write-Host "  Worker:        Kue job processor (oyun sonu islemleri)" -ForegroundColor White
-Write-Host "  Dev Server:    http://localhost:3001  <-- BURAYI AC" -ForegroundColor Green
+Write-Host "  API Server:         http://localhost:3000" -ForegroundColor White
+Write-Host "  Single Player:      http://localhost:8000" -ForegroundColor White
+Write-Host "  Multiplayer Game:   http://localhost:8001" -ForegroundColor White
+Write-Host "  Worker:             Kue job processor" -ForegroundColor White
+Write-Host "  Dev Server:         http://localhost:3001  <-- BURAYI AC" -ForegroundColor Green
 Write-Host "`nTarayicida http://localhost:3001 adresini ac." -ForegroundColor Yellow
 
 

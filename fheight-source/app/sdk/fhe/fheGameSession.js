@@ -622,6 +622,24 @@ FHEGameSession.prototype.endGame = function() {
   });
 };
 
+/**
+ * Complete mulligan phase for multiplayer FHE
+ * @param {boolean[]} mulliganSlots - Array of 5 booleans, true = replace this card
+ * @returns {Promise<void>}
+ */
+FHEGameSession.prototype.completeMulligan = function(mulliganSlots) {
+  var self = this;
+  Logger.module('FHE_GAME').log('completeMulligan called with slots:', mulliganSlots);
+
+  // For now, multiplayer FHE uses same reveal flow as single player
+  // Contract doesn't have separate mulligan - it's handled by additional reveals
+  // Just mark mulligan as complete and return
+  return new Promise(function(resolve) {
+    Logger.module('FHE_GAME').log('Mulligan phase complete (no contract call needed - handled by reveal flow)');
+    resolve();
+  });
+};
+
 // ============ DECRYPT (KMS) ============
 
 /**

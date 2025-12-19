@@ -45,10 +45,40 @@ createGame = (gameType, player1Data, player2Data, gameServer, callback) ->
 
   Logger.module("GAME CREATE").debug "Setting up game for user #{player1Name} and user #{player2Name} on #{gameServer}"
 
+  # DEBUG: Log full token data to see FHE fields
+  Logger.module("GAME CREATE").error "=== CREATEGAME TOKEN DEBUG ==="
+  Logger.module("GAME CREATE").error "Player1 fhe_enabled: #{player1DataForGame?.fhe_enabled}"
+  Logger.module("GAME CREATE").error "Player2 fhe_enabled: #{player2DataForGame?.fhe_enabled}"
+  Logger.module("GAME CREATE").error "Player1 keys: #{JSON.stringify(Object.keys(player1DataForGame or {}))}"
+
+  # FHE Multiplayer: Check if either player has FHE enabled
+  # Both players must use FHE if the game is FHE-enabled
+  player1FheEnabled = player1DataForGame?.fhe_enabled
+  player2FheEnabled = player2DataForGame?.fhe_enabled
+
+  if player1FheEnabled or player2FheEnabled
+    Logger.module("GAME CREATE").debug "FHE MULTIPLAYER MODE - Setting up FHE flags"
+    # Set FHE flags on player data so gameSetup.js skips random card drawing
+    # Each player creates their own blockchain game, server verifies via getVerifiedDrawOrder()
+    if player1FheEnabled
+      player1DataForGame.fhePlayer = true
+      player1DataForGame.startingHandSize = 0  # Don't draw random cards - FHE will determine
+      Logger.module("GAME CREATE").debug "Player 1 FHE enabled - startingHandSize: 0"
+    if player2FheEnabled
+      player2DataForGame.fhePlayer = true
+      player2DataForGame.startingHandSize = 0  # Don't draw random cards - FHE will determine
+      Logger.module("GAME CREATE").debug "Player 2 FHE enabled - startingHandSize: 0"
+
   # try to setup GameSession
   try
     # create GameSession
     newGameSession = SDK.GameSession.create()
+
+    # Set FHE enabled on game session if either player uses FHE
+    if player1FheEnabled or player2FheEnabled
+      newGameSession.fheEnabled = true
+      Logger.module("GAME CREATE").debug "GameSession fheEnabled: true"
+
     newGameSession.gameType = gameType
     newGameSession.gameFormat = SDK.GameType.getGameFormatForGameType(gameType)
     # modify "casual" games to create holiday game mode

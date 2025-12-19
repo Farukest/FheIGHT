@@ -29,14 +29,21 @@ class DrawCardAction extends PutCardInHandAction {
     // FHE MODE: Skip EVERYTHING for FHE player - cards come from blockchain
     // This check MUST be outside getIsRunningAsAuthoritative() so it works on both server AND client
     const gameSession = this.getGameSession();
-    if (gameSession.fheEnabled) {
+    const ownerId = this.getOwnerId();
+
+    // Check FHE status from BOTH gameSession flag AND playerSetupData
+    // Multiplayer: gameSession.fheEnabled may be undefined, but playerSetupData has fhe_enabled from token
+    const playerSetupData = gameSession.getPlayerSetupDataForPlayerId && gameSession.getPlayerSetupDataForPlayerId(ownerId);
+    const isFheEnabled = gameSession.fheEnabled || (playerSetupData && playerSetupData.fhe_enabled);
+
+    if (isFheEnabled) {
       const aiPlayerId = gameSession.getAiPlayerId && gameSession.getAiPlayerId();
-      const isAiPlayer = aiPlayerId && this.getOwnerId() === aiPlayerId;
+      const isAiPlayer = aiPlayerId && ownerId === aiPlayerId;
 
       if (!isAiPlayer) {
         // FHE human player - deck is on blockchain, skip ALL logic
         // No card draw, no hurting damage, nothing - frontend handles it via FHE decrypt
-        Logger.module('SDK').log('[FHE] DrawCardAction: Skipping for FHE player (deck from blockchain)');
+        Logger.module('SDK').log('[FHE] DrawCardAction: Skipping for FHE player (deck from blockchain), fheEnabled:', gameSession.fheEnabled, 'playerSetupData.fhe_enabled:', playerSetupData && playerSetupData.fhe_enabled);
         this._fheSkipped = true;
         // Don't call super._execute() - we don't want to add anything to hand
         return;

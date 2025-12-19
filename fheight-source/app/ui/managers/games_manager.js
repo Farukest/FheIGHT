@@ -528,6 +528,62 @@ var GamesManager = Manager.extend({
     return this.requestEnterMatchmaking(this.matchRequest);
   },
 
+  /**
+   * Find new game with FHE data
+   * Same as findNewGame but includes FHE-specific data in matchRequest
+   */
+  findNewGameWithFHE: function (deck, factionId, gameType, generalId, cardBackId, battleMapId, fheData) {
+    // if we're already looking for a game, just ignore this
+    if (this.isLookingForGame)
+      return;
+
+    // grab the current user id
+    var userId = ProfileManager.getInstance().get('id');
+
+    Logger.module('UI').log('GamesManager::findNewGameWithFHE -> for faction id', factionId, 'with FHE data', fheData);
+
+    // Build matchRequest same as findNewGame
+    var matchRequest = {};
+    matchRequest.name = ProfileManager.getInstance().get('username');
+    matchRequest.gameType = gameType;
+    matchRequest.namespace = process.env.NODE_ENV;
+    matchRequest.deck = deck;
+    matchRequest.factionId = factionId;
+    matchRequest.generalId = generalId;
+    matchRequest.cardBackId = cardBackId;
+    matchRequest.battleMapId = battleMapId;
+    matchRequest.hasPremiumBattleMaps = InventoryManager.getInstance().hasAnyBattleMapCosmetics();
+    matchRequest.timestamp = Date.now();
+
+    // Add FHE data to matchRequest
+    if (fheData) {
+      matchRequest.fhe_enabled = fheData.fhe_enabled;
+      matchRequest.fhe_game_id = fheData.fhe_game_id;
+      matchRequest.fhe_contract_address = fheData.fhe_contract_address;
+      matchRequest.fhe_player_wallet = fheData.fhe_player_wallet;
+    }
+
+    if (gameType == SDK.GameType.Friendly) {
+      matchRequest.inviteId = this.inviteId || null;
+    } else if (this.inviteId) {
+      this.cancelInvite();
+      this.rejectInvite();
+    }
+
+    // save a copy of request
+    this.matchRequest = matchRequest;
+
+    // fire matchmaking_start event
+    this.trigger(EVENTS.matchmaking_start, this.matchRequest);
+
+    // mark ourselves as looking for game
+    this.isLookingForGame = true;
+    this._onFindingGame();
+
+    // fire ajax request
+    return this.requestEnterMatchmaking(this.matchRequest);
+  },
+
   // TODO : merge this into startWatchingForGame
   _onFindingGame: function () {
     Logger.module('UI').log('GamesManager._onFindingGame');
