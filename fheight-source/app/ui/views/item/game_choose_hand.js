@@ -37,6 +37,20 @@ var GameChooseHandItemView = Backbone.Marionette.ItemView.extend({
     if (SDK.GameSession.getInstance().getIsSpectateMode()) {
       this.ui.$confirmButton.hide();
     }
+
+    // FHE MODE: Hide confirm button initially - it will be shown after decrypt completes
+    // This prevents users from clicking Continue before cards are decrypted
+    var gameSession = SDK.GameSession.getInstance();
+    var fheEnabled = gameSession.fheEnabled || CONFIG.fheEnabled;
+    var isDeveloperMode = gameSession.getIsDeveloperMode();
+    if (fheEnabled && !isDeveloperMode && !SDK.GameSession.getInstance().getIsSpectateMode()) {
+      // Hide confirm button until decrypt completes
+      this.ui.$confirmButton.css({
+        opacity: 0,
+        'pointer-events': 'none',
+      });
+    }
+
     this._updateOpponentConnection();
   },
 
