@@ -1,79 +1,13 @@
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 3
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 3
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 3
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 3
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 3
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 3
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 3
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 3
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 3
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> step; step count undefined
-application.js:2342 APPLICATIO  | App._onNetworkGameEvent -> step {type: 'step', step: {…}}
-gameSession.js:1945 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GS._queueStep ->  12608
-gameSession.js:1963 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GS._startNextStep -> 12608 w/ action EndTurnAction
-gameSession.js:1978 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GS._startStep ->  12608
-gameSession.js:2041 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GS._executeActionForStep ->  EndTurnAction 12623
-gameSession.js:1578 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GS.p_endTurn -> turn count: 0
-gameSession.js:2397 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GameSession.p_resolveStep
-gameSession.js:2041 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GS._executeActionForStep ->  DrawCardAction 12640
-drawCardAction.js:46 SDK         | [FHE] DrawCardAction: Skipping for FHE player (deck from blockchain), fheEnabled: true playerSetupData.fhe_enabled: true
-gameSession.js:2397 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GameSession.p_resolveStep
-gameSession.js:2476 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GS._endStep 12608
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_select; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_select; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_mouse_clear; step count undefined
-GameLayer.js:2180 ENGINE      |  -> showNextStep interface SdkStepInterface {_sdkStep: Step, actionsEndingGame: null, actionInterfaceSequence: Array(2), hasShownHandFullForPlayerIds: Array(0), hasShownOutOfCardsForPlayerIds: Array(0), …} with action EndTurnAction {type: 'EndTurnAction', ownerId: '-Ofum3S3l_5MupHTGsy0', index: 12623, timestamp: 1766108203139, subActionsOrderedByEventType: Array(1), …}
-GameLayer.js:1700 ENGINE      | GameLayer.showEndTurn
-GameLayer.js:1727 ENGINE      | GameLayer.afterShowEndTurn
-GameLayer.js:1417 ENGINE      | GameLayer.resetActiveState
-application.js:2747 APPLICATIO  | App:onAfterShowEndTurn
-game.js:418 FHE         | [DRAW] DrawCardAction detected for my player (count: 1)
-fheGameSession.js:403 FHE_GAME    | === REVEAL DRAW CARD ===
-fheGameSession.js:355 FHE_GAME    | Incrementing turn...
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
+FHE_GAME    | Decrypted indices: (5) [213, 143, 220, 184, 243]
+fheGameSession.js:589 FHE_GAME    | revealDrawBatch TX sent: 0x687f0b630b32f155e8b811b273de08fbc30b678a9b31fc40e1c2ea0bbae1df0f
+fheGameSession.js:596 FHE_GAME    | Reveal confirmed
+fheGameSession.js:290 FHE_GAME    | === INITIAL HAND READY ===
+fheGameSession.js:291 FHE_GAME    | Hand: (5) [11107, 11013, 11044, 108, 11044]
+fheGameSession.js:321 FHE_GAME    | Server notified: fhe_initial_hand_revealed
+fheGameSession.js:298 FHE_GAME    | Server response: {"error":"Blockchain error: Cannot read properties of null (reading 'flushCachedAttribute')"}
+fheGameSession.js:309 FHE_GAME    | Server error: Blockchain error: Cannot read properties of null (reading 'flushCachedAttribute')
+(anonymous) @ fheGameSession.js:309
+on @ index.js:63
 Emitter.emit @ index.js:143
 emitEvent @ socket.js:519
 onevent @ socket.js:506
@@ -91,403 +25,36 @@ onPacket @ socket.js:348
 Emitter.emit @ index.js:143
 onPacket @ transport.js:106
 onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-fheGameSession.js:366 FHE_GAME    | incrementTurn TX sent: 0xa4fdb449bf0742f0d357470c1f35c13c31bf3f46265c00b4719d046b6707a5fb
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> network_game_hover; step count undefined
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-fheGameSession.js:376 FHE_GAME    | Turn incremented to: 1
-fheGameSession.js:412 FHE_GAME    | Got handle for new card
-fheGameSession.js:668 FHE_GAME    | [DEBUG] Handle[0] type=string raw=0x8ca7797ebb6d21675d03d02a05a2a692a5f24b585fff0000000000aa36a70200 converted=0x8ca7797ebb6d21675d03d02a05a2a692a5f24b585fff0000000000aa36a70200
-fheGameSession.js:672 FHE_GAME    | [DEBUG] All handleStrings: ['0x8ca7797ebb6d21675d03d02a05a2a692a5f24b585fff0000000000aa36a70200']
-fheGameSession.js:696 FHE_GAME    | [KMS] Calling publicDecrypt with handles: ['0x8ca7797ebb6d21675d03d02a05a2a692a5f24b585fff0000000000aa36a70200']
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-fheGameSession.js:700 FHE_GAME    | [KMS] publicDecrypt response: {clearValues: {…}, abiEncodedClearValues: '0x00000000000000000000000000000000000000000000000000000000000000cc', decryptionProof: '0x0794c5e9454c03a2bad5c0e22eea695468e999a06db1b614…85bc506fae14df117b6939d8d7f77c4fa74f98df5c1f1971b'}
-fheGameSession.js:706 FHE_GAME    | [KMS] Handle 0x8ca7797ebb6d21675d03d02a05a2a692a5f24b585fff0000000000aa36a70200 -> clear value: 204n
-fheGameSession.js:715 FHE_GAME    | [KMS] Decrypt success, clearIndices: [204]
-fheGameSession.js:418 FHE_GAME    | Decrypted index: 204
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-fheGameSession.js:589 FHE_GAME    | revealDrawBatch TX sent: 0xac2675380b0ae736dce595355cf993c208e33d8f6885c96f6c94fb2670e4afd5
-networkManager.js:186 IO          | NetworkManager::IO:network_game_event -> turn_time; step count 5
-application.js:2382 APPLICATIO  | App._onNetworkGameEvent -> seems like game session is behind server step count
-App._onNetworkGameEvent @ application.js:2382
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
-Emitter.emit @ index.js:143
-emitEvent @ socket.js:519
-onevent @ socket.js:506
-onpacket @ socket.js:474
-Emitter.emit @ index.js:143
-(anonymous) @ manager.js:240
-Promise.then
-(anonymous) @ websocket-constructor.browser.js:8
-ondecoded @ manager.js:239
-Emitter.emit @ index.js:143
-add @ index.js:154
-ondata @ manager.js:226
-Emitter.emit @ index.js:143
-onPacket @ socket.js:348
-Emitter.emit @ index.js:143
-onPacket @ transport.js:106
-onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-application.js:1537 APPLICATIO  | App._error Your current match appears to be out of sync. To avoid any issues, please select CONTINUE and reconnect to your match.
-application.js:575 APPLICATIO  | App:main
-application.js:2762 APPLICATIO  | App.cleanupGame
-application.js:2777 APPLICATIO  | App.cleanupGameEvents
-application.js:3921 APPLICATIO  | App._unsubscribeFromGameLocalEvents
-application.js:3944 APPLICATIO  | App._unsubscribeFromGameNetworkEvents
-GameLayer.js:278 ENGINE      | GameLayer.terminate
-GameLayer.js:1417 ENGINE      | GameLayer.resetActiveState
-gameSession.js:516 SDK         | [G:-OgoEvuekhLNBdI2Trhn] GS.terminate
-networkManager.js:295 SDK         | NetworkManager:disconnect
-networkManager.js:245 io client disconnect
-networkManager.js:246 IO          | NetworkManager::IO:disconnect -> DISCONNECT
-(anonymous) @ networkManager.js:246
-Emitter.emit @ index.js:143
-onclose @ socket.js:451
-disconnect @ socket.js:641
-disconnect @ networkManager.js:303
-(anonymous) @ application.js:590
+ws.onmessage @ websocket.js:77Understand this error
+fheGameSession.js:332 FHE_GAME    | revealInitialHand failed: Error: Blockchain error: Cannot read properties of null (reading 'flushCachedAttribute')
+at Socket.<anonymous> (fheGameSession.js:310:1)
+at Socket.on (index.js:63:1)
+at Emitter.emit (index.js:143:1)
+at Socket.emitEvent (socket.js:519:1)
+at Socket.onevent (socket.js:506:1)
+at Socket.onpacket (socket.js:474:1)
+at Emitter.emit (index.js:143:1)
+at manager.js:240:1
+(anonymous) @ fheGameSession.js:332
 tryCatcher @ bluebird.js:4594
 Promise2._settlePromiseFromHandler @ bluebird.js:2698
 Promise2._settlePromiseAt @ bluebird.js:2772
-Promise2._settlePromiseAtPostResolution @ bluebird.js:2436
-Async._drainQueue @ bluebird.js:180
+Promise2._settlePromises @ bluebird.js:2888
+Async._drainQueue @ bluebird.js:175
 Async._drainQueues @ bluebird.js:185
 Async.drainQueues @ bluebird.js:67
 setTimeout
 schedule @ bluebird.js:131
 Async._queueTick @ bluebird.js:193
-AsyncInvoke @ bluebird.js:117
-Async.invoke @ bluebird.js:147
-Promise2._then @ bluebird.js:2427
-Promise2.then @ bluebird.js:2304
-App.main @ application.js:574
-App._error @ application.js:1549
-App._onNetworkGameEvent @ application.js:2390
-triggerEvents @ eventbus.js:156
-trigger @ eventbus.js:89
-(anonymous) @ networkManager.js:189
-(anonymous) @ underscore-umd.js:1086
-setTimeout
-(anonymous) @ underscore-umd.js:1085
-(anonymous) @ underscore-umd.js:76
-executeBound @ underscore-umd.js:986
-bound @ underscore-umd.js:1006
-(anonymous) @ networkManager.js:189
+AsyncSettlePromises @ bluebird.js:122
+Async.settlePromises @ bluebird.js:157
+Promise2._queueSettlePromises @ bluebird.js:2828
+Promise2._rejectUnchecked @ bluebird.js:2878
+Promise2._reject @ bluebird.js:2747
+Promise2._rejectCallback @ bluebird.js:2663
+(anonymous) @ bluebird.js:2677
+(anonymous) @ fheGameSession.js:310
+on @ index.js:63
 Emitter.emit @ index.js:143
 emitEvent @ socket.js:519
 onevent @ socket.js:506
@@ -505,27 +72,64 @@ onPacket @ socket.js:348
 Emitter.emit @ index.js:143
 onPacket @ transport.js:106
 onData @ transport.js:98
-ws.onmessage @ websocket.js:77
-chat_manager.js:345 UI          | ChatManager::setStatus -> loading
-application.js:650 UI          | Last active game was on  Fri Dec 19 2025 04:35:51 GMT+0300 (GMT+03:00) with data Backbone.Model {cid: 'c3613', attributes: {…}, collection: constructor, _changing: false, _previousAttributes: {…}, …}
-application.js:1731 APPLICATIO  | App._resumeGame {created_at: 1766108151465, deck_cards: Array(40), faction_id: 4, game_id: '-OgoEvuekhLNBdI2Trhn', game_type: 'ranked', …}
-chat_manager.js:345 UI          | ChatManager::setStatus -> game
-chat_manager.js:345 UI          | ChatManager::setStatus -> loading
-GameLayer.js:278 ENGINE      | GameLayer.terminate
-GameLayer.js:1417 ENGINE      | GameLayer.resetActiveState
-GameLayer.js:278 ENGINE      | GameLayer.terminate
-GameLayer.js:1417 ENGINE      | GameLayer.resetActiveState
-chat_manager.js:345 UI          | ChatManager::setStatus -> game
-MatchmakingLayer.js:123 ENGINE      | MatchmakingLayer.showVsForGame 4 2 true 0.35
-FX.js:422 ENGINE      | FX.reset
-vendor.js:23422 [Violation] 'load' handler took 151ms
-vendor.js:23422 [Violation] 'load' handler took 163ms
-fheGameSession.js:596 FHE_GAME    | Reveal confirmed
-fheGameSession.js:442 FHE_GAME    | === CARD DRAWN ===
-fheGameSession.js:443 FHE_GAME    | Card ID: 11103
-fheGameSession.js:444 FHE_GAME    | Hand size: 6
-fheGameSession.js:445 FHE_GAME    | Deck remaining: 33
-fheGameSession.js:454 FHE_GAME    | Server notified: fhe_card_drawn
-vendor.js:24056 [Violation] 'requestAnimationFrame' handler took 68ms
-
-
+ws.onmessage @ websocket.js:77Understand this error
+game.js:730 FHE_UI      | [FHE] Decrypt failed: Error: Blockchain error: Cannot read properties of null (reading 'flushCachedAttribute')
+at Socket.<anonymous> (fheGameSession.js:310:1)
+at Socket.on (index.js:63:1)
+at Emitter.emit (index.js:143:1)
+at Socket.emitEvent (socket.js:519:1)
+at Socket.onevent (socket.js:506:1)
+at Socket.onpacket (socket.js:474:1)
+at Emitter.emit (index.js:143:1)
+at manager.js:240:1
+(anonymous) @ game.js:730
+tryCatcher @ bluebird.js:4594
+Promise2._settlePromiseFromHandler @ bluebird.js:2698
+Promise2._settlePromiseAt @ bluebird.js:2772
+Promise2._settlePromises @ bluebird.js:2888
+Async._drainQueue @ bluebird.js:175
+Async._drainQueues @ bluebird.js:185
+Async.drainQueues @ bluebird.js:67
+setTimeout
+schedule @ bluebird.js:131
+Async._queueTick @ bluebird.js:193
+AsyncSettlePromises @ bluebird.js:122
+Async.settlePromises @ bluebird.js:157
+Promise2._queueSettlePromises @ bluebird.js:2828
+Promise2._rejectUnchecked @ bluebird.js:2878
+Promise2._reject @ bluebird.js:2747
+Promise2._rejectCallback @ bluebird.js:2663
+(anonymous) @ bluebird.js:2677
+(anonymous) @ fheGameSession.js:310
+on @ index.js:63
+Emitter.emit @ index.js:143
+emitEvent @ socket.js:519
+onevent @ socket.js:506
+onpacket @ socket.js:474
+Emitter.emit @ index.js:143
+(anonymous) @ manager.js:240
+Promise.then
+(anonymous) @ websocket-constructor.browser.js:8
+ondecoded @ manager.js:239
+Emitter.emit @ index.js:143
+add @ index.js:154
+ondata @ manager.js:226
+Emitter.emit @ index.js:143
+onPacket @ socket.js:348
+Emitter.emit @ index.js:143
+onPacket @ transport.js:106
+onData @ transport.js:98
+ws.onmessage @ websocket.js:77Understand this error
+game.js:839 FHE_UI      | [FHE] Retrying FHE decrypt...
+fheGameSession.js:241 FHE_GAME    | === REVEAL INITIAL HAND ===
+fheGameSession.js:245 FHE_GAME    | Waiting for ZAMA ACL indexing (10 seconds)...
+fheGameSession.js:253 FHE_GAME    | ACL wait complete, proceeding...
+fheGameSession.js:258 FHE_GAME    | Allowed reveals: 5
+fheGameSession.js:332 FHE_GAME    | revealInitialHand failed: Error: call revert exception; VM Exception while processing transaction: reverted with reason string "Exceeds allowed reveals" [ See: https://links.ethers.org/v5-errors-CALL_EXCEPTION ] (method="getDrawHandles(uint256,uint8)", data="0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000174578636565647320616c6c6f7765642072657665616c73000000000000000000", errorArgs=["Exceeds allowed reveals"], errorName="Error", errorSignature="Error(string)", reason="Exceeds allowed reveals", code=CALL_EXCEPTION, version=abi/5.7.0)
+at Logger3.makeError (index.js:238:1)
+at Logger3.throwError (index.js:247:1)
+at Interface2.decodeFunctionResult (interface.js:388:1)
+at Contract2.<anonymous> (index.js:395:1)
+at step (index.js:48:1)
+at Object.next (index.js:29:1)
+at fulfilled (index.js:20:1)

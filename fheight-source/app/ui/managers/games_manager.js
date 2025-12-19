@@ -532,7 +532,7 @@ var GamesManager = Manager.extend({
    * Find new game with FHE data
    * Same as findNewGame but includes FHE-specific data in matchRequest
    */
-  findNewGameWithFHE: function (deck, factionId, gameType, generalId, cardBackId, battleMapId, fheData) {
+  findNewGameWithFHE: function (deck, factionId, gameType, generalId, cardBackId, battleMapId, fheData, ticketId) {
     // if we're already looking for a game, just ignore this
     if (this.isLookingForGame)
       return;
@@ -552,6 +552,7 @@ var GamesManager = Manager.extend({
     matchRequest.generalId = generalId;
     matchRequest.cardBackId = cardBackId;
     matchRequest.battleMapId = battleMapId;
+    matchRequest.ticketId = ticketId;
     matchRequest.hasPremiumBattleMaps = InventoryManager.getInstance().hasAnyBattleMapCosmetics();
     matchRequest.timestamp = Date.now();
 

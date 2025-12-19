@@ -1837,23 +1837,35 @@ onFHEInitialHandRevealed = (requestData) ->
     drawPile = playerDeck.getDrawPile()
     handSlotIndex = 0
 
-    for cardId in verifiedCards
-      foundDrawPilePos = -1
-      for i in [0...drawPile.length]
-        cardIndex = drawPile[i]
-        card = game.session.getCardByIndex(cardIndex)
-        if card? and card.getId() == cardId
-          foundDrawPilePos = i
-          break
+    # Start buffering events to prevent syncState() being called on each applyCardToHand
+    # This avoids null card reference errors in modifiers during syncState
+    game.session.p_startBufferingEvents()
 
-      if foundDrawPilePos >= 0
-        cardIndex = drawPile[foundDrawPilePos]
-        card = game.session.getCardByIndex(cardIndex)
-        game.session.applyCardToHand(playerDeck, cardIndex, card, handSlotIndex)
-        cardIndicesForClient.push(cardIndex)
-        handSlotIndex++
-      else
-        cardIndicesForClient.push(null)
+    try
+      for cardId in verifiedCards
+        foundDrawPilePos = -1
+        for i in [0...drawPile.length]
+          cardIndex = drawPile[i]
+          card = game.session.getCardByIndex(cardIndex)
+          if card? and card.getId() == cardId
+            foundDrawPilePos = i
+            break
+
+        if foundDrawPilePos >= 0
+          cardIndex = drawPile[foundDrawPilePos]
+          card = game.session.getCardByIndex(cardIndex)
+          if card?
+            game.session.applyCardToHand(playerDeck, cardIndex, card, handSlotIndex)
+            cardIndicesForClient.push(cardIndex)
+            handSlotIndex++
+          else
+            Logger.module("FHE").warn "[G:#{gameId}]", "Card at index #{cardIndex} is null, skipping"
+            cardIndicesForClient.push(null)
+        else
+          cardIndicesForClient.push(null)
+    finally
+      # Stop buffering events - this will flush buffered events
+      game.session.p_stopBufferingEvents()
 
     # Update FHE state
     fheState.revealedCount = verifiedCards.length
@@ -1967,17 +1979,25 @@ onFHECardDrawn = (requestData) ->
       appliedCardIndex = drawPile[foundDrawPilePos]
       card = game.session.getCardByIndex(appliedCardIndex)
 
-      handSize = playerDeck.getNumCardsInHand()
-      maxHandSize = CONFIG.MAX_HAND_SIZE || 6
+      if card?
+        handSize = playerDeck.getNumCardsInHand()
+        maxHandSize = CONFIG.MAX_HAND_SIZE || 6
 
-      if handSize >= maxHandSize
-        Logger.module("FHE").log "[G:#{gameId}]", "BURN: Hand full, card #{cardId} burned"
-        drawPileIndex = drawPile.indexOf(appliedCardIndex)
-        if drawPileIndex >= 0
-          drawPile.splice(drawPileIndex, 1)
-        cardBurned = true
+        if handSize >= maxHandSize
+          Logger.module("FHE").log "[G:#{gameId}]", "BURN: Hand full, card #{cardId} burned"
+          drawPileIndex = drawPile.indexOf(appliedCardIndex)
+          if drawPileIndex >= 0
+            drawPile.splice(drawPileIndex, 1)
+          cardBurned = true
+        else
+          # Buffer events to prevent syncState() null card errors in modifiers
+          game.session.p_startBufferingEvents()
+          try
+            game.session.applyCardToHand(playerDeck, appliedCardIndex, card)
+          finally
+            game.session.p_stopBufferingEvents()
       else
-        game.session.applyCardToHand(playerDeck, appliedCardIndex, card)
+        Logger.module("FHE").warn "[G:#{gameId}]", "Card at index #{appliedCardIndex} is null, skipping"
 
     # Update FHE state
     fheState.revealedCount = indices.length
