@@ -56,9 +56,9 @@ var PinDialogItemView = Backbone.Marionette.ItemView.extend({
   },
 
   onPress: function (e) {
-    if ($(e.target).attr('id') === this.id) {
-      this.onCancel(e);
-    }
+    // PIN dialogs should NOT close when clicking outside
+    // Only the X button (cancel-dialog) can close it
+    // This prevents accidental dismissal during FHE operations
   },
 
   onShow: function () {

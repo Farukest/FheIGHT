@@ -689,6 +689,33 @@ var DeckSelectCompositeView = SlidingPanelSelectCompositeView.extend({
   },
 
   /**
+   * Update the Encrypt & Fight button text to show current status
+   * @param {string} status - Status text to show (null to reset)
+   */
+  _updateFHEButtonStatus: function(status) {
+    var $btn = this.ui.$deckSelectConfirm;
+    var $btnCasual = this.ui.$deckSelectConfirmCasual;
+
+    if (status) {
+      // Store original text if not already stored
+      if (!this._originalButtonText) {
+        this._originalButtonText = $btn.text();
+        this._originalButtonTextCasual = $btnCasual.text();
+      }
+      $btn.text(status);
+      $btnCasual.text(status);
+    } else {
+      // Reset to original text
+      if (this._originalButtonText) {
+        $btn.text(this._originalButtonText);
+        $btnCasual.text(this._originalButtonTextCasual);
+        this._originalButtonText = null;
+        this._originalButtonTextCasual = null;
+      }
+    }
+  },
+
+  /**
    * Initialize FHE and create game before matchmaking
    * Follows same flow as single player _startSinglePlayerGameFHE
    */
@@ -708,6 +735,7 @@ var DeckSelectCompositeView = SlidingPanelSelectCompositeView.extend({
     var walletPromise;
     if (!Wallet.getState().connected) {
       Logger.module('DECK_SELECT').log('FHE: Wallet not connected, connecting...');
+      self._updateFHEButtonStatus('Connecting Wallet...');
       walletPromise = Wallet.connect();
     } else {
       walletPromise = Promise.resolve();
@@ -716,6 +744,8 @@ var DeckSelectCompositeView = SlidingPanelSelectCompositeView.extend({
     walletPromise
       .then(function() {
         // Step 2: Initialize FHE Game Mode (this shows PIN dialog if needed)
+        self._updateFHEButtonStatus('Initializing FHE...');
+
         var fheGameMode = FHE.getInstance();
         var contractAddresses = fheSession.getContractAddresses();
         var gameSessionAddress = contractAddresses.GameSession;
@@ -725,12 +755,14 @@ var DeckSelectCompositeView = SlidingPanelSelectCompositeView.extend({
         return fheGameMode.initialize(gameSessionAddress)
           .then(function() {
             Logger.module('DECK_SELECT').log('FHE: Creating game on blockchain...');
+            self._updateFHEButtonStatus('Creating Game...');
 
             // Step 3: Create game on contract (same as single player createSinglePlayerGame)
             return fheGameMode.createSinglePlayerGame(generalId, deckCardIds);
           })
           .then(function(fheGameId) {
             Logger.module('DECK_SELECT').log('FHE: Game created with ID:', fheGameId);
+            self._updateFHEButtonStatus('Finding Match...');
 
             // Step 4: Now proceed with matchmaking, passing FHE data
             // GamesManager will include this in matchRequest
@@ -753,7 +785,8 @@ var DeckSelectCompositeView = SlidingPanelSelectCompositeView.extend({
       .catch(function(error) {
         Logger.module('DECK_SELECT').error('FHE: Initialization failed:', error);
 
-        // Re-enable buttons on error
+        // Reset button status and re-enable buttons on error
+        self._updateFHEButtonStatus(null);
         self.ui.$deckSelectConfirm.removeClass('disabled');
         self.ui.$deckSelectConfirmCasual.removeClass('disabled');
 
