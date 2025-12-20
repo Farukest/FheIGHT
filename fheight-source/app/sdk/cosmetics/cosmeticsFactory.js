@@ -93,11 +93,11 @@ class CosmeticsFactory {
     let orderedSubTypes = [];
     // To do any manual ordering add a subtype to the if/else below, anything not in list will be appended
     if (cosmeticType === CosmeticsTypeLookup.Emote) {
-      orderedSubTypes = ["Lyonar","Songhai","Vetruvian","Abyssian","Magmar","Vanar","Neutral"];
+      orderedSubTypes = ["Valorguard","Sharzy","Sandshard","Shadowfell","Earthmaw","Frostborne","Neutral"];
     } else if (cosmeticType === CosmeticsTypeLookup.CardBack) {
       orderedSubTypes = [];
     } else if (cosmeticType === CosmeticsTypeLookup.ProfileIcon) {
-      orderedSubTypes = ["Lyonar","Songhai","Vetruvian","Abyssian","Magmar","Vanar","Neutral"];
+      orderedSubTypes = ["Valorguard","Sharzy","Sandshard","Shadowfell","Earthmaw","Frostborne","Neutral"];
     } else if (cosmeticType === CosmeticsTypeLookup.Scene) {
       orderedSubTypes = [];
     }
@@ -117,12 +117,12 @@ class CosmeticsFactory {
     if ((this._cachedLocalizedSubTypeTitles == null)) {
       this._cachedLocalizedSubTypeTitles = {};
       this._cachedLocalizedSubTypeTitles["all"] = i18next.t("shop.all_subcategories_title");
-      this._cachedLocalizedSubTypeTitles["Lyonar"] = i18next.t("factions.faction_1_abbreviated_name");
-      this._cachedLocalizedSubTypeTitles["Songhai"] = i18next.t("factions.faction_2_abbreviated_name");
-      this._cachedLocalizedSubTypeTitles["Vetruvian"] = i18next.t("factions.faction_3_abbreviated_name");
-      this._cachedLocalizedSubTypeTitles["Abyssian"] = i18next.t("factions.faction_4_abbreviated_name");
-      this._cachedLocalizedSubTypeTitles["Magmar"] = i18next.t("factions.faction_5_abbreviated_name");
-      this._cachedLocalizedSubTypeTitles["Vanar"] = i18next.t("factions.faction_6_abbreviated_name");
+      this._cachedLocalizedSubTypeTitles["Valorguard"] = i18next.t("factions.faction_1_abbreviated_name");
+      this._cachedLocalizedSubTypeTitles["Sharzy"] = i18next.t("factions.faction_2_abbreviated_name");
+      this._cachedLocalizedSubTypeTitles["Sandshard"] = i18next.t("factions.faction_3_abbreviated_name");
+      this._cachedLocalizedSubTypeTitles["Shadowfell"] = i18next.t("factions.faction_4_abbreviated_name");
+      this._cachedLocalizedSubTypeTitles["Earthmaw"] = i18next.t("factions.faction_5_abbreviated_name");
+      this._cachedLocalizedSubTypeTitles["Frostborne"] = i18next.t("factions.faction_6_abbreviated_name");
       this._cachedLocalizedSubTypeTitles["Neutral"] = i18next.t("factions.faction_neutral_abbreviated_name");
       this._cachedLocalizedSubTypeTitles["Emotes"] = i18next.t("shop.category_emotes_name");
     }
@@ -2985,7 +2985,7 @@ cos[ProfileIcon.abyssian_abyssalcrawler] = {
   id: ProfileIcon.abyssian_abyssalcrawler,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_abyssal_crawler_name"),
@@ -3002,7 +3002,7 @@ cos[ProfileIcon.abyssian_cassyvasoulreaper1] = {
   id: ProfileIcon.abyssian_cassyvasoulreaper1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_cassyva_name"),
@@ -3019,7 +3019,7 @@ cos[ProfileIcon.abyssian_maehv1] = {
   id: ProfileIcon.abyssian_maehv1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_maehv_name"),
@@ -3036,7 +3036,7 @@ cos[ProfileIcon.abyssian_crest] = {
   id: ProfileIcon.abyssian_crest,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_abyssian_crest_name"),
@@ -3053,7 +3053,7 @@ cos[ProfileIcon.abyssian_gloomchaser] = {
   id: ProfileIcon.abyssian_gloomchaser,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_gloomchaser_name"),
@@ -3070,7 +3070,7 @@ cos[ProfileIcon.abyssian_kelainosister] = {
   id: ProfileIcon.abyssian_kelainosister,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_shadow_sister_name"),
@@ -3087,7 +3087,7 @@ cos[ProfileIcon.abyssian_lilithe1] = {
   id: ProfileIcon.abyssian_lilithe1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_lilithe_name"),
@@ -3104,7 +3104,7 @@ cos[ProfileIcon.abyssian_lilithe2] = {
   id: ProfileIcon.abyssian_lilithe2,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_lilithe_mk2_name"),
@@ -3121,7 +3121,7 @@ cos[ProfileIcon.abyssian_vorpalreaver] = {
   id: ProfileIcon.abyssian_vorpalreaver,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_vorpal_reaver_name"),
@@ -3138,7 +3138,7 @@ cos[ProfileIcon.abyssian_wraithling] = {
   id: ProfileIcon.abyssian_wraithling,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   factionId: Factions.Faction4,
   enabled: true,
   name: i18next.t("cosmetics.icon_wraithling_name"),
@@ -3171,7 +3171,7 @@ cos[ProfileIcon.lyonar_arclytesentinel] = {
   id: ProfileIcon.lyonar_arclytesentinel,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_arclyte_sentinel_name"),
@@ -3188,7 +3188,7 @@ cos[ProfileIcon.lyonar_argeonhighmayne1] = {
   id: ProfileIcon.lyonar_argeonhighmayne1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_argeon_name"),
@@ -3205,7 +3205,7 @@ cos[ProfileIcon.lyonar_argeonhighmayne2] = {
   id: ProfileIcon.lyonar_argeonhighmayne2,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_argeon_mk2_name"),
@@ -3222,7 +3222,7 @@ cos[ProfileIcon.lyonar_crest] = {
   id: ProfileIcon.lyonar_crest,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_lyonar_crest_name"),
@@ -3239,7 +3239,7 @@ cos[ProfileIcon.lyonar_lightchaser] = {
   id: ProfileIcon.lyonar_lightchaser,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_lightchaser_name"),
@@ -3256,7 +3256,7 @@ cos[ProfileIcon.lyonar_silverguardknight] = {
   id: ProfileIcon.lyonar_silverguardknight,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_silverguard_knight_name"),
@@ -3273,7 +3273,7 @@ cos[ProfileIcon.lyonar_steropesister] = {
   id: ProfileIcon.lyonar_steropesister,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_sun_sister_name"),
@@ -3290,7 +3290,7 @@ cos[ProfileIcon.lyonar_suntidemaiden] = {
   id: ProfileIcon.lyonar_suntidemaiden,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_suntide_maiden_name"),
@@ -3307,7 +3307,7 @@ cos[ProfileIcon.lyonar_windbladeadept] = {
   id: ProfileIcon.lyonar_windbladeadept,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_windblade_adept_name"),
@@ -3324,7 +3324,7 @@ cos[ProfileIcon.lyonar_ziransunforge1] = {
   id: ProfileIcon.lyonar_ziransunforge1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_ziran_name"),
@@ -3341,7 +3341,7 @@ cos[ProfileIcon.lyonar_brome1] = {
   id: ProfileIcon.lyonar_brome1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   factionId: Factions.Faction1,
   enabled: true,
   name: i18next.t("cosmetics.icon_brome_name"),
@@ -3358,7 +3358,7 @@ cos[ProfileIcon.magmar_crest] = {
   id: ProfileIcon.magmar_crest,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_magmar_crest_name"),
@@ -3375,7 +3375,7 @@ cos[ProfileIcon.magmar_dreadnought] = {
   id: ProfileIcon.magmar_dreadnought,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_dreadnought_name"),
@@ -3392,7 +3392,7 @@ cos[ProfileIcon.magmar_elucidator] = {
   id: ProfileIcon.magmar_elucidator,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_elucidator_name"),
@@ -3409,7 +3409,7 @@ cos[ProfileIcon.magmar_makantorwarbeast] = {
   id: ProfileIcon.magmar_makantorwarbeast,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_makantor_name"),
@@ -3426,7 +3426,7 @@ cos[ProfileIcon.magmar_phalanxar] = {
   id: ProfileIcon.magmar_phalanxar,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_phalanxar_name"),
@@ -3443,7 +3443,7 @@ cos[ProfileIcon.magmar_silitharelder] = {
   id: ProfileIcon.magmar_silitharelder,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_silithar_elder_name"),
@@ -3460,7 +3460,7 @@ cos[ProfileIcon.magmar_starhorn1] = {
   id: ProfileIcon.magmar_starhorn1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_starhorn_1_name"),
@@ -3477,7 +3477,7 @@ cos[ProfileIcon.magmar_starhorn2] = {
   id: ProfileIcon.magmar_starhorn2,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_starhorn_2_name"),
@@ -3494,7 +3494,7 @@ cos[ProfileIcon.magmar_ragnora1] = {
   id: ProfileIcon.magmar_ragnora1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_ragnora_name"),
@@ -3511,7 +3511,7 @@ cos[ProfileIcon.magmar_taygetesister] = {
   id: ProfileIcon.magmar_taygetesister,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_taygete_name"),
@@ -3528,7 +3528,7 @@ cos[ProfileIcon.magmar_vaath1] = {
   id: ProfileIcon.magmar_vaath1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_vaath_name"),
@@ -3545,7 +3545,7 @@ cos[ProfileIcon.magmar_vaath2] = {
   id: ProfileIcon.magmar_vaath2,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_vaath_mk2_name"),
@@ -3562,7 +3562,7 @@ cos[ProfileIcon.magmar_veteransilithar] = {
   id: ProfileIcon.magmar_veteransilithar,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_veteran_silithar_name"),
@@ -3579,7 +3579,7 @@ cos[ProfileIcon.magmar_youngsilithar] = {
   id: ProfileIcon.magmar_youngsilithar,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   factionId: Factions.Faction5,
   enabled: true,
   name: i18next.t("cosmetics.icon_young_silithar_name"),
@@ -3964,7 +3964,7 @@ cos[ProfileIcon.songhai_alkyonesister] = {
   id: ProfileIcon.songhai_alkyonesister,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_storm_sister_name"),
@@ -3981,7 +3981,7 @@ cos[ProfileIcon.songhai_crest] = {
   id: ProfileIcon.songhai_crest,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_songhai_crest_name"),
@@ -3998,7 +3998,7 @@ cos[ProfileIcon.songhai_gorehorn] = {
   id: ProfileIcon.songhai_gorehorn,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_gorehorn_name"),
@@ -4015,7 +4015,7 @@ cos[ProfileIcon.songhai_grandmasterzendo] = {
   id: ProfileIcon.songhai_grandmasterzendo,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_zendo_name"),
@@ -4032,7 +4032,7 @@ cos[ProfileIcon.songhai_heartseeker] = {
   id: ProfileIcon.songhai_heartseeker,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_heartseeker_name"),
@@ -4049,7 +4049,7 @@ cos[ProfileIcon.songhai_kaidoassassin] = {
   id: ProfileIcon.songhai_kaidoassassin,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_kaido_assassin_name"),
@@ -4066,7 +4066,7 @@ cos[ProfileIcon.songhai_kaleosxaan1] = {
   id: ProfileIcon.songhai_kaleosxaan1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_kaleos_name"),
@@ -4083,7 +4083,7 @@ cos[ProfileIcon.songhai_revaeventide1] = {
   id: ProfileIcon.songhai_revaeventide1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_reva_name"),
@@ -4100,7 +4100,7 @@ cos[ProfileIcon.songhai_revaeventide2] = {
   id: ProfileIcon.songhai_revaeventide2,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_reva_mk2_name"),
@@ -4117,7 +4117,7 @@ cos[ProfileIcon.songhai_shidai1] = {
   id: ProfileIcon.songhai_shidai1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_shidai_name"),
@@ -4134,7 +4134,7 @@ cos[ProfileIcon.songhai_scarletviper] = {
   id: ProfileIcon.songhai_scarletviper,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_scarlet_viper_name"),
@@ -4151,7 +4151,7 @@ cos[ProfileIcon.songhai_tuskboar] = {
   id: ProfileIcon.songhai_tuskboar,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_tusk_boar_name"),
@@ -4168,7 +4168,7 @@ cos[ProfileIcon.songhai_widowmaker] = {
   id: ProfileIcon.songhai_widowmaker,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   factionId: Factions.Faction2,
   enabled: true,
   name: i18next.t("cosmetics.icon_widowmaker_name"),
@@ -4185,7 +4185,7 @@ cos[ProfileIcon.vanar_arcticdisplacer] = {
   id: ProfileIcon.vanar_arcticdisplacer,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_arctic_displacer_name"),
@@ -4202,7 +4202,7 @@ cos[ProfileIcon.vanar_crest] = {
   id: ProfileIcon.vanar_crest,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_vanar_crest_name"),
@@ -4219,7 +4219,7 @@ cos[ProfileIcon.vanar_draugarlord] = {
   id: ProfileIcon.vanar_draugarlord,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_draugar_lord_name"),
@@ -4236,7 +4236,7 @@ cos[ProfileIcon.vanar_faiebloodwing_warbird] = {
   id: ProfileIcon.vanar_faiebloodwing_warbird,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_warbird_name"),
@@ -4253,7 +4253,7 @@ cos[ProfileIcon.vanar_faiebloodwing1] = {
   id: ProfileIcon.vanar_faiebloodwing1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_faie_name"),
@@ -4270,7 +4270,7 @@ cos[ProfileIcon.vanar_faiebloodwing2] = {
   id: ProfileIcon.vanar_faiebloodwing2,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_faie_mk2_name"),
@@ -4287,7 +4287,7 @@ cos[ProfileIcon.vanar_glacialelemental] = {
   id: ProfileIcon.vanar_glacialelemental,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_glacial_elemental_name"),
@@ -4304,7 +4304,7 @@ cos[ProfileIcon.vanar_hearthsister] = {
   id: ProfileIcon.vanar_hearthsister,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_hearth_sister_name"),
@@ -4321,7 +4321,7 @@ cos[ProfileIcon.vanar_icebladedryad] = {
   id: ProfileIcon.vanar_icebladedryad,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_iceblade_dryad_name"),
@@ -4338,7 +4338,7 @@ cos[ProfileIcon.vanar_karawinterblade1] = {
   id: ProfileIcon.vanar_karawinterblade1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_kara_name"),
@@ -4355,7 +4355,7 @@ cos[ProfileIcon.vanar_karawinterblade2] = {
   id: ProfileIcon.vanar_karawinterblade2,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_kara_mk2_name"),
@@ -4372,7 +4372,7 @@ cos[ProfileIcon.vanar_ilena1] = {
   id: ProfileIcon.vanar_ilena1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_ilena_name"),
@@ -4389,7 +4389,7 @@ cos[ProfileIcon.vanar_maiasister] = {
   id: ProfileIcon.vanar_maiasister,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_wind_sister_name"),
@@ -4406,7 +4406,7 @@ cos[ProfileIcon.vanar_razorback] = {
   id: ProfileIcon.vanar_razorback,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_razorback_name"),
@@ -4423,7 +4423,7 @@ cos[ProfileIcon.vanar_snowchaser] = {
   id: ProfileIcon.vanar_snowchaser,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_snowchaser_name"),
@@ -4440,7 +4440,7 @@ cos[ProfileIcon.vanar_wolfraven] = {
   id: ProfileIcon.vanar_wolfraven,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   factionId: Factions.Faction6,
   enabled: true,
   name: i18next.t("cosmetics.icon_wolfraven_name"),
@@ -4457,7 +4457,7 @@ cos[ProfileIcon.vetruvian_crest] = {
   id: ProfileIcon.vetruvian_crest,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_vetruvian_crest_name"),
@@ -4474,7 +4474,7 @@ cos[ProfileIcon.vetruvian_miragemaster] = {
   id: ProfileIcon.vetruvian_miragemaster,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_mirage_master_name"),
@@ -4491,7 +4491,7 @@ cos[ProfileIcon.vetruvian_pax] = {
   id: ProfileIcon.vetruvian_pax,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_pax_name"),
@@ -4508,7 +4508,7 @@ cos[ProfileIcon.vetruvian_pyromancer] = {
   id: ProfileIcon.vetruvian_pyromancer,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_pyromancer_name"),
@@ -4525,7 +4525,7 @@ cos[ProfileIcon.vetruvian_rae] = {
   id: ProfileIcon.vetruvian_rae,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_rae_name"),
@@ -4542,7 +4542,7 @@ cos[ProfileIcon.vetruvian_saonsister] = {
   id: ProfileIcon.vetruvian_saonsister,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_sand_sister_name"),
@@ -4559,7 +4559,7 @@ cos[ProfileIcon.vetruvian_scionesssajj1] = {
   id: ProfileIcon.vetruvian_scionesssajj1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_sajj_name"),
@@ -4576,7 +4576,7 @@ cos[ProfileIcon.vetruvian_ciphyron1] = {
   id: ProfileIcon.vetruvian_ciphyron1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_ciphyron_name"),
@@ -4593,7 +4593,7 @@ cos[ProfileIcon.vetruvian_starfirescarab] = {
   id: ProfileIcon.vetruvian_starfirescarab,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_starfire_scarab_name"),
@@ -4610,7 +4610,7 @@ cos[ProfileIcon.vetruvian_windshrike] = {
   id: ProfileIcon.vetruvian_windshrike,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_windshrike_name"),
@@ -4627,7 +4627,7 @@ cos[ProfileIcon.vetruvian_zirixstarstrider1] = {
   id: ProfileIcon.vetruvian_zirixstarstrider1,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_zirix_name"),
@@ -4644,7 +4644,7 @@ cos[ProfileIcon.vetruvian_zirixstarstrider2] = {
   id: ProfileIcon.vetruvian_zirixstarstrider2,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   factionId: Factions.Faction3,
   enabled: true,
   name: i18next.t("cosmetics.icon_zirix_mk2_name"),
@@ -4834,7 +4834,7 @@ cos[ProfileIcon.gibbet] = {
   id: ProfileIcon.gibbet,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   name: "Gibbet",
   shopDescription: "Gibbet",
@@ -4866,7 +4866,7 @@ cos[ProfileIcon.canopic] = {
   id: ProfileIcon.canopic,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   name: "Fifth Canopic",
   shopDescription: "Fifth Canopic",
@@ -4882,7 +4882,7 @@ cos[ProfileIcon.veracity] = {
   id: ProfileIcon.veracity,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   name: "Yggdra's Voracity",
   shopDescription: "Yggdra's Voracity",
@@ -4898,7 +4898,7 @@ cos[ProfileIcon.indominus] = {
   id: ProfileIcon.indominus,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   name: "Indominus",
   shopDescription: "Indominus",
@@ -4930,7 +4930,7 @@ cos[ProfileIcon.eternityPainter] = {
   id: ProfileIcon.eternityPainter,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   name: "Eternity Painter",
   shopDescription: "Eternity Painter",
@@ -4946,7 +4946,7 @@ cos[ProfileIcon.skullProphet] = {
   id: ProfileIcon.skullProphet,
   typeId: CosmeticsTypeLookup.ProfileIcon,
   order: ORDER_PROFILE_ICONS,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   name: "Skull Prophet",
   shopDescription: "Skull Prophet",
@@ -5613,7 +5613,7 @@ cos[Emote.emote_fog_taunt] = {
 cos[Emote.Faction1Taunt] = {
   id: Emote.Faction1Taunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_taunt.img,
@@ -5630,7 +5630,7 @@ cos[Emote.Faction1Taunt] = {
 cos[Emote.Faction1Angry] = {
   id: Emote.Faction1Angry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_angry.img,
@@ -5647,7 +5647,7 @@ cos[Emote.Faction1Angry] = {
 cos[Emote.Faction1Confused] = {
   id: Emote.Faction1Confused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_confused.img,
@@ -5664,7 +5664,7 @@ cos[Emote.Faction1Confused] = {
 cos[Emote.Faction1Sad] = {
   id: Emote.Faction1Sad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_sad.img,
@@ -5681,7 +5681,7 @@ cos[Emote.Faction1Sad] = {
 cos[Emote.Faction1Frustrated] = {
   id: Emote.Faction1Frustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_frustrated.img,
@@ -5698,7 +5698,7 @@ cos[Emote.Faction1Frustrated] = {
 cos[Emote.Faction1Surprised] = {
   id: Emote.Faction1Surprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_surprised.img,
@@ -5715,7 +5715,7 @@ cos[Emote.Faction1Surprised] = {
 cos[Emote.Faction1Bow] = {
   id: Emote.Faction1Bow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_bow.img,
@@ -5732,7 +5732,7 @@ cos[Emote.Faction1Bow] = {
 cos[Emote.Faction1Sleep] = {
   id: Emote.Faction1Sleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_sleep.img,
@@ -5749,7 +5749,7 @@ cos[Emote.Faction1Sleep] = {
 cos[Emote.Faction1Sunglasses] = {
   id: Emote.Faction1Sunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_sunglasses.img,
@@ -5766,7 +5766,7 @@ cos[Emote.Faction1Sunglasses] = {
 cos[Emote.Faction1Happy] = {
   id: Emote.Faction1Happy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_basic_happy.img,
@@ -5783,7 +5783,7 @@ cos[Emote.Faction1Happy] = {
 cos[Emote.Faction1Kiss] = {
   id: Emote.Faction1Kiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_kiss.img,
@@ -5807,7 +5807,7 @@ cos[Emote.Faction1Kiss] = {
 cos[Emote.Faction2Taunt] = {
   id: Emote.Faction2Taunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_taunt.img,
@@ -5824,7 +5824,7 @@ cos[Emote.Faction2Taunt] = {
 cos[Emote.Faction2Happy] = {
   id: Emote.Faction2Happy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_happy.img,
@@ -5841,7 +5841,7 @@ cos[Emote.Faction2Happy] = {
 cos[Emote.Faction2Confused] = {
   id: Emote.Faction2Confused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_confused.img,
@@ -5858,7 +5858,7 @@ cos[Emote.Faction2Confused] = {
 cos[Emote.Faction2Sad] = {
   id: Emote.Faction2Sad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_sad.img,
@@ -5875,7 +5875,7 @@ cos[Emote.Faction2Sad] = {
 cos[Emote.Faction2Frustrated] = {
   id: Emote.Faction2Frustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_frustrated.img,
@@ -5892,7 +5892,7 @@ cos[Emote.Faction2Frustrated] = {
 cos[Emote.Faction2Surprised] = {
   id: Emote.Faction2Surprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_surprised.img,
@@ -5909,7 +5909,7 @@ cos[Emote.Faction2Surprised] = {
 cos[Emote.Faction2Bow] = {
   id: Emote.Faction2Bow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_bow.img,
@@ -5926,7 +5926,7 @@ cos[Emote.Faction2Bow] = {
 cos[Emote.Faction2Sleep] = {
   id: Emote.Faction2Sleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_sleep.img,
@@ -5943,7 +5943,7 @@ cos[Emote.Faction2Sleep] = {
 cos[Emote.Faction2Sunglasses] = {
   id: Emote.Faction2Sunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_sunglasses.img,
@@ -5960,7 +5960,7 @@ cos[Emote.Faction2Sunglasses] = {
 cos[Emote.Faction2Angry] = {
   id: Emote.Faction2Angry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_basic_angry.img,
@@ -5977,7 +5977,7 @@ cos[Emote.Faction2Angry] = {
 cos[Emote.Faction2Kiss] = {
   id: Emote.Faction2Kiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_kiss.img,
@@ -6001,7 +6001,7 @@ cos[Emote.Faction2Kiss] = {
 cos[Emote.Faction3Taunt] = {
   id: Emote.Faction3Taunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_taunt.img,
@@ -6018,7 +6018,7 @@ cos[Emote.Faction3Taunt] = {
 cos[Emote.Faction3Happy] = {
   id: Emote.Faction3Happy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_happy.img,
@@ -6035,7 +6035,7 @@ cos[Emote.Faction3Happy] = {
 cos[Emote.Faction3Angry] = {
   id: Emote.Faction3Angry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_angry.img,
@@ -6052,7 +6052,7 @@ cos[Emote.Faction3Angry] = {
 cos[Emote.Faction3Sad] = {
   id: Emote.Faction3Sad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_sad.img,
@@ -6069,7 +6069,7 @@ cos[Emote.Faction3Sad] = {
 cos[Emote.Faction3Frustrated] = {
   id: Emote.Faction3Frustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_frustrated.img,
@@ -6086,7 +6086,7 @@ cos[Emote.Faction3Frustrated] = {
 cos[Emote.Faction3Surprised] = {
   id: Emote.Faction3Surprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_surprised.img,
@@ -6103,7 +6103,7 @@ cos[Emote.Faction3Surprised] = {
 cos[Emote.Faction3Bow] = {
   id: Emote.Faction3Bow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_bow.img,
@@ -6120,7 +6120,7 @@ cos[Emote.Faction3Bow] = {
 cos[Emote.Faction3Sleep] = {
   id: Emote.Faction3Sleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_sleep.img,
@@ -6137,7 +6137,7 @@ cos[Emote.Faction3Sleep] = {
 cos[Emote.Faction3Sunglasses] = {
   id: Emote.Faction3Sunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_sunglasses.img,
@@ -6154,7 +6154,7 @@ cos[Emote.Faction3Sunglasses] = {
 cos[Emote.Faction3Confused] = {
   id: Emote.Faction3Confused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_basic_confused.img,
@@ -6171,7 +6171,7 @@ cos[Emote.Faction3Confused] = {
 cos[Emote.Faction3Kiss] = {
   id: Emote.Faction3Kiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_kiss.img,
@@ -6195,7 +6195,7 @@ cos[Emote.Faction3Kiss] = {
 cos[Emote.Faction4Taunt] = {
   id: Emote.Faction4Taunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_taunt.img,
@@ -6212,7 +6212,7 @@ cos[Emote.Faction4Taunt] = {
 cos[Emote.Faction4Happy] = {
   id: Emote.Faction4Happy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_happy.img,
@@ -6229,7 +6229,7 @@ cos[Emote.Faction4Happy] = {
 cos[Emote.Faction4Angry] = {
   id: Emote.Faction4Angry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_angry.img,
@@ -6246,7 +6246,7 @@ cos[Emote.Faction4Angry] = {
 cos[Emote.Faction4Confused] = {
   id: Emote.Faction4Confused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_confused.img,
@@ -6263,7 +6263,7 @@ cos[Emote.Faction4Confused] = {
 cos[Emote.Faction4Sad] = {
   id: Emote.Faction4Sad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_sad.img,
@@ -6280,7 +6280,7 @@ cos[Emote.Faction4Sad] = {
 cos[Emote.Faction4Surprised] = {
   id: Emote.Faction4Surprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_surprised.img,
@@ -6297,7 +6297,7 @@ cos[Emote.Faction4Surprised] = {
 cos[Emote.Faction4Bow] = {
   id: Emote.Faction4Bow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_bow.img,
@@ -6314,7 +6314,7 @@ cos[Emote.Faction4Bow] = {
 cos[Emote.Faction4Sleep] = {
   id: Emote.Faction4Sleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_sleep.img,
@@ -6331,7 +6331,7 @@ cos[Emote.Faction4Sleep] = {
 cos[Emote.Faction4Sunglasses] = {
   id: Emote.Faction4Sunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_sunglasses.img,
@@ -6348,7 +6348,7 @@ cos[Emote.Faction4Sunglasses] = {
 cos[Emote.Faction4Frustrated] = {
   id: Emote.Faction4Frustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_frustrated.img,
@@ -6365,7 +6365,7 @@ cos[Emote.Faction4Frustrated] = {
 cos[Emote.Faction4Kiss] = {
   id: Emote.Faction4Kiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_teal_kiss.img,
@@ -6389,7 +6389,7 @@ cos[Emote.Faction4Kiss] = {
 cos[Emote.Faction5Taunt] = {
   id: Emote.Faction5Taunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_taunt.img,
@@ -6406,7 +6406,7 @@ cos[Emote.Faction5Taunt] = {
 cos[Emote.Faction5Happy] = {
   id: Emote.Faction5Happy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_happy.img,
@@ -6423,7 +6423,7 @@ cos[Emote.Faction5Happy] = {
 cos[Emote.Faction5Angry] = {
   id: Emote.Faction5Angry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_angry.img,
@@ -6440,7 +6440,7 @@ cos[Emote.Faction5Angry] = {
 cos[Emote.Faction5Confused] = {
   id: Emote.Faction5Confused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_confused.img,
@@ -6457,7 +6457,7 @@ cos[Emote.Faction5Confused] = {
 cos[Emote.Faction5Frustrated] = {
   id: Emote.Faction5Frustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_frustrated.img,
@@ -6474,7 +6474,7 @@ cos[Emote.Faction5Frustrated] = {
 cos[Emote.Faction5Surprised] = {
   id: Emote.Faction5Surprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_surprised.img,
@@ -6491,7 +6491,7 @@ cos[Emote.Faction5Surprised] = {
 cos[Emote.Faction5Bow] = {
   id: Emote.Faction5Bow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_bow.img,
@@ -6508,7 +6508,7 @@ cos[Emote.Faction5Bow] = {
 cos[Emote.Faction5Sleep] = {
   id: Emote.Faction5Sleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_sleep.img,
@@ -6525,7 +6525,7 @@ cos[Emote.Faction5Sleep] = {
 cos[Emote.Faction5Sunglasses] = {
   id: Emote.Faction5Sunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_sunglasses.img,
@@ -6542,7 +6542,7 @@ cos[Emote.Faction5Sunglasses] = {
 cos[Emote.Faction5Sad] = {
   id: Emote.Faction5Sad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_basic_sad.img,
@@ -6559,7 +6559,7 @@ cos[Emote.Faction5Sad] = {
 cos[Emote.Faction5Kiss] = {
   id: Emote.Faction5Kiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_kiss.img,
@@ -6583,7 +6583,7 @@ cos[Emote.Faction5Kiss] = {
 cos[Emote.Faction6Frustrated] = {
   id: Emote.Faction6Frustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_frustrated.img,
@@ -6600,7 +6600,7 @@ cos[Emote.Faction6Frustrated] = {
 cos[Emote.Faction6Happy] = {
   id: Emote.Faction6Happy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_happy.img,
@@ -6617,7 +6617,7 @@ cos[Emote.Faction6Happy] = {
 cos[Emote.Faction6Angry] = {
   id: Emote.Faction6Angry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_angry.img,
@@ -6634,7 +6634,7 @@ cos[Emote.Faction6Angry] = {
 cos[Emote.Faction6Confused] = {
   id: Emote.Faction6Confused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_confused.img,
@@ -6651,7 +6651,7 @@ cos[Emote.Faction6Confused] = {
 cos[Emote.Faction6Sad] = {
   id: Emote.Faction6Sad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_sad.img,
@@ -6668,7 +6668,7 @@ cos[Emote.Faction6Sad] = {
 cos[Emote.Faction6Surprised] = {
   id: Emote.Faction6Surprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_surprised.img,
@@ -6685,7 +6685,7 @@ cos[Emote.Faction6Surprised] = {
 cos[Emote.Faction6Bow] = {
   id: Emote.Faction6Bow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_bow.img,
@@ -6702,7 +6702,7 @@ cos[Emote.Faction6Bow] = {
 cos[Emote.Faction6Sleep] = {
   id: Emote.Faction6Sleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_sleep.img,
@@ -6719,7 +6719,7 @@ cos[Emote.Faction6Sleep] = {
 cos[Emote.Faction6Sunglasses] = {
   id: Emote.Faction6Sunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_sunglasses.img,
@@ -6736,7 +6736,7 @@ cos[Emote.Faction6Sunglasses] = {
 cos[Emote.Faction6Taunt] = {
   id: Emote.Faction6Taunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_taunt.img,
@@ -6755,7 +6755,7 @@ cos[Emote.Faction6Taunt] = {
 cos[Emote.Faction6Kiss] = {
   id: Emote.Faction6Kiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_basic_kiss.img,
@@ -6781,7 +6781,7 @@ cos[Emote.Faction6Kiss] = {
 cos[Emote.Faction1AltTaunt] = {
   id: Emote.Faction1AltTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_taunt.img,
@@ -6800,7 +6800,7 @@ cos[Emote.Faction1AltTaunt] = {
 cos[Emote.Faction1AltAngry] = {
   id: Emote.Faction1AltAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_angry.img,
@@ -6819,7 +6819,7 @@ cos[Emote.Faction1AltAngry] = {
 cos[Emote.Faction1AltConfused] = {
   id: Emote.Faction1AltConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_confused.img,
@@ -6837,7 +6837,7 @@ cos[Emote.Faction1AltConfused] = {
 cos[Emote.Faction1AltSad] = {
   id: Emote.Faction1AltSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_sad.img,
@@ -6856,7 +6856,7 @@ cos[Emote.Faction1AltSad] = {
 cos[Emote.Faction1AltFrustrated] = {
   id: Emote.Faction1AltFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_frustrated.img,
@@ -6875,7 +6875,7 @@ cos[Emote.Faction1AltFrustrated] = {
 cos[Emote.Faction1AltSurprised] = {
   id: Emote.Faction1AltSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_surprised.img,
@@ -6894,7 +6894,7 @@ cos[Emote.Faction1AltSurprised] = {
 cos[Emote.Faction1AltBow] = {
   id: Emote.Faction1AltBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_bow.img,
@@ -6913,7 +6913,7 @@ cos[Emote.Faction1AltBow] = {
 cos[Emote.Faction1AltSleep] = {
   id: Emote.Faction1AltSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_sleep.img,
@@ -6932,7 +6932,7 @@ cos[Emote.Faction1AltSleep] = {
 cos[Emote.Faction1AltSunglasses] = {
   id: Emote.Faction1AltSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_sunglasses.img,
@@ -6951,7 +6951,7 @@ cos[Emote.Faction1AltSunglasses] = {
 cos[Emote.Faction1AltHappy] = {
   id: Emote.Faction1AltHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_happy.img,
@@ -6970,7 +6970,7 @@ cos[Emote.Faction1AltHappy] = {
 cos[Emote.Faction1AltKiss] = {
   id: Emote.Faction1AltKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_alt_kiss.img,
@@ -6994,7 +6994,7 @@ cos[Emote.Faction1AltKiss] = {
 cos[Emote.Faction2AltTaunt] = {
   id: Emote.Faction2AltTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_taunt.img,
@@ -7013,7 +7013,7 @@ cos[Emote.Faction2AltTaunt] = {
 cos[Emote.Faction2AltHappy] = {
   id: Emote.Faction2AltHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_happy.img,
@@ -7032,7 +7032,7 @@ cos[Emote.Faction2AltHappy] = {
 cos[Emote.Faction2AltConfused] = {
   id: Emote.Faction2AltConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_confused.img,
@@ -7051,7 +7051,7 @@ cos[Emote.Faction2AltConfused] = {
 cos[Emote.Faction2AltSad] = {
   id: Emote.Faction2AltSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_sad.img,
@@ -7070,7 +7070,7 @@ cos[Emote.Faction2AltSad] = {
 cos[Emote.Faction2AltFrustrated] = {
   id: Emote.Faction2AltFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_frustrated.img,
@@ -7089,7 +7089,7 @@ cos[Emote.Faction2AltFrustrated] = {
 cos[Emote.Faction2AltSurprised] = {
   id: Emote.Faction2AltSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_surprised.img,
@@ -7108,7 +7108,7 @@ cos[Emote.Faction2AltSurprised] = {
 cos[Emote.Faction2AltBow] = {
   id: Emote.Faction2AltBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_bow.img,
@@ -7127,7 +7127,7 @@ cos[Emote.Faction2AltBow] = {
 cos[Emote.Faction2AltSleep] = {
   id: Emote.Faction2AltSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_sleep.img,
@@ -7146,7 +7146,7 @@ cos[Emote.Faction2AltSleep] = {
 cos[Emote.Faction2AltSunglasses] = {
   id: Emote.Faction2AltSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_sunglasses.img,
@@ -7165,7 +7165,7 @@ cos[Emote.Faction2AltSunglasses] = {
 cos[Emote.Faction2AltAngry] = {
   id: Emote.Faction2AltAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_angry.img,
@@ -7184,7 +7184,7 @@ cos[Emote.Faction2AltAngry] = {
 cos[Emote.Faction2AltKiss] = {
   id: Emote.Faction2AltKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_alt_kiss.img,
@@ -7208,7 +7208,7 @@ cos[Emote.Faction2AltKiss] = {
 cos[Emote.Faction3AltTaunt] = {
   id: Emote.Faction3AltTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_taunt.img,
@@ -7227,7 +7227,7 @@ cos[Emote.Faction3AltTaunt] = {
 cos[Emote.Faction3AltHappy] = {
   id: Emote.Faction3AltHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_happy.img,
@@ -7246,7 +7246,7 @@ cos[Emote.Faction3AltHappy] = {
 cos[Emote.Faction3AltAngry] = {
   id: Emote.Faction3AltAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_angry.img,
@@ -7265,7 +7265,7 @@ cos[Emote.Faction3AltAngry] = {
 cos[Emote.Faction3AltSad] = {
   id: Emote.Faction3AltSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_sad.img,
@@ -7284,7 +7284,7 @@ cos[Emote.Faction3AltSad] = {
 cos[Emote.Faction3AltFrustrated] = {
   id: Emote.Faction3AltFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_frustrated.img,
@@ -7303,7 +7303,7 @@ cos[Emote.Faction3AltFrustrated] = {
 cos[Emote.Faction3AltSurprised] = {
   id: Emote.Faction3AltSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_surprised.img,
@@ -7322,7 +7322,7 @@ cos[Emote.Faction3AltSurprised] = {
 cos[Emote.Faction3AltBow] = {
   id: Emote.Faction3AltBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_bow.img,
@@ -7341,7 +7341,7 @@ cos[Emote.Faction3AltBow] = {
 cos[Emote.Faction3AltSleep] = {
   id: Emote.Faction3AltSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_sleep.img,
@@ -7360,7 +7360,7 @@ cos[Emote.Faction3AltSleep] = {
 cos[Emote.Faction3AltSunglasses] = {
   id: Emote.Faction3AltSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_sunglasses.img,
@@ -7379,7 +7379,7 @@ cos[Emote.Faction3AltSunglasses] = {
 cos[Emote.Faction3AltConfused] = {
   id: Emote.Faction3AltConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_confused.img,
@@ -7398,7 +7398,7 @@ cos[Emote.Faction3AltConfused] = {
 cos[Emote.Faction3AltKiss] = {
   id: Emote.Faction3AltKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_alt_kiss.img,
@@ -7422,7 +7422,7 @@ cos[Emote.Faction3AltKiss] = {
 cos[Emote.Faction4AltTaunt] = {
   id: Emote.Faction4AltTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_taunt.img,
@@ -7441,7 +7441,7 @@ cos[Emote.Faction4AltTaunt] = {
 cos[Emote.Faction4AltHappy] = {
   id: Emote.Faction4AltHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_happy.img,
@@ -7460,7 +7460,7 @@ cos[Emote.Faction4AltHappy] = {
 cos[Emote.Faction4AltAngry] = {
   id: Emote.Faction4AltAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_angry.img,
@@ -7479,7 +7479,7 @@ cos[Emote.Faction4AltAngry] = {
 cos[Emote.Faction4AltConfused] = {
   id: Emote.Faction4AltConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_confused.img,
@@ -7498,7 +7498,7 @@ cos[Emote.Faction4AltConfused] = {
 cos[Emote.Faction4AltSad] = {
   id: Emote.Faction4AltSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_sad.img,
@@ -7517,7 +7517,7 @@ cos[Emote.Faction4AltSad] = {
 cos[Emote.Faction4AltSurprised] = {
   id: Emote.Faction4AltSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_surprised.img,
@@ -7536,7 +7536,7 @@ cos[Emote.Faction4AltSurprised] = {
 cos[Emote.Faction4AltBow] = {
   id: Emote.Faction4AltBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_bow.img,
@@ -7555,7 +7555,7 @@ cos[Emote.Faction4AltBow] = {
 cos[Emote.Faction4AltSleep] = {
   id: Emote.Faction4AltSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_sleep.img,
@@ -7574,7 +7574,7 @@ cos[Emote.Faction4AltSleep] = {
 cos[Emote.Faction4AltSunglasses] = {
   id: Emote.Faction4AltSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_sunglasses.img,
@@ -7593,7 +7593,7 @@ cos[Emote.Faction4AltSunglasses] = {
 cos[Emote.Faction4AltFrustrated] = {
   id: Emote.Faction4AltFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_frustrated.img,
@@ -7612,7 +7612,7 @@ cos[Emote.Faction4AltFrustrated] = {
 cos[Emote.Faction4AltKiss] = {
   id: Emote.Faction4AltKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_alt_kiss.img,
@@ -7636,7 +7636,7 @@ cos[Emote.Faction4AltKiss] = {
 cos[Emote.Faction5AltTaunt] = {
   id: Emote.Faction5AltTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_taunt.img,
@@ -7655,7 +7655,7 @@ cos[Emote.Faction5AltTaunt] = {
 cos[Emote.Faction5AltHappy] = {
   id: Emote.Faction5AltHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_happy.img,
@@ -7674,7 +7674,7 @@ cos[Emote.Faction5AltHappy] = {
 cos[Emote.Faction5AltAngry] = {
   id: Emote.Faction5AltAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_angry.img,
@@ -7693,7 +7693,7 @@ cos[Emote.Faction5AltAngry] = {
 cos[Emote.Faction5AltConfused] = {
   id: Emote.Faction5AltConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_confused.img,
@@ -7712,7 +7712,7 @@ cos[Emote.Faction5AltConfused] = {
 cos[Emote.Faction5AltFrustrated] = {
   id: Emote.Faction5AltFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_frustrated.img,
@@ -7731,7 +7731,7 @@ cos[Emote.Faction5AltFrustrated] = {
 cos[Emote.Faction5AltSurprised] = {
   id: Emote.Faction5AltSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_surprised.img,
@@ -7750,7 +7750,7 @@ cos[Emote.Faction5AltSurprised] = {
 cos[Emote.Faction5AltBow] = {
   id: Emote.Faction5AltBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_bow.img,
@@ -7769,7 +7769,7 @@ cos[Emote.Faction5AltBow] = {
 cos[Emote.Faction5AltSleep] = {
   id: Emote.Faction5AltSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_sleep.img,
@@ -7788,7 +7788,7 @@ cos[Emote.Faction5AltSleep] = {
 cos[Emote.Faction5AltSunglasses] = {
   id: Emote.Faction5AltSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_sunglasses.img,
@@ -7807,7 +7807,7 @@ cos[Emote.Faction5AltSunglasses] = {
 cos[Emote.Faction5AltSad] = {
   id: Emote.Faction5AltSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_sad.img,
@@ -7826,7 +7826,7 @@ cos[Emote.Faction5AltSad] = {
 cos[Emote.Faction5AltKiss] = {
   id: Emote.Faction5AltKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_alt_kiss.img,
@@ -7850,7 +7850,7 @@ cos[Emote.Faction5AltKiss] = {
 cos[Emote.Faction6AltFrustrated] = {
   id: Emote.Faction6AltFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_frustrated.img,
@@ -7869,7 +7869,7 @@ cos[Emote.Faction6AltFrustrated] = {
 cos[Emote.Faction6AltHappy] = {
   id: Emote.Faction6AltHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_happy.img,
@@ -7888,7 +7888,7 @@ cos[Emote.Faction6AltHappy] = {
 cos[Emote.Faction6AltAngry] = {
   id: Emote.Faction6AltAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_angry.img,
@@ -7907,7 +7907,7 @@ cos[Emote.Faction6AltAngry] = {
 cos[Emote.Faction6AltConfused] = {
   id: Emote.Faction6AltConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_confused.img,
@@ -7926,7 +7926,7 @@ cos[Emote.Faction6AltConfused] = {
 cos[Emote.Faction6AltSad] = {
   id: Emote.Faction6AltSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_sad.img,
@@ -7945,7 +7945,7 @@ cos[Emote.Faction6AltSad] = {
 cos[Emote.Faction6AltSurprised] = {
   id: Emote.Faction6AltSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_surprised.img,
@@ -7964,7 +7964,7 @@ cos[Emote.Faction6AltSurprised] = {
 cos[Emote.Faction6AltBow] = {
   id: Emote.Faction6AltBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_bow.img,
@@ -7983,7 +7983,7 @@ cos[Emote.Faction6AltBow] = {
 cos[Emote.Faction6AltSleep] = {
   id: Emote.Faction6AltSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_sleep.img,
@@ -8002,7 +8002,7 @@ cos[Emote.Faction6AltSleep] = {
 cos[Emote.Faction6AltSunglasses] = {
   id: Emote.Faction6AltSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_sunglasses.img,
@@ -8021,7 +8021,7 @@ cos[Emote.Faction6AltSunglasses] = {
 cos[Emote.Faction6AltTaunt] = {
   id: Emote.Faction6AltTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_taunt.img,
@@ -8040,7 +8040,7 @@ cos[Emote.Faction6AltTaunt] = {
 cos[Emote.Faction6AltKiss] = {
   id: Emote.Faction6AltKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_alt_kiss.img,
@@ -8068,7 +8068,7 @@ cos[Emote.Faction6AltKiss] = {
 cos[Emote.Faction1ThirdTaunt] = {
   id: Emote.Faction1ThirdTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_taunt.img,
@@ -8087,7 +8087,7 @@ cos[Emote.Faction1ThirdTaunt] = {
 cos[Emote.Faction1ThirdAngry] = {
   id: Emote.Faction1ThirdAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_angry.img,
@@ -8106,7 +8106,7 @@ cos[Emote.Faction1ThirdAngry] = {
 cos[Emote.Faction1ThirdConfused] = {
   id: Emote.Faction1ThirdConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_confused.img,
@@ -8124,7 +8124,7 @@ cos[Emote.Faction1ThirdConfused] = {
 cos[Emote.Faction1ThirdSad] = {
   id: Emote.Faction1ThirdSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_sad.img,
@@ -8143,7 +8143,7 @@ cos[Emote.Faction1ThirdSad] = {
 cos[Emote.Faction1ThirdFrustrated] = {
   id: Emote.Faction1ThirdFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_frustrated.img,
@@ -8162,7 +8162,7 @@ cos[Emote.Faction1ThirdFrustrated] = {
 cos[Emote.Faction1ThirdSurprised] = {
   id: Emote.Faction1ThirdSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_surprised.img,
@@ -8181,7 +8181,7 @@ cos[Emote.Faction1ThirdSurprised] = {
 cos[Emote.Faction1ThirdBow] = {
   id: Emote.Faction1ThirdBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_bow.img,
@@ -8200,7 +8200,7 @@ cos[Emote.Faction1ThirdBow] = {
 cos[Emote.Faction1ThirdSleep] = {
   id: Emote.Faction1ThirdSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_sleep.img,
@@ -8219,7 +8219,7 @@ cos[Emote.Faction1ThirdSleep] = {
 cos[Emote.Faction1ThirdSunglasses] = {
   id: Emote.Faction1ThirdSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_sunglasses.img,
@@ -8238,7 +8238,7 @@ cos[Emote.Faction1ThirdSunglasses] = {
 cos[Emote.Faction1ThirdHappy] = {
   id: Emote.Faction1ThirdHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_happy.img,
@@ -8257,7 +8257,7 @@ cos[Emote.Faction1ThirdHappy] = {
 cos[Emote.Faction1ThirdKiss] = {
   id: Emote.Faction1ThirdKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Lyonar",
+  subTypeId: "Valorguard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f1_third_kiss.img,
@@ -8281,7 +8281,7 @@ cos[Emote.Faction1ThirdKiss] = {
 cos[Emote.Faction2ThirdTaunt] = {
   id: Emote.Faction2ThirdTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_taunt.img,
@@ -8300,7 +8300,7 @@ cos[Emote.Faction2ThirdTaunt] = {
 cos[Emote.Faction2ThirdHappy] = {
   id: Emote.Faction2ThirdHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_happy.img,
@@ -8319,7 +8319,7 @@ cos[Emote.Faction2ThirdHappy] = {
 cos[Emote.Faction2ThirdConfused] = {
   id: Emote.Faction2ThirdConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_confused.img,
@@ -8338,7 +8338,7 @@ cos[Emote.Faction2ThirdConfused] = {
 cos[Emote.Faction2ThirdSad] = {
   id: Emote.Faction2ThirdSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_sad.img,
@@ -8357,7 +8357,7 @@ cos[Emote.Faction2ThirdSad] = {
 cos[Emote.Faction2ThirdFrustrated] = {
   id: Emote.Faction2ThirdFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_frustrated.img,
@@ -8376,7 +8376,7 @@ cos[Emote.Faction2ThirdFrustrated] = {
 cos[Emote.Faction2ThirdSurprised] = {
   id: Emote.Faction2ThirdSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_surprised.img,
@@ -8395,7 +8395,7 @@ cos[Emote.Faction2ThirdSurprised] = {
 cos[Emote.Faction2ThirdBow] = {
   id: Emote.Faction2ThirdBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_bow.img,
@@ -8414,7 +8414,7 @@ cos[Emote.Faction2ThirdBow] = {
 cos[Emote.Faction2ThirdSleep] = {
   id: Emote.Faction2ThirdSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_sleep.img,
@@ -8433,7 +8433,7 @@ cos[Emote.Faction2ThirdSleep] = {
 cos[Emote.Faction2ThirdSunglasses] = {
   id: Emote.Faction2ThirdSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_sunglasses.img,
@@ -8452,7 +8452,7 @@ cos[Emote.Faction2ThirdSunglasses] = {
 cos[Emote.Faction2ThirdAngry] = {
   id: Emote.Faction2ThirdAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_angry.img,
@@ -8471,7 +8471,7 @@ cos[Emote.Faction2ThirdAngry] = {
 cos[Emote.Faction2ThirdKiss] = {
   id: Emote.Faction2ThirdKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Songhai",
+  subTypeId: "Sharzy",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f2_third_kiss.img,
@@ -8495,7 +8495,7 @@ cos[Emote.Faction2ThirdKiss] = {
 cos[Emote.Faction3ThirdTaunt] = {
   id: Emote.Faction3ThirdTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_taunt.img,
@@ -8514,7 +8514,7 @@ cos[Emote.Faction3ThirdTaunt] = {
 cos[Emote.Faction3ThirdHappy] = {
   id: Emote.Faction3ThirdHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_happy.img,
@@ -8533,7 +8533,7 @@ cos[Emote.Faction3ThirdHappy] = {
 cos[Emote.Faction3ThirdAngry] = {
   id: Emote.Faction3ThirdAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_angry.img,
@@ -8552,7 +8552,7 @@ cos[Emote.Faction3ThirdAngry] = {
 cos[Emote.Faction3ThirdSad] = {
   id: Emote.Faction3ThirdSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_sad.img,
@@ -8571,7 +8571,7 @@ cos[Emote.Faction3ThirdSad] = {
 cos[Emote.Faction3ThirdFrustrated] = {
   id: Emote.Faction3ThirdFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_frustrated.img,
@@ -8590,7 +8590,7 @@ cos[Emote.Faction3ThirdFrustrated] = {
 cos[Emote.Faction3ThirdSurprised] = {
   id: Emote.Faction3ThirdSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_surprised.img,
@@ -8609,7 +8609,7 @@ cos[Emote.Faction3ThirdSurprised] = {
 cos[Emote.Faction3ThirdBow] = {
   id: Emote.Faction3ThirdBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_bow.img,
@@ -8628,7 +8628,7 @@ cos[Emote.Faction3ThirdBow] = {
 cos[Emote.Faction3ThirdSleep] = {
   id: Emote.Faction3ThirdSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_sleep.img,
@@ -8647,7 +8647,7 @@ cos[Emote.Faction3ThirdSleep] = {
 cos[Emote.Faction3ThirdSunglasses] = {
   id: Emote.Faction3ThirdSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_sunglasses.img,
@@ -8666,7 +8666,7 @@ cos[Emote.Faction3ThirdSunglasses] = {
 cos[Emote.Faction3ThirdConfused] = {
   id: Emote.Faction3ThirdConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_confused.img,
@@ -8685,7 +8685,7 @@ cos[Emote.Faction3ThirdConfused] = {
 cos[Emote.Faction3ThirdKiss] = {
   id: Emote.Faction3ThirdKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vetruvian",
+  subTypeId: "Sandshard",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f3_third_kiss.img,
@@ -8709,7 +8709,7 @@ cos[Emote.Faction3ThirdKiss] = {
 cos[Emote.Faction4ThirdTaunt] = {
   id: Emote.Faction4ThirdTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_taunt.img,
@@ -8728,7 +8728,7 @@ cos[Emote.Faction4ThirdTaunt] = {
 cos[Emote.Faction4ThirdHappy] = {
   id: Emote.Faction4ThirdHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_happy.img,
@@ -8747,7 +8747,7 @@ cos[Emote.Faction4ThirdHappy] = {
 cos[Emote.Faction4ThirdAngry] = {
   id: Emote.Faction4ThirdAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_angry.img,
@@ -8766,7 +8766,7 @@ cos[Emote.Faction4ThirdAngry] = {
 cos[Emote.Faction4ThirdConfused] = {
   id: Emote.Faction4ThirdConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_confused.img,
@@ -8785,7 +8785,7 @@ cos[Emote.Faction4ThirdConfused] = {
 cos[Emote.Faction4ThirdSad] = {
   id: Emote.Faction4ThirdSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_sad.img,
@@ -8804,7 +8804,7 @@ cos[Emote.Faction4ThirdSad] = {
 cos[Emote.Faction4ThirdSurprised] = {
   id: Emote.Faction4ThirdSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_surprised.img,
@@ -8823,7 +8823,7 @@ cos[Emote.Faction4ThirdSurprised] = {
 cos[Emote.Faction4ThirdBow] = {
   id: Emote.Faction4ThirdBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_bow.img,
@@ -8842,7 +8842,7 @@ cos[Emote.Faction4ThirdBow] = {
 cos[Emote.Faction4ThirdSleep] = {
   id: Emote.Faction4ThirdSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_sleep.img,
@@ -8861,7 +8861,7 @@ cos[Emote.Faction4ThirdSleep] = {
 cos[Emote.Faction4ThirdSunglasses] = {
   id: Emote.Faction4ThirdSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_sunglasses.img,
@@ -8880,7 +8880,7 @@ cos[Emote.Faction4ThirdSunglasses] = {
 cos[Emote.Faction4ThirdFrustrated] = {
   id: Emote.Faction4ThirdFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_frustrated.img,
@@ -8899,7 +8899,7 @@ cos[Emote.Faction4ThirdFrustrated] = {
 cos[Emote.Faction4ThirdKiss] = {
   id: Emote.Faction4ThirdKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Abyssian",
+  subTypeId: "Shadowfell",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f4_third_kiss.img,
@@ -8923,7 +8923,7 @@ cos[Emote.Faction4ThirdKiss] = {
 cos[Emote.Faction5ThirdTaunt] = {
   id: Emote.Faction5ThirdTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_taunt.img,
@@ -8942,7 +8942,7 @@ cos[Emote.Faction5ThirdTaunt] = {
 cos[Emote.Faction5ThirdHappy] = {
   id: Emote.Faction5ThirdHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_happy.img,
@@ -8961,7 +8961,7 @@ cos[Emote.Faction5ThirdHappy] = {
 cos[Emote.Faction5ThirdAngry] = {
   id: Emote.Faction5ThirdAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_angry.img,
@@ -8980,7 +8980,7 @@ cos[Emote.Faction5ThirdAngry] = {
 cos[Emote.Faction5ThirdConfused] = {
   id: Emote.Faction5ThirdConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_confused.img,
@@ -8999,7 +8999,7 @@ cos[Emote.Faction5ThirdConfused] = {
 cos[Emote.Faction5ThirdFrustrated] = {
   id: Emote.Faction5ThirdFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_frustrated.img,
@@ -9018,7 +9018,7 @@ cos[Emote.Faction5ThirdFrustrated] = {
 cos[Emote.Faction5ThirdSurprised] = {
   id: Emote.Faction5ThirdSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_surprised.img,
@@ -9037,7 +9037,7 @@ cos[Emote.Faction5ThirdSurprised] = {
 cos[Emote.Faction5ThirdBow] = {
   id: Emote.Faction5ThirdBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_bow.img,
@@ -9056,7 +9056,7 @@ cos[Emote.Faction5ThirdBow] = {
 cos[Emote.Faction5ThirdSleep] = {
   id: Emote.Faction5ThirdSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_sleep.img,
@@ -9075,7 +9075,7 @@ cos[Emote.Faction5ThirdSleep] = {
 cos[Emote.Faction5ThirdSunglasses] = {
   id: Emote.Faction5ThirdSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_sunglasses.img,
@@ -9094,7 +9094,7 @@ cos[Emote.Faction5ThirdSunglasses] = {
 cos[Emote.Faction5ThirdSad] = {
   id: Emote.Faction5ThirdSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_sad.img,
@@ -9113,7 +9113,7 @@ cos[Emote.Faction5ThirdSad] = {
 cos[Emote.Faction5ThirdKiss] = {
   id: Emote.Faction5ThirdKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Magmar",
+  subTypeId: "Earthmaw",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f5_third_kiss.img,
@@ -9137,7 +9137,7 @@ cos[Emote.Faction5ThirdKiss] = {
 cos[Emote.Faction6ThirdFrustrated] = {
   id: Emote.Faction6ThirdFrustrated,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_frustrated.img,
@@ -9156,7 +9156,7 @@ cos[Emote.Faction6ThirdFrustrated] = {
 cos[Emote.Faction6ThirdHappy] = {
   id: Emote.Faction6ThirdHappy,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_happy.img,
@@ -9175,7 +9175,7 @@ cos[Emote.Faction6ThirdHappy] = {
 cos[Emote.Faction6ThirdAngry] = {
   id: Emote.Faction6ThirdAngry,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_angry.img,
@@ -9194,7 +9194,7 @@ cos[Emote.Faction6ThirdAngry] = {
 cos[Emote.Faction6ThirdConfused] = {
   id: Emote.Faction6ThirdConfused,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_confused.img,
@@ -9213,7 +9213,7 @@ cos[Emote.Faction6ThirdConfused] = {
 cos[Emote.Faction6ThirdSad] = {
   id: Emote.Faction6ThirdSad,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_sad.img,
@@ -9232,7 +9232,7 @@ cos[Emote.Faction6ThirdSad] = {
 cos[Emote.Faction6ThirdSurprised] = {
   id: Emote.Faction6ThirdSurprised,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_surprised.img,
@@ -9251,7 +9251,7 @@ cos[Emote.Faction6ThirdSurprised] = {
 cos[Emote.Faction6ThirdBow] = {
   id: Emote.Faction6ThirdBow,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_bow.img,
@@ -9270,7 +9270,7 @@ cos[Emote.Faction6ThirdBow] = {
 cos[Emote.Faction6ThirdSleep] = {
   id: Emote.Faction6ThirdSleep,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_sleep.img,
@@ -9289,7 +9289,7 @@ cos[Emote.Faction6ThirdSleep] = {
 cos[Emote.Faction6ThirdSunglasses] = {
   id: Emote.Faction6ThirdSunglasses,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_sunglasses.img,
@@ -9308,7 +9308,7 @@ cos[Emote.Faction6ThirdSunglasses] = {
 cos[Emote.Faction6ThirdTaunt] = {
   id: Emote.Faction6ThirdTaunt,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_taunt.img,
@@ -9327,7 +9327,7 @@ cos[Emote.Faction6ThirdTaunt] = {
 cos[Emote.Faction6ThirdKiss] = {
   id: Emote.Faction6ThirdKiss,
   typeId: CosmeticsTypeLookup.Emote,
-  subTypeId: "Vanar",
+  subTypeId: "Frostborne",
   enabled: true,
   alwaysVisible: true,
   img: RSX.emote_f6_third_kiss.img,

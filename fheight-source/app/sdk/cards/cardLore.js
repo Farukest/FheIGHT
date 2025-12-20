@@ -757,7 +757,7 @@ l[Cards.Spell.ScionsSecondWish] = {
     "She had language, knew words. But she had not, until that moment, realized the importance of names. Nevertheless, she knew what to say. ‘Give me a name that will please you. A name from the old city.’",
     "At first she could not tell if she had displeased him. Then Zirix nodded. ‘You will be Sajj,’ he said, ‘after a soldier who fell defending the city from invaders in a time long ago and far away. Shards of her sword, pulled out of that past battle, are part of you now.’",
     "‘Sajj,’ she repeated. ‘I will serve you as she served.’",
-    "This time, when he spoke, approval warmed his voice. ‘Then welcome to the Vetruvian Imperium, Sajj.’",
+    "This time, when he spoke, approval warmed his voice. ‘Then welcome to the Sandshard Mech, Sajj.’",
     "She knew then that she would brave anything to further Zirix's ambitions.",
     "[Next Chapter: Staff Of Y\'Kir]"
   ].join("\n\n")
@@ -858,7 +858,7 @@ l[Cards.Artifact.SunstoneBracers] = {
   name: "3: Argeon Highmayne",
   description: "",
   text: [
-    "Lord Highmayne and his two eldest sons were dead, and the city of Windcliffe was deep in mourning. Ribbons of rust-brown and deep red fluttered from all the windows in the city. Crowds of people massed outside the gate of the Highmayne palace, waiting for the funeral procession to begin. Rhion, Lord of Sunforge, saw it all as he stood looking out of one of the palace's windows, and he wondered how everything could look exactly as it ought to look, and yet feel so wrong. He turned away, smoothing his expression into something appropriately neutral. ‘A sad day for the Lyonar Kingdoms,’ he said.",
+    "Lord Highmayne and his two eldest sons were dead, and the city of Windcliffe was deep in mourning. Ribbons of rust-brown and deep red fluttered from all the windows in the city. Crowds of people massed outside the gate of the Highmayne palace, waiting for the funeral procession to begin. Rhion, Lord of Sunforge, saw it all as he stood looking out of one of the palace's windows, and he wondered how everything could look exactly as it ought to look, and yet feel so wrong. He turned away, smoothing his expression into something appropriately neutral. ‘A sad day for the Valorguard Legion,’ he said.",
     "Argeon nodded. He was sitting at the other end of the study, dressed in mourning brown. ‘It is still difficult for me to believe. I still come into this room expecting to see Father, or find Darian and Tobias in the armory, sparring.’",
     "‘I also find it difficult to believe. Those three were cut down, and you, I am told, were without a single wound.’ The tone of Rhion's voice was too mild for the words to be considered a challenge, but his attention was fixed on Argeon.",
     "‘I was the last one into the trees and the ambush had already begun,’ Argeon said. ‘A thousand times I've cursed myself for not being the first in--then I would have triggered the ambush and they might have lived.’",
@@ -883,7 +883,7 @@ l[Cards.Spell.WarSurge] = {
   text: [
     "On other days the coliseum was used for displays of sport or artistic performances, and the crowd buzzed with talk and laughter. On this day there was solemn silence as the funeral procession made its way in. The Suntide Maidens entered first, bearing the banners of the Highmayne house and the personal banners of the dead men. Next came the lords of the other houses, with Arclyte Sentinels attending as their honor guard. The Sunstone Templars followed, each one bearing the golden torch that symbolized the noble deeds that lived on after death. The biers of the dead came next, carried by Silverguard Knights. Last of all rode Argeon, Lord Highmayne.",
     "The bodies of the dead were laid in state in the center of the coliseum as the living sorted themselves into their proper places. Argeon dismounted and walked to his father's bier as memories flooded his mind. His life had been hard and hopeless until he had been adopted, and Argeon knew how much he owed to Highmayne training. Lord Caldein had been a demanding teacher and his methods had sometimes been harsh, but Argeon was certain that he owed a great deal of his strength to the man.",
-    "‘I'm sorry, Father,’ he whispered to the corpse. ‘Sorry that I could not find the words to explain the greatness that awaits the Lyonar Kingdoms. Sorry I could not make you see. Sorry that it came to this.’",
+    "‘I'm sorry, Father,’ he whispered to the corpse. ‘Sorry that I could not find the words to explain the greatness that awaits the Valorguard Legion. Sorry I could not make you see. Sorry that it came to this.’",
     "He opened his mouth to speak again, but no words came. Instead he went to his knees, weeping.",
     "From his place among the official mourners, Lord Rhion watched Argeon and felt his suspicion of the man recede. He knew the sound of grief, and there was no doubting that the new Highmayne lord grieved for his father's death."
   ].join("\n\n")
@@ -926,7 +926,7 @@ l[Cards.Spell.PhoenixFire] = {
     "‘Lady Eventide!’",
     "The messenger approached her with a bow, sneaking a glance at the smoking crater nearby. ‘My lady, we have received an important missive from Starhorn the Seeker.’",
     "Reva’s expression darkened.",
-    "The messenger hesitated, bowing low as to kiss the floor. ‘Starhorn the Seeker claims that the Ghost Tiger has communed with the reincarnation of Kaon Deladriss from the Mists, and that Kaleos Xaan is destined to rule over all of the Songhai Empire, from the Fist of the Four Winds to the Saberspine Mountains.’",
+    "The messenger hesitated, bowing low as to kiss the floor. ‘Starhorn the Seeker claims that the Ghost Tiger has communed with the reincarnation of Kaon Deladriss from the Mists, and that Kaleos Xaan is destined to rule over all of the Sharzy Backblade, from the Fist of the Four Winds to the Saberspine Mountains.’",
     "Reva felt something cold settle in her chest. 'I will meet him at the Temple.'",
     "[To Be Continued]"
   ].join("\n\n")

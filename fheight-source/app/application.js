@@ -2678,12 +2678,12 @@ App._startGame = function() {
       if (opponent == null) { opponent = false; }
       let s = {key: '', text: ''};
       switch (factionId) {
-        case 1: s = {key: 'f1', text: 'Lyonar'}; break;
-        case 2: s = {key: 'f2', text: 'Songhai'}; break;
-        case 3: s = {key: 'f3', text: 'Vetruvian'}; break;
-        case 4: s = {key: 'f4', text: 'Abyssian'}; break;
-        case 5: s = {key: 'f5', text: 'Magmar'}; break;
-        case 6: s = {key: 'f6', text: 'Vanar'}; break;
+        case 1: s = {key: 'f1', text: 'Valorguard'}; break;
+        case 2: s = {key: 'f2', text: 'Sharzy'}; break;
+        case 3: s = {key: 'f3', text: 'Sandshard'}; break;
+        case 4: s = {key: 'f4', text: 'Shadowfell'}; break;
+        case 5: s = {key: 'f5', text: 'Earthmaw'}; break;
+        case 6: s = {key: 'f6', text: 'Frostborne'}; break;
         default: s = {key: 'neutral', text: 'Neutral'};
       }
       if (opponent) {
