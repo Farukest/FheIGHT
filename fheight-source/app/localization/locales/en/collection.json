@@ -26,7 +26,7 @@
 	"unlock_prismatic_crafting_by_leveling_faction_msg":"Unlock prismatic by reaching {{faction_name}} level {{unlocksAtLevel}}.",
 	"unlock_general_by_leveling_msg": "Unlock 1 copy by reaching {{faction_name}} level {{level}}.",
 	"unlock_card_by_leveling_msg": "Unlock 3 copies by reaching {{faction_name}} level {{level}}.",
-	"unlock_through_spirit_orbs_msg": "Unlockable only through {{card_set_name}} Spirit Orbs.",
+	"unlock_through_spirit_orbs_msg": "Unlockable only through {{card_set_name}} Morphic Marbles.",
 	"unlock_faction_msg": "Unlock {{faction_name}} by defeating them in a Practice Game.",
 
 	"cannot_craft_prismatic_achievement_cards_yet_msg": "You cannot craft or disenchant prismatic achievement cards until you've earned the achievement.",

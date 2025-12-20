@@ -11,7 +11,7 @@ class MidNov2017LoginAchievement extends Achievement {
   static initClass() {
     this.id = "midNov2017LoginAchievement";
     this.title = "Immortal Vanguard Expansion Launch";
-    this.description = "Enjoy 3 Immortal Vanguard Spirit Orbs to kickstart your collection!";
+    this.description = "Enjoy 3 Immortal Vanguard Morphic Marbles to kickstart your collection!";
     this.progressRequired = 1;
     this.rewards =
       {giftChests: [GiftCrateLookup.MidNovember2017Login]};

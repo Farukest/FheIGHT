@@ -535,31 +535,55 @@ var InventoryManager = Manager.extend({
         });
 
         request.done(function (response) {
-          if (response && response.cards) {
-            var rarityIds = _.map(response.cards, function (cardId) {
-              var sdkCard = SDK.CardFactory.cardForIdentifier(cardId, SDK.GameSession.current());
-              return sdkCard.getRarityId();
-            });
-            rarityIds = rarityIds.sort();
-            var spiritValue = _.reduce(rarityIds, function (memo, rarityId) {
-              return memo + SDK.RarityFactory.rarityForIdentifier(rarityId).spiritCost;
-            }, 0);
-            var raritySplit = JSON.stringify(rarityIds);
+          console.log('DEBUG unlockBoosterPack response:', response);
+          try {
+            if (response && response.cards) {
+              var rarityIds = _.map(response.cards, function (cardId) {
+                var gameSession = SDK.GameSession.current();
+                var sdkCard = SDK.CardFactory.cardForIdentifier(cardId, gameSession);
+                if (!sdkCard) {
+                  console.error('DEBUG unlockBoosterPack - sdkCard is null for cardId:', cardId);
+                  return 1; // default rarity
+                }
+                return sdkCard.getRarityId();
+              });
+              rarityIds = rarityIds.sort();
+              var spiritValue = _.reduce(rarityIds, function (memo, rarityId) {
+                var rarity = SDK.RarityFactory.rarityForIdentifier(rarityId);
+                return memo + (rarity ? rarity.spiritCost : 0);
+              }, 0);
+              var raritySplit = JSON.stringify(rarityIds);
 
-            var isFirst = 0;
-            if (NewPlayerManager.getInstance().getHasOpenedSpiritOrb()) {
-              isFirst = 1;
+              var isFirst = 0;
+              try {
+                if (NewPlayerManager.getInstance().getHasOpenedSpiritOrb()) {
+                  isFirst = 1;
+                }
+              } catch (e) {
+                console.error('DEBUG getHasOpenedSpiritOrb error:', e);
+              }
+
+              try {
+                Analytics.track('opened spirit orb', {
+                  category: Analytics.EventCategory.SpiritOrbs,
+                  rarity_split: raritySplit,
+                  spirit_value: spiritValue,
+                  is_first: isFirst,
+                });
+              } catch (e) {
+                console.error('DEBUG Analytics.track error:', e);
+              }
             }
 
-            Analytics.track('opened spirit orb', {
-              category: Analytics.EventCategory.SpiritOrbs,
-              rarity_split: raritySplit,
-              spirit_value: spiritValue,
-              is_first: isFirst,
-            });
+            try {
+              NewPlayerManager.getInstance().setHasOpenedSpiritOrb(true);
+            } catch (e) {
+              console.error('DEBUG setHasOpenedSpiritOrb error:', e);
+            }
+          } catch (e) {
+            console.error('DEBUG unlockBoosterPack general error:', e);
           }
 
-          NewPlayerManager.getInstance().setHasOpenedSpiritOrb(true);
           resolve(response);
         });
 

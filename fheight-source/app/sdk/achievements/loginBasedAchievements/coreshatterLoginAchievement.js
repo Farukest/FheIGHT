@@ -12,7 +12,7 @@ class CoreshatterLoginAchievement extends Achievement {
   static initClass() {
     this.id = "coreshatterLoginAchievement";
     this.title = "Trials of Mythron Expansion Launch";
-    this.description = "Enjoy 3 Trials of Mythron Spirit Orbs to kickstart your collection!";
+    this.description = "Enjoy 3 Trials of Mythron Morphic Marbles to kickstart your collection!";
     this.progressRequired = 1;
     this.rewards =
       {giftChests: [GiftCrateLookup.CoreshatterLogin]};

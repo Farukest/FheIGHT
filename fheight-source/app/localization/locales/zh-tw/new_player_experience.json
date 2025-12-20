@@ -6,9 +6,9 @@
 	"play_mode_unlock_message": "Complete Starter Quests to unlock.",
 	"play_mode_gauntlet_unlock_message": "Reach Level 10 with any Faction to unlock.",
 	"play_mode_unlock_game_count_message": "Play {{game_count}} more Season Games to unlock.",
-	"highlight_open_spirit_orbs_popover": "Open Spirit Orbs to unlock new cards for your Collection.",
+	"highlight_open_spirit_orbs_popover": "Open Morphic Marbles to unlock new cards for your Collection.",
 	"new_quests_popover": "New Quests",
-	"buy_spirit_orb": "Get Spirit Orb",
+	"buy_spirit_orb": "Get Morphic Marble",
 	"new_shop_special_available_popover": "New Special",
 
 	"faction_unlocked_title": "Faction Unlocked",

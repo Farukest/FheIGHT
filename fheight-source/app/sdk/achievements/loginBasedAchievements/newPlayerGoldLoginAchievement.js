@@ -11,7 +11,7 @@ class NewPlayerGoldLoginAchievement extends Achievement {
   static initClass() {
     this.id = "newPlayerGoldLoginAchievement";
     this.title = "Welcome to FHEIGHT!";
-    this.description = "Use Gold to buy Spirit Orbs.";
+    this.description = "Use Gold to buy Morphic Marbles.";
     this.progressRequired = 1;
     this.rewards =
       {gold: 2500};

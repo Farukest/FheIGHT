@@ -11,7 +11,7 @@ class MidAugLoginAchievement extends Achievement {
   static initClass() {
     this.id = "midAugLoginAchievement";
     this.title = "Thanks for playing FHEIGHT";
-    this.description = "Enjoy 3 Unearthed Prophecy Spirit Orbs on us for being a great community!";
+    this.description = "Enjoy 3 Unearthed Prophecy Morphic Marbles on us for being a great community!";
     this.progressRequired = 1;
     this.rewards =
       {giftChests: [GiftCrateLookup.MidAugust2017Login]};

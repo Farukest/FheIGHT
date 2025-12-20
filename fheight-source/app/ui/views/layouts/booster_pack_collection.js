@@ -282,9 +282,14 @@ var BoosterPackCollectionLayout = Backbone.Marionette.LayoutView.extend({
       var animateUnlockPromise;
       var scene = Scene.getInstance();
       var boosterLayer = scene && scene.getContent();
+      console.log('DEBUG booster_pack_collection - scene:', scene);
+      console.log('DEBUG booster_pack_collection - boosterLayer:', boosterLayer);
+      console.log('DEBUG booster_pack_collection - instanceof BoosterPackOpeningLayer:', boosterLayer instanceof BoosterPackOpeningLayer);
       if (boosterLayer instanceof BoosterPackOpeningLayer) {
+        console.log('DEBUG booster_pack_collection - calling showUnlockPack');
         animateUnlockPromise = boosterLayer.showUnlockPack();
       } else {
+        console.log('DEBUG booster_pack_collection - NOT BoosterPackOpeningLayer, skipping animation');
         animateUnlockPromise = Promise.resolve();
       }
 
@@ -371,12 +376,18 @@ var BoosterPackCollectionLayout = Backbone.Marionette.LayoutView.extend({
         // reveal contents of pack
         var scene = Scene.getInstance();
         var boosterLayer = scene && scene.getContent();
+        console.log('DEBUG showRevealPack - unlockedBoosterPackCards:', unlockedBoosterPackCards);
+        console.log('DEBUG showRevealPack - boosterLayer:', boosterLayer);
+        console.log('DEBUG showRevealPack - instanceof:', boosterLayer instanceof BoosterPackOpeningLayer);
         if (boosterLayer instanceof BoosterPackOpeningLayer) {
+          console.log('DEBUG showRevealPack - calling showRevealPack with cards');
           boosterLayer.showRevealPack(unlockedBoosterPackCards).then(function () {
             // unlock booster packs and navigation
             this.setLocked(false);
             NavigationManager.getInstance().requestUserTriggeredNavigationUnlocked(this._userNavLockId);
           }.bind(this));
+        } else {
+          console.log('DEBUG showRevealPack - NOT calling showRevealPack, layer not ready');
         }
       }.bind(this));
     }

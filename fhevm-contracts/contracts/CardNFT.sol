@@ -6,7 +6,7 @@ import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title CardNFT - Card Collection NFTs for FHEIGHT Game
-/// @notice NFT contract for game cards obtained from Spirit Orbs
+/// @notice NFT contract for game cards obtained from Morphic Marbles
 /// @dev Cards have rarity, cardId (type), and prismatic status
 contract CardNFT is ERC721Enumerable, Ownable {
     // ============ Constants ============
@@ -42,7 +42,7 @@ contract CardNFT is ERC721Enumerable, Ownable {
     // Card data for each token
     mapping(uint256 => CardData) public cards;
 
-    // Authorized minters (SpiritOrb contract)
+    // Authorized minters (MorphicMarble contract)
     mapping(address => bool) public minters;
 
     // Base URI for metadata
@@ -121,7 +121,7 @@ contract CardNFT is ERC721Enumerable, Ownable {
 
     // ============ Minting Functions ============
 
-    /// @notice Mint a card with specific rarity (called by SpiritOrb)
+    /// @notice Mint a card with specific rarity (called by MorphicMarble)
     /// @param to Recipient address
     /// @param rarity Card rarity
     /// @return tokenId The minted token ID

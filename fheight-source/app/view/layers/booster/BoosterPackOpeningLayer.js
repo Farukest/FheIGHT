@@ -623,11 +623,17 @@ const BoosterPackOpeningLayer = FXCompositeLayer.extend({
    * @returns {Promise}
    */
   showRevealPack(cardIds) {
+    console.log('DEBUG BoosterPackOpeningLayer.showRevealPack - cardIds:', cardIds);
     const revealPromise = new Promise((resolve, reject) => {
       this._whenRevealResolve = resolve;
 
       this.whenRequiredResourcesReady().then((requestId) => {
-        if (!this.getAreResourcesValid(requestId)) return; // resources invalidated/unloaded
+        console.log('DEBUG showRevealPack - resources ready, requestId:', requestId);
+        if (!this.getAreResourcesValid(requestId)) {
+          console.log('DEBUG showRevealPack - resources INVALID, returning');
+          return; // resources invalidated/unloaded
+        }
+        console.log('DEBUG showRevealPack - resources valid, continuing');
 
         // randomize pack before showing
         this._cardCountsById = _.countBy(cardIds, (cardId) => cardId);
@@ -731,18 +737,21 @@ const BoosterPackOpeningLayer = FXCompositeLayer.extend({
             this.innerLayer.addChild(explosionParticles);
 
             // reveal each card in the pack
+            console.log('DEBUG showRevealPack - revealing cards, count:', cardIds.length);
             const unlockCardPromises = [];
             for (let i = 0; i < cardIds.length; i++) {
+              console.log('DEBUG showRevealPack - calling _showCardMoveAndReveal for card:', cardIds[i], 'index:', i);
               unlockCardPromises.push(this._showCardMoveAndReveal(cardIds[i], i));
             }
 
             // when all cards revealed
             Promise.all(unlockCardPromises).then(() => {
+              console.log('DEBUG showRevealPack - all cards revealed!');
               this._unlocking = false;
               this._opened = true;
               resolve();
             }).catch((error) => {
-              console.error(error);
+              console.error('DEBUG showRevealPack - error revealing cards:', error);
               throw error;
             });
           }),
@@ -900,7 +909,10 @@ const BoosterPackOpeningLayer = FXCompositeLayer.extend({
     audio_engine.current().play_effect(RSX[`sfx_loot_crate_card_reward_reveal_${index}`].audio, false);
 
     // show card reveal
-    const sdkCard = SDK.CardFactory.cardForIdentifier(cardId, SDK.GameSession.getInstance());
+    const gameSession = SDK.GameSession.getInstance();
+    console.log('DEBUG _showCardReveal - cardId:', cardId, 'gameSession:', gameSession);
+    const sdkCard = SDK.CardFactory.cardForIdentifier(cardId, gameSession);
+    console.log('DEBUG _showCardReveal - sdkCard:', sdkCard);
     const showRevealPromise = cardNode.showReveal(sdkCard, sourceScreenPosition, null, 0.0);
 
     if (cardCount > 1) {

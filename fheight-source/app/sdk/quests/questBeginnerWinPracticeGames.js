@@ -17,7 +17,7 @@ class QuestBeginnerWinPracticeGames extends QuestBeginner {
     this.Identifier = 9901;
     this.prototype.spiritOrbsReward = 1;
     this.prototype.goldReward = null;
-     // Awards a Spirit Orb instead of Gold. Adding gold messes up the UI.
+     // Awards a Morphic Marble instead of Gold. Adding gold messes up the UI.
   }
 
   constructor(){

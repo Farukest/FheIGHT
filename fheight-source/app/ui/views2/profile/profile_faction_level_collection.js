@@ -81,7 +81,7 @@ var ProfileFactionLevelCollectionView = Backbone.Marionette.ItemView.extend({
             }
           }
           if (rewardData.booster_packs) {
-            v.next_reward_description = rewardData.booster_packs + ' Spirit Orb(s)';
+            v.next_reward_description = rewardData.booster_packs + ' Morphic Marble(s)';
           }
           if (rewardData.emotes) {
             v.next_reward_description = 'Faction Emote';

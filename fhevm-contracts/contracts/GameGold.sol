@@ -6,7 +6,7 @@ import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title GameGold - In-game Currency for FHEIGHT
-/// @notice ERC20 token used for purchasing Spirit Orbs and other in-game items
+/// @notice ERC20 token used for purchasing Morphic Marbles and other in-game items
 /// @dev Standard ERC20 with mint/burn capabilities for game economy management
 contract GameGold is ERC20, ERC20Burnable, Ownable {
     // ============ Constants ============

@@ -35,7 +35,8 @@ const MotionStreakRingNode = cc.Node.extend({
         this.addChild(node);
         this._guideNodes.push(node);
         node.setOpacity(0);
-        streak.setOpacity(0);
+        // cc.MotionStreak doesn't support setOpacity, skip it
+        // streak.setOpacity(0);
         streak.setBlendFunc(cc.SRC_ALPHA, cc.ONE);
       }
     });
@@ -133,10 +134,11 @@ const MotionStreakRingNode = cc.Node.extend({
     streak.setPosition(sourcePoint);
     let sequence = [cc.delayTime(i * 0.1)];
 
-    streak.runAction(cc.sequence(
-      cc.delayTime(i * 0.1),
-      cc.fadeIn(0.2),
-    ));
+    // cc.MotionStreak doesn't support opacity actions, skip fadeIn
+    // streak.runAction(cc.sequence(
+    //   cc.delayTime(i * 0.1),
+    //   cc.fadeIn(0.2),
+    // ));
 
     for (var j = 0; j < 4; j++) {
       var p = motionPoints[j];

@@ -1,6 +1,13 @@
 /* ---------- DECK SELECT ---------- */
 .deck-select {
 	@extend .panel;
+
+	// Starter deck ve custom deck choices background
+	.sliding-panel-select-choices .choices {
+		background: rgba(30, 30, 40, 0.82);
+		border-radius: 65px 0px 0px 18px;
+	}
+
 	.popover {
 		text-align: center;
 		&.top {

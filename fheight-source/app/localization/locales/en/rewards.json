@@ -3,7 +3,7 @@
 	"card_reward_subtitle": "{{card_count}}/{{total}} {{factionName}} cards unlocked",
 	"generic_reward_title": "You earned a reward!",
 
-	"spirit_orb_reward_info": "Open Spirit Orbs to earn new units and spells",
+	"spirit_orb_reward_info": "Open Morphic Marbles to earn new units and spells",
 
 	"quest_complete_title": "Quest Complete: {{quest_name}}",
 	"quest_reward_gift_crate_title": "FREE Gift Crate for completing the {{quest_name}} quest",
@@ -12,7 +12,7 @@
 
 	"spirit_for_faction_lvl_reward_message": "You've earned {{spirit}} SPIRIT for reaching {{faction_name}} level {{level}}",
 	"gold_for_faction_lvl_reward_message": "You've earned {{gold}} Gold for reaching {{faction_name}} level {{level}}",
-	"orb_for_faction_lvl_reward_message": "You've earned a SPIRIT ORB for reaching {{faction_name}} level {{level}}",
+	"orb_for_faction_lvl_reward_message": "You've earned a MORPHIC MARBLE for reaching {{faction_name}} level {{level}}",
 
 	"3_win_gold_reward_title": "3 wins reward",
 	"3_win_gold_reward_message": "You've earned {{gold_amount}} Gold for winning 3 games",
@@ -25,7 +25,7 @@
 	"first_10_games_reward_title": "10 Games Played Reward",
 	"first_10_games_reward_message": "You've earned {{gold_amount}} Gold for playing 10 full games",
 	"boss_defeated_reward_title": "BOSS DEFEATED",
-	"boss_defeated_reward_message": "+1 SPIRIT ORB for defeating the Boss for the first time",
+	"boss_defeated_reward_message": "+1 MORPHIC MARBLE for defeating the Boss for the first time",
 
 	"multi_mystery_crate": "You've won {{numCrates}} Mystery Crates!",
 	"one_mystery_crate": "You've won a {{crateName}} Crate!",
