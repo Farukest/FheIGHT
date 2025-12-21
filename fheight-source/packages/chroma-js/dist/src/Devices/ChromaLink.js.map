@@ -1,0 +1,1 @@
+{"version":3,"file":"ChromaLink.js","sourceRoot":"","sources":["../../../src/Devices/ChromaLink.ts"],"names":[],"mappings":";;AACA,iCAAgC;AAEhC,MAAqB,UAAW,SAAQ,cAAU;IAC9C;QACI,KAAK,EAAE,CAAC;QACR,IAAI,CAAC,MAAM,GAAG,YAAY,CAAC;QAC3B,IAAI,CAAC,QAAQ,GAAG,CAAC,aAAa,EAAE,eAAe,EAAE,eAAe,CAAC,CAAC;IACtE,CAAC;CACJ;AAND,6BAMC"}

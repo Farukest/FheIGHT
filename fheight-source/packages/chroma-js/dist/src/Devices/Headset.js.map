@@ -1,0 +1,1 @@
+{"version":3,"file":"Headset.js","sourceRoot":"","sources":["../../../src/Devices/Headset.ts"],"names":[],"mappings":";;AACA,iCAAgC;AAEhC,MAAqB,OAAQ,SAAQ,cAAU;IAC3C;QACI,KAAK,EAAE,CAAC;QACR,IAAI,CAAC,MAAM,GAAG,SAAS,CAAC;QACxB,IAAI,CAAC,QAAQ,GAAG,CAAC,aAAa,EAAE,eAAe,EAAE,eAAe,CAAC,CAAC;IACtE,CAAC;CACJ;AAND,0BAMC"}
