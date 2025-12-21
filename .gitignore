@@ -254,9 +254,10 @@ fhevm-contracts/coverage/
 fhevm-contracts/dist/
 
 # ===== DOCUMENTATION (Tracked in docs/ but ignored from root) =====
-# All .md files except README.md
+# All .md files except README.md and docs/
 *.md
 !README.md
+!docs/*.md
 
 
 # Zama reference documents
