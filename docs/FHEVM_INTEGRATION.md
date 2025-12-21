@@ -31,36 +31,42 @@ Complete technical documentation for Fully Homomorphic Encryption integration in
 |                              FHEIGHT FHE ARCHITECTURE                             |
 +-----------------------------------------------------------------------------------+
 |                                                                                   |
-|  +-------------+     +-------------+     +-------------+     +-------------+      |
-|  |   CLIENT    |     |   SERVER    |     | BLOCKCHAIN  |     |   ZAMA      |      |
-|  | (Browser)   |     | (Node.js)   |     |  (Sepolia)  |     |  (Gateway)  |      |
-|  +------+------+     +------+------+     +------+------+     +------+------+      |
-|         |                   |                   |                   |             |
-|         |                   |                   |                   |             |
-|  +------v------+     +------v------+     +------v------+     +------v------+      |
-|  |fheGameSession|    |game.coffee |     |GameSession  |     | KMS         |      |
-|  |   .js       |     |single_player|    |   .sol      |     | Threshold   |      |
-|  |             |     |  .coffee   |     |             |     | Decrypt     |      |
-|  +------+------+     +------+------+     +------+------+     +------+------+      |
+|  +-------------+       +-------------+     +-------------+     +-------------+    |
+|  |   CLIENT    |       |   SERVER    |     | BLOCKCHAIN  |     |   ZAMA      |    |
+|  | (Browser)   |       | (Node.js)   |     |  (Sepolia)  |     |  (Gateway)  |    |
+|  +------+------+       +------+------+     +------+------+     +------+------+    |
+|         |                     |                   |                   |           |
+|         |                     |                   |                   |           |
+|         v                     v                   v                   v           |
+|  +---------------+     +-------------+     +-------------+     +-------------+    |
+|  |fheGameSession |     |game.coffee  |     |GameSession  |     | KMS         |    |
+|  |   .js         |     |single_player|     |   .sol      |     | Threshold   |    |
+|  |               |     |  .coffee    |     |             |     | Decrypt     |    |
+|  +------+--------+     +------+------+     +------+------+     +------+------+    |
 |         |                   |                   |                   |             |
 |         |                   |                   |                   |             |
 |         |   1. Create Game  |                   |                   |             |
-|         +--------------------------------------------->              |             |
+|         +-------------------------------------->|                   |             |
+|         |                   |                   |                   |             |
 |         |                   |                   |                   |             |
 |         |                   |     2. 40x FHE.randEuint8()           |             |
 |         |                   |                   +------------------>|             |
 |         |                   |                   |                   |             |
 |         |   3. getDrawHandles                   |                   |             |
-|         +--------------------------------------------->              |             |
+|         +-------------------------------------->|                   |             |
+|         |                   |                   |                   |             |
 |         |                   |                   |                   |             |
 |         |   4. publicDecrypt                    |                   |             |
-|         +--------------------------------------------------------------------->   |
+|         +---------------------------------------------------------->|             |
+|         |                   |                   |                   |             |
 |         |                   |                   |                   |             |
 |         |                   |                   |   5. Decrypt      |             |
 |         |                   |                   |<------------------+             |
 |         |                   |                   |                   |             |
+|         |                   |                   |                   |             |
 |         |   6. revealDrawBatch (with proof)     |                   |             |
-|         +--------------------------------------------->              |             |
+|         +-------------------------------------->|                   |             |
+|         |                   |                   |                   |             |
 |         |                   |                   |                   |             |
 |         |                   |     7. FHE.checkSignatures()          |             |
 |         |                   |                   +                   |             |
@@ -68,16 +74,21 @@ Complete technical documentation for Fully Homomorphic Encryption integration in
 |         |   8. Notify server|                   |                   |             |
 |         +------------------>|                   |                   |             |
 |         |                   |                   |                   |             |
+|         |                   |                   |                   |             |
 |         |                   |   9. getVerifiedDrawOrder()           |             |
 |         |                   +------------------>|                   |             |
+|         |                   |                   |                   |             |
 |         |                   |                   |                   |             |
 |         |                   |<------------------+                   |             |
 |         |                   |  10. Verified indices                 |             |
 |         |                   |                   |                   |             |
+|         |                   |                   |                   |             |
 |         |  11. Apply cards  |                   |                   |             |
 |         |<------------------+                   |                   |             |
 |         |                   |                   |                   |             |
-|  +------v------+     +------v------+     +------v------+     +------v------+      |
+|         |                   |                   |                   |             |
+|         v                   v                   v                   v             |
+|  +-------------+     +-------------+     +-------------+     +-------------+      |
 |  | Game plays  |     | Coordinates |     | Stores all  |     | Decrypts    |      |
 |  | with cards  |     | game state  |     | randoms     |     | on request  |      |
 |  +-------------+     +-------------+     +-------------+     +-------------+      |
@@ -210,6 +221,7 @@ The FHE session stores the Zama reencryption keypair - a ML-KEM keypair generate
 
 ```
 GENERATION --> SIGNATURE --> ENCRYPTION --> STORAGE --> RECOVERY
+     |              |             |             |            |
      |              |             |             |            |
      |              |             |             |            |
 fhevmjs.       MetaMask      PIN input    LocalStorage   Game start
@@ -1504,18 +1516,24 @@ Boss Battle uses the same FHE system as Single Player with different AI configur
 
 ```
 deck_select_boss_battle.js: getConfirmSelectionEvent()
+    |
     |-- return EVENTS.start_boss_battle
+    |
     v
 application.js: _startBossBattleGame()
+    |
     |-- if (CONFIG.fheEnabled)
     |       _startBossBattleGameFHE()
+    |      
     v
 _startBossBattleGameFHE():
+    |
     |-- Wallet.connect()
     |-- FHE.GameMode.initialize()
     |-- createSinglePlayerGame()  // SAME blockchain function
     |-- POST /api/me/games/boss_battle
     |       { fhe_enabled: true, fhe_game_id: gameId }
+    |       
     v
 Server:
     |-- gameSetupOptions.fheEnabled = true
