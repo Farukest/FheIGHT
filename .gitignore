@@ -216,6 +216,8 @@ fheight-source/.gulp-cache/
 # Environment files
 fheight-source/.env
 fheight-source/config/local.json
+fheight-source/config/production.json
+fheight-source/config/development.json
 
 # Log files
 fheight-source/*.log
