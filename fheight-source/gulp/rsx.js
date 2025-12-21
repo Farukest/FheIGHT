@@ -61,7 +61,7 @@ export function copy() {
   paths = _.uniq(paths);
   // paths.forEach(path => gutil.log(gutil.colors.bgMagenta.white(path)))
   gutil.log(gutil.colors.magenta(`${paths.length} paths being copied for packaging`));
-  return gulp.src(paths, { base: 'app' })
+  return gulp.src(paths, { base: 'app', allowEmpty: true })
     .pipe(gulp.dest('dist/src'));
 }
 
