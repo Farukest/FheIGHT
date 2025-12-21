@@ -220,6 +220,9 @@ fheight-source/config/local.json
 fheight-source/config/production.json
 fheight-source/config/development.json
 
+# Local dev scripts
+start-servers.ps1
+
 # Log files
 fheight-source/*.log
 
