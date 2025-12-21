@@ -112,6 +112,18 @@ Each Turn Draw (1 card):
          --> Contract.getDrawHandles(1) --> Zama.publicDecrypt()
          --> Contract.revealDrawBatch() --> Server --> Apply card
 
+Replace Card (manual or ability):
+  Client --> Contract.getDrawHandles(1) --> Zama.publicDecrypt()
+         --> Contract.revealDrawBatch() --> Server --> Remove old, Apply new
+
+Draw Card Ability (Spelljammer, Blaze Hound, etc.):
+  Ability triggers --> Contract.getDrawHandles(N) --> Zama.publicDecrypt()
+         --> Contract.revealDrawBatch() --> Server --> Apply N cards to hand
+
+Random Card from Pool (Dying Wish, transform effects):
+  Ability triggers --> Contract.getDrawHandles(1) --> Zama.publicDecrypt()
+         --> Contract.revealDrawBatch() --> Server --> Filter pool, Apply card
+
 Marble Opening (5 cards):
   Client --> Contract.drawRandoms() --> 15x FHE.randEuint8()
          --> Zama.publicDecrypt() --> Contract.revealRandoms()
