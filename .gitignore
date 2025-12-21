@@ -245,3 +245,14 @@ fhevm-contracts/fhevmTemp/
 fhevm-contracts/node_modules/
 fhevm-contracts/coverage/
 fhevm-contracts/dist/
+
+# ===== DOCUMENTATION (Tracked in docs/ but ignored from root) =====
+# All .md files except README.md
+*.md
+!README.md
+
+# docs folder (will be on GitHub but ignored from tracking)
+docs/
+
+# Zama reference documents
+document/
