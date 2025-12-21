@@ -14,6 +14,11 @@ This is a production-ready fhEVM implementation showcasing encrypted tactical ga
 
 **Game Features Guide:** [GAME_FEATURES.md](./docs/GAME_FEATURES.md) - Complete guide on play modes, social features, collection system, quests, codex lore, and all customization options.
 
+
+### GAME PREVIEW
+
+<img width="1176" height="671" alt="YOUTUBE2" src="https://github.com/user-attachments/assets/fb2aa3d7-ca08-457f-8087-2c98f01fbb5c" />
+
 ---
 
 ## Table of Contents
