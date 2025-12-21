@@ -24,6 +24,91 @@ Complete technical documentation for Fully Homomorphic Encryption integration in
 
 ---
 
+## System Architecture Overview
+
+```
++-----------------------------------------------------------------------------------+
+|                              FHEIGHT FHE ARCHITECTURE                             |
++-----------------------------------------------------------------------------------+
+|                                                                                   |
+|  +-------------+     +-------------+     +-------------+     +-------------+      |
+|  |   CLIENT    |     |   SERVER    |     | BLOCKCHAIN  |     |   ZAMA      |      |
+|  | (Browser)   |     | (Node.js)   |     |  (Sepolia)  |     |  (Gateway)  |      |
+|  +------+------+     +------+------+     +------+------+     +------+------+      |
+|         |                   |                   |                   |             |
+|         |                   |                   |                   |             |
+|  +------v------+     +------v------+     +------v------+     +------v------+      |
+|  |fheGameSession|    |game.coffee |     |GameSession  |     | KMS         |      |
+|  |   .js       |     |single_player|    |   .sol      |     | Threshold   |      |
+|  |             |     |  .coffee   |     |             |     | Decrypt     |      |
+|  +------+------+     +------+------+     +------+------+     +------+------+      |
+|         |                   |                   |                   |             |
+|         |                   |                   |                   |             |
+|         |   1. Create Game  |                   |                   |             |
+|         +--------------------------------------------->              |             |
+|         |                   |                   |                   |             |
+|         |                   |     2. 40x FHE.randEuint8()           |             |
+|         |                   |                   +------------------>|             |
+|         |                   |                   |                   |             |
+|         |   3. getDrawHandles                   |                   |             |
+|         +--------------------------------------------->              |             |
+|         |                   |                   |                   |             |
+|         |   4. publicDecrypt                    |                   |             |
+|         +--------------------------------------------------------------------->   |
+|         |                   |                   |                   |             |
+|         |                   |                   |   5. Decrypt      |             |
+|         |                   |                   |<------------------+             |
+|         |                   |                   |                   |             |
+|         |   6. revealDrawBatch (with proof)     |                   |             |
+|         +--------------------------------------------->              |             |
+|         |                   |                   |                   |             |
+|         |                   |     7. FHE.checkSignatures()          |             |
+|         |                   |                   +                   |             |
+|         |                   |                   |                   |             |
+|         |   8. Notify server|                   |                   |             |
+|         +------------------>|                   |                   |             |
+|         |                   |                   |                   |             |
+|         |                   |   9. getVerifiedDrawOrder()           |             |
+|         |                   +------------------>|                   |             |
+|         |                   |                   |                   |             |
+|         |                   |<------------------+                   |             |
+|         |                   |  10. Verified indices                 |             |
+|         |                   |                   |                   |             |
+|         |  11. Apply cards  |                   |                   |             |
+|         |<------------------+                   |                   |             |
+|         |                   |                   |                   |             |
+|  +------v------+     +------v------+     +------v------+     +------v------+      |
+|  | Game plays  |     | Coordinates |     | Stores all  |     | Decrypts    |      |
+|  | with cards  |     | game state  |     | randoms     |     | on request  |      |
+|  +-------------+     +-------------+     +-------------+     +-------------+      |
+|                                                                                   |
++-----------------------------------------------------------------------------------+
+```
+
+### Data Flow Summary
+
+```
+Game Creation:
+  Client --> Contract.createSinglePlayerGame() --> 40x FHE.randEuint8()
+
+Initial Hand (5 cards):
+  Client --> Contract.getDrawHandles(5) --> Zama.publicDecrypt()
+         --> Contract.revealDrawBatch() --> FHE.checkSignatures()
+         --> Server --> Contract.getVerifiedDrawOrder() --> Apply cards
+
+Each Turn Draw (1 card):
+  Client --> Contract.incrementTurn()
+         --> Contract.getDrawHandles(1) --> Zama.publicDecrypt()
+         --> Contract.revealDrawBatch() --> Server --> Apply card
+
+Marble Opening (5 cards):
+  Client --> Contract.drawRandoms() --> 15x FHE.randEuint8()
+         --> Zama.publicDecrypt() --> Contract.revealRandoms()
+         --> Server --> Contract.getVerifiedRandoms() --> Calculate cards
+```
+
+---
+
 ## 1. File References
 
 ### Client Files
@@ -181,6 +266,54 @@ localStorage['fheight_fhe_session'] = {
 
 The FHE client (fhevmjs) handles encrypted operations with Zama Gateway.
 
+### SDK Instance Creation (fheGameSession.js)
+
+```javascript
+// fheGameSession.js - _getFhevmInstance()
+FHEGameSession.prototype._getFhevmInstance = function() {
+  var self = this;
+
+  return new Promise(function(resolve, reject) {
+    if (self._fhevmInstance) {
+      resolve(self._fhevmInstance);
+      return;
+    }
+
+    var sdk = window.relayerSDK || window.fhevm;
+    if (!sdk || typeof sdk.createInstance !== 'function') {
+      reject(new Error('FHEVM SDK not available'));
+      return;
+    }
+
+    var initPromise = (typeof sdk.initSDK === 'function')
+      ? sdk.initSDK()
+      : Promise.resolve();
+
+    initPromise
+      .then(function() {
+        var config = {
+          aclContractAddress: '0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D',
+          kmsContractAddress: '0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A',
+          inputVerifierContractAddress: '0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0',
+          verifyingContractAddressDecryption: '0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478',
+          verifyingContractAddressInputVerification: '0x483b9dE06E4E4C7D35CCf5837A1668487406D955',
+          chainId: Wallet.getActiveChainId(),
+          gatewayChainId: 10901,
+          network: Wallet.getActiveRpcUrl(),
+          relayerUrl: 'https://relayer.testnet.zama.org'
+        };
+
+        return sdk.createInstance(config);
+      })
+      .then(function(instance) {
+        self._fhevmInstance = instance;
+        resolve(instance);
+      })
+      .catch(reject);
+  });
+};
+```
+
 ### Initialization Flow
 
 ```
@@ -289,6 +422,154 @@ var cardPool = SDK.GameSession.getCardCaches()
 // Map FHE random to card
 var selectedIndex = randomValue % cardPool.length;
 var cardId = cardPool[selectedIndex];
+```
+
+---
+
+## 5.5 GameSession Contract Code
+
+The GameSession contract handles FHE random generation for card draws.
+
+### Contract Structure (GameSession.sol)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import { FHE, euint8 } from "@fhevm/solidity/lib/FHE.sol";
+import { ZamaEthereumConfig } from "@fhevm/solidity/config/ZamaConfig.sol";
+
+contract GameSession is ZamaEthereumConfig {
+
+    uint8 public constant DECK_SIZE = 40;
+    uint8 public constant INITIAL_HAND_SIZE = 5;
+
+    struct Game {
+        address player;
+        uint8 currentTurn;
+        uint8 revealedCount;
+        bool isActive;
+        uint256 createdAt;
+    }
+
+    // Games mapping
+    mapping(uint256 => Game) public games;
+
+    // Draw indices - encrypted random values (FHE encrypted)
+    // IMPORTANT: euint8[40] array type doesn't work with FHE!
+    // Must use nested mapping: gameId => index => euint8
+    mapping(uint256 => mapping(uint8 => euint8)) private drawIndices;
+
+    // Revealed values - verified clear indices
+    mapping(uint256 => uint8[]) public revealedValues;
+}
+```
+
+### Game Creation with FHE Random Generation
+
+```solidity
+// GameSession.sol - createSinglePlayerGame()
+function createSinglePlayerGame(uint256 gameId) external {
+    require(games[gameId].player == address(0), "Game exists");
+
+    games[gameId] = Game({
+        player: msg.sender,
+        currentTurn: 0,
+        revealedCount: 0,
+        isActive: true,
+        createdAt: block.timestamp
+    });
+
+    // Generate 40 encrypted random indices (real FHE)
+    for (uint8 i = 0; i < DECK_SIZE; i++) {
+        euint8 encryptedIndex = FHE.randEuint8();
+        // CRITICAL: Allow contract to read this value
+        FHE.allowThis(encryptedIndex);
+        // Store to storage
+        drawIndices[gameId][i] = encryptedIndex;
+        // Make publicly decryptable for client SDK
+        FHE.makePubliclyDecryptable(encryptedIndex);
+    }
+
+    emit GameCreated(gameId, msg.sender);
+}
+```
+
+### Reveal Batch with Proof Verification
+
+```solidity
+// GameSession.sol - revealDrawBatch()
+function revealDrawBatch(
+    uint256 gameId,
+    uint8[] calldata clearIndices,
+    bytes calldata abiEncodedClearValues,
+    bytes calldata decryptionProof
+) external onlyPlayer(gameId) gameActive(gameId) {
+    uint8 count = uint8(clearIndices.length);
+    uint8 startIdx = games[gameId].revealedCount;
+
+    require(count > 0, "Empty indices");
+    require(startIdx + count <= getAllowedReveals(gameId), "Exceeds allowed");
+    require(startIdx + count <= DECK_SIZE, "Exceeds deck");
+
+    // Build handle list for verification
+    bytes32[] memory cts = new bytes32[](count);
+    for (uint8 i = 0; i < count; i++) {
+        cts[i] = FHE.toBytes32(drawIndices[gameId][startIdx + i]);
+    }
+
+    // Verify KMS decryption proof - reverts if invalid
+    FHE.checkSignatures(cts, abiEncodedClearValues, decryptionProof);
+
+    // Store revealed values
+    for (uint8 i = 0; i < count; i++) {
+        revealedValues[gameId].push(clearIndices[i]);
+    }
+
+    games[gameId].revealedCount = startIdx + count;
+    emit DrawRevealed(gameId, count, startIdx + count);
+}
+```
+
+### Get Draw Handles for Client Decrypt
+
+```solidity
+// GameSession.sol - getDrawHandles()
+function getDrawHandles(
+    uint256 gameId,
+    uint8 count
+) external view returns (bytes32[] memory handles) {
+    Game storage game = games[gameId];
+    uint8 start = game.revealedCount;
+    uint8 allowed = getAllowedReveals(gameId);
+
+    require(start + count <= allowed, "Exceeds allowed reveals");
+    require(start + count <= DECK_SIZE, "Exceeds deck");
+
+    handles = new bytes32[](count);
+
+    // Return FHE encrypted handles as bytes32
+    for (uint8 i = 0; i < count; i++) {
+        handles[i] = FHE.toBytes32(drawIndices[gameId][start + i]);
+    }
+
+    return handles;
+}
+```
+
+### Allowed Reveals Calculation
+
+```solidity
+// GameSession.sol - getAllowedReveals()
+function getAllowedReveals(uint256 gameId) public view returns (uint8) {
+    uint8 turn = games[gameId].currentTurn;
+    // Turn 0: 5 cards (initial hand)
+    // Turn 1: 6 cards (5 + 1)
+    // Turn 2: 7 cards (5 + 2)
+    // ...
+    uint8 allowed = INITIAL_HAND_SIZE + turn;
+    return allowed > DECK_SIZE ? DECK_SIZE : allowed;
+}
 ```
 
 ---
@@ -462,6 +743,176 @@ function calculateCardsFromIndices(deck, indices) {
         remainingDeck: remaining
     };
 }
+```
+
+### Client Initial Hand Reveal Code (fheGameSession.js)
+
+```javascript
+// fheGameSession.js - revealInitialHand()
+FHEGameSession.prototype.revealInitialHand = function() {
+  var self = this;
+
+  return new Promise(function(resolve, reject) {
+    if (self.gameId === null) {
+      reject(new Error('Not in a game'));
+      return;
+    }
+
+    // CHECK: If we have cached data, use retryNotifyServer instead
+    if (self._cachedInitialHandData) {
+      Logger.module('FHE_GAME').log('Cached hand found, skipping blockchain');
+      self.retryNotifyServer().then(resolve).catch(reject);
+      return;
+    }
+
+    Logger.module('FHE_GAME').log('=== REVEAL INITIAL HAND ===');
+
+    // Wait for ZAMA ACL indexing (10 seconds on Sepolia)
+    var waitForACL = new Promise(function(res) {
+      setTimeout(res, 10000);
+    });
+
+    waitForACL
+    .then(function() {
+      // Step 1: Check allowed reveals
+      return self._getAllowedReveals();
+    })
+    .then(function(allowed) {
+      if (allowed < INITIAL_HAND_SIZE) {
+        throw new Error('Not enough allowed reveals');
+      }
+      // Step 2: Get draw handles
+      return self._getDrawHandles(INITIAL_HAND_SIZE);
+    })
+    .then(function(handles) {
+      // Step 3: Public decrypt via KMS
+      return self._publicDecrypt(handles);
+    })
+    .then(function(result) {
+      // Step 4: Store revealed indices
+      self.revealedIndices = result.clearIndices.slice();
+
+      // Step 5: Submit reveal batch TX
+      return self._revealDrawBatch(
+        result.clearIndices,
+        result.abiEncodedClearValues,
+        result.proof
+      );
+    })
+    .then(function() {
+      // Step 6: Calculate cards locally
+      self.myHand = self._calculateCards(self.revealedIndices);
+
+      // Cache for retry
+      self._cachedInitialHandData = {
+        hand: self.myHand.slice(),
+        revealedIndices: self.revealedIndices.slice()
+      };
+
+      // Step 7: Notify server
+      return self._notifyServerInitialHand();
+    })
+    .then(function(serverCardIndices) {
+      self._cachedInitialHandData = null; // Clear cache on success
+      resolve({
+        cardIds: self.myHand.slice(),
+        cardIndices: serverCardIndices
+      });
+    })
+    .catch(reject);
+  });
+};
+```
+
+### Client Public Decrypt Code (fheGameSession.js)
+
+```javascript
+// fheGameSession.js - _publicDecrypt()
+FHEGameSession.prototype._publicDecrypt = function(handles) {
+  var self = this;
+
+  return new Promise(function(resolve, reject) {
+    // Convert handles to hex strings
+    var handleStrings = handles.map(function(h) {
+      if (typeof h === 'bigint') {
+        return '0x' + h.toString(16).padStart(64, '0');
+      } else if (h._hex) {
+        return h._hex;
+      }
+      return h.toString();
+    });
+
+    // Get FHEVM SDK instance
+    self._getFhevmInstance()
+      .then(function(instance) {
+        // Call publicDecrypt on Zama Gateway
+        return instance.publicDecrypt(handleStrings);
+      })
+      .then(function(result) {
+        // SDK returns clearValues as object map, not array!
+        // Format: { '0xhandle1': value1, '0xhandle2': value2, ... }
+        var clearIndices = handleStrings.map(function(h) {
+          var value = result.clearValues[h];
+          if (typeof value === 'bigint') {
+            return Number(value % BigInt(256));
+          }
+          return Number(value) % 256;
+        });
+
+        resolve({
+          clearIndices: clearIndices,
+          abiEncodedClearValues: result.abiEncodedClearValues || '0x',
+          proof: result.decryptionProof || '0x'
+        });
+      })
+      .catch(reject);
+  });
+};
+```
+
+### Client Game Creation Code (fheGameSession.js)
+
+```javascript
+// fheGameSession.js - createSinglePlayerGame()
+FHEGameSession.prototype.createSinglePlayerGame = function(gameId, deck) {
+  var self = this;
+
+  return new Promise(function(resolve, reject) {
+    if (!self.contract) {
+      reject(new Error('Contract not connected'));
+      return;
+    }
+
+    // Store deck for card calculation
+    self.deck = deck.slice();
+    self.remainingDeck = deck.slice();
+    self.myHand = [];
+    self.revealedIndices = [];
+    self.gameId = gameId;
+
+    // Encode TX
+    var iface = new ethers.utils.Interface(GAME_SESSION_ABI);
+    var data = iface.encodeFunctionData('createSinglePlayerGame', [gameId]);
+
+    // Send TX via session wallet
+    self.sessionWallet.signTransaction({
+      to: self.contractAddress,
+      data: data,
+      gasLimit: '0x7A1200' // 8M gas (40x FHE.rand)
+    })
+    .then(function(txResponse) {
+      return txResponse.wait();
+    })
+    .then(function(receipt) {
+      if (receipt.status === 0) {
+        throw new Error('Transaction reverted');
+      }
+      self.blockchainGameId = gameId;
+      resolve(self.gameId);
+    })
+    .catch(reject);
+  });
+};
 ```
 
 ---
@@ -872,6 +1323,167 @@ setConfirmButtonVisibility: function (visible) {
 | Server replays old game | Unique on-chain gameId |
 | Server favors player | All randoms from FHE coprocessor |
 
+### Server FHE Event Handlers (game.coffee)
+
+```coffeescript
+# game.coffee - FHE socket event bindings
+socket.on "fhe_game_created", onFHEGameCreated
+socket.on "fhe_initial_hand_revealed", onFHEInitialHandRevealed
+socket.on "fhe_card_drawn", onFHECardDrawn
+```
+
+### Server Initial Hand Verification (game.coffee)
+
+```coffeescript
+# game.coffee - onFHEInitialHandRevealed()
+onFHEInitialHandRevealed = (requestData) ->
+  socket = @
+  gameId = requestData.gameId
+  playerId = @.playerId
+
+  fheState = getFHEStateForPlayer(gameId, playerId)
+  if !fheState?.enabled
+    socket.emit "fhe_initial_hand_revealed_response", { error: "FHE not enabled" }
+    return
+
+  blockchainGameId = fheState.blockchainGameId
+  fheDeckOrder = getFHEDeckOrderForPlayer(gameId, playerId)
+  network = fheState.network or 'sepolia'
+  INITIAL_HAND_SIZE = 5
+
+  # BLOCKCHAIN VERIFICATION - Never trust client!
+  BlockchainModule.verifyAndCalculateCards(network, blockchainGameId, fheDeckOrder, INITIAL_HAND_SIZE)
+  .then (result) ->
+    if !result.verified
+      socket.emit "fhe_initial_hand_revealed_response", { error: "Verification failed" }
+      return
+
+    verifiedCards = result.cards
+    cardIndicesForClient = []
+    player = game.session.getPlayerById(playerId)
+    playerDeck = player.getDeck()
+    drawPile = playerDeck.getDrawPile()
+
+    # Apply verified cards to hand
+    for cardId, handSlotIndex in verifiedCards
+      for i in [0...drawPile.length]
+        cardIndex = drawPile[i]
+        card = game.session.getCardByIndex(cardIndex)
+        if card? and card.getId() == cardId
+          game.session.applyCardToHand(playerDeck, cardIndex, card, handSlotIndex)
+          cardIndicesForClient.push(cardIndex)
+          break
+
+    # Update FHE state
+    fheState.revealedCount = verifiedCards.length
+    fheState.initialHandRevealComplete = true
+
+    socket.emit "fhe_initial_hand_revealed_response", {
+      success: true
+      cardIndices: cardIndicesForClient
+    }
+
+    # Start timer if all FHE players ready
+    if allFheDone
+      restartTurnTimer(gameId)
+```
+
+### Server Card Draw Verification (game.coffee)
+
+```coffeescript
+# game.coffee - onFHECardDrawn()
+onFHECardDrawn = (requestData) ->
+  socket = @
+  gameId = requestData.gameId
+  playerId = @.playerId
+
+  fheState = getFHEStateForPlayer(gameId, playerId)
+  blockchainGameId = fheState.blockchainGameId
+  fheDeckOrder = getFHEDeckOrderForPlayer(gameId, playerId)
+  network = fheState.network or 'sepolia'
+  previousRevealCount = fheState.revealedCount or 5
+  expectedNewRevealCount = previousRevealCount + 1
+
+  # BLOCKCHAIN VERIFICATION - Never trust client!
+  BlockchainModule.getVerifiedDrawOrder(network, blockchainGameId)
+  .then (indices) ->
+    if indices.length < expectedNewRevealCount
+      socket.emit "fhe_card_drawn_response", { error: "Reveal not yet on blockchain" }
+      return
+
+    # Calculate ALL cards using full indices array
+    result = BlockchainModule.calculateCardsFromIndices(fheDeckOrder, indices)
+
+    # The last drawn card is the new one
+    cardId = result.drawnCards[result.drawnCards.length - 1]
+
+    player = game.session.getPlayerById(playerId)
+    playerDeck = player.getDeck()
+    drawPile = playerDeck.getDrawPile()
+
+    # Find and apply the card
+    for i in [0...drawPile.length]
+      cardIndex = drawPile[i]
+      card = game.session.getCardByIndex(cardIndex)
+      if card? and card.getId() == cardId
+        handSlotIndex = playerDeck.getNumCardsInHand()
+        if handSlotIndex < 6  # Max hand size
+          game.session.applyCardToHand(playerDeck, cardIndex, card, handSlotIndex)
+          appliedCardIndex = cardIndex
+        else
+          cardBurned = true  # Hand full
+        break
+
+    # Update state
+    fheState.revealedCount = indices.length
+    fheState.turnDrawComplete = true
+
+    # Emit pending StartTurnAction if waiting
+    if game.pendingStartTurnStep?
+      emitGameEvent(null, gameId, game.pendingStartTurnStep)
+      game.pendingStartTurnStep = null
+      restartTurnTimer(gameId)
+
+    socket.emit "fhe_card_drawn_response", {
+      success: true
+      cardIndex: appliedCardIndex
+      burned: cardBurned
+    }
+```
+
+### Server Blockchain Module (blockchain.coffee)
+
+```coffeescript
+# blockchain.coffee - verifyAndCalculateCards()
+verifyAndCalculateCards = (network, blockchainGameId, fheDeckOrder, expectedCount) ->
+  getVerifiedDrawOrder(network, blockchainGameId)
+  .then (indices) ->
+    if indices.length < expectedCount
+      return { verified: false, error: "Not enough reveals" }
+
+    # Use only first expectedCount indices
+    usedIndices = indices.slice(0, expectedCount)
+
+    # Calculate cards using same algorithm as client
+    result = calculateCardsFromIndices(fheDeckOrder, usedIndices)
+
+    return {
+      verified: true
+      cards: result.drawnCards
+      indices: usedIndices
+      remainingDeck: result.remainingDeck
+    }
+
+# blockchain.coffee - getVerifiedDrawOrder()
+getVerifiedDrawOrder = (network, gameId) ->
+  provider = getProvider(network)
+  contract = new ethers.Contract(GAME_SESSION_ADDRESS, GAME_SESSION_ABI, provider)
+  contract.getVerifiedDrawOrder(gameId)
+  .then (indices) ->
+    # Convert BigNumber array to regular numbers
+    return indices.map((idx) -> idx.toNumber())
+```
+
 ---
 
 ## 12. Boss Battle Integration
@@ -1003,6 +1615,131 @@ CLIENT                    MarbleRandoms               SERVER
    |<----------------------------------------------------+
    |                            |                        |
    |                            |                        |
+```
+
+### MarbleRandoms Contract Code (MarbleRandoms.sol)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import { FHE, euint8 } from "@fhevm/solidity/lib/FHE.sol";
+import { ZamaEthereumConfig } from "@fhevm/solidity/config/ZamaConfig.sol";
+
+contract MarbleRandoms is ZamaEthereumConfig {
+
+    uint8 public constant CARDS_PER_MARBLE = 5;
+    uint8 public constant RANDOMS_PER_CARD = 3; // rarity, index, prismatic
+    uint8 public constant TOTAL_RANDOMS = 15;   // 5 * 3
+
+    struct MarbleSession {
+        address owner;
+        uint8 cardSetId;
+        bool isDrawn;
+        bool isRevealed;
+        uint256 createdAt;
+    }
+
+    struct RevealedValues {
+        uint8[5] rarity;
+        uint8[5] index;
+        uint8[5] prismatic;
+    }
+
+    // Marble sessions
+    mapping(bytes32 => MarbleSession) public marbles;
+
+    // Encrypted randoms: 0-4 = rarity, 5-9 = index, 10-14 = prismatic
+    mapping(bytes32 => mapping(uint8 => euint8)) private encryptedRandoms;
+
+    // Revealed values
+    mapping(bytes32 => RevealedValues) private revealedValues;
+}
+```
+
+### Marble Draw Randoms Function
+
+```solidity
+// MarbleRandoms.sol - drawRandoms()
+function drawRandoms(bytes32 marbleId, uint8 cardSetId) external {
+    require(marbles[marbleId].owner == address(0), "Marble already drawn");
+
+    marbles[marbleId] = MarbleSession({
+        owner: msg.sender,
+        cardSetId: cardSetId,
+        isDrawn: true,
+        isRevealed: false,
+        createdAt: block.timestamp
+    });
+
+    // Generate 15 encrypted randoms (5 cards x 3 randoms each)
+    for (uint8 i = 0; i < TOTAL_RANDOMS; i++) {
+        euint8 encryptedRand = FHE.randEuint8();
+        FHE.allowThis(encryptedRand);
+        encryptedRandoms[marbleId][i] = encryptedRand;
+        FHE.makePubliclyDecryptable(encryptedRand);
+    }
+
+    emit RandomsGenerated(marbleId, msg.sender, cardSetId);
+}
+```
+
+### Marble Reveal with Proof Verification
+
+```solidity
+// MarbleRandoms.sol - revealRandoms()
+function revealRandoms(
+    bytes32 marbleId,
+    uint8[15] calldata clearValues,
+    bytes calldata abiEncodedClearValues,
+    bytes calldata decryptionProof
+) external onlyOwner(marbleId) {
+    MarbleSession storage session = marbles[marbleId];
+    require(session.isDrawn, "Not drawn");
+    require(!session.isRevealed, "Already revealed");
+
+    // Build handle list for verification
+    bytes32[] memory cts = new bytes32[](TOTAL_RANDOMS);
+    for (uint8 i = 0; i < TOTAL_RANDOMS; i++) {
+        cts[i] = FHE.toBytes32(encryptedRandoms[marbleId][i]);
+    }
+
+    // Verify KMS decryption proof - reverts if invalid
+    FHE.checkSignatures(cts, abiEncodedClearValues, decryptionProof);
+
+    // Store revealed values in structured format
+    RevealedValues storage revealed = revealedValues[marbleId];
+    for (uint8 i = 0; i < CARDS_PER_MARBLE; i++) {
+        revealed.rarity[i] = clearValues[i];           // 0-4
+        revealed.index[i] = clearValues[i + 5];        // 5-9
+        revealed.prismatic[i] = clearValues[i + 10];   // 10-14
+    }
+
+    session.isRevealed = true;
+
+    emit RandomsRevealed(
+        marbleId,
+        revealed.rarity,
+        revealed.index,
+        revealed.prismatic
+    );
+}
+```
+
+### Marble Get Verified Randoms
+
+```solidity
+// MarbleRandoms.sol - getVerifiedRandoms()
+function getVerifiedRandoms(bytes32 marbleId) external view returns (
+    uint8[5] memory rarity,
+    uint8[5] memory index,
+    uint8[5] memory prismatic
+) {
+    require(marbles[marbleId].isRevealed, "Not revealed");
+
+    RevealedValues storage revealed = revealedValues[marbleId];
+    return (revealed.rarity, revealed.index, revealed.prismatic);
+}
 ```
 
 ### Server Card Calculation
