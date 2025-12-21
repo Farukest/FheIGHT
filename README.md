@@ -1,6 +1,6 @@
 # FHEIGHT
 
-**Fully Homomorphic Encryption Tactical Board Game on Blockchain**
+**Fully Homomorphic Encryption Tactical Board Game on Zama FHEVM**
 
 FHEIGHT is a tactical board game where players command characters, execute actions, and engage in strategic combat using card-based abilities. The game supports both **multiplayer PvP** and **singleplayer vs AI** modes, with Fully Homomorphic Encryption (FHE) securing all randomness - card draws, ability outcomes, AI difficulty scaling, and combat results remain encrypted until legitimately revealed, preventing any prediction or manipulation.
 
