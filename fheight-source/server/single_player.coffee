@@ -1252,6 +1252,10 @@ onStep = (event) ->
       # special action cases
       action = step.action
       if action instanceof SDK.EndTurnAction
+        # IMPORTANT: Stop the turn timer immediately when end turn is triggered
+        # This prevents race condition where timer tick and manual end turn overlap
+        stopTurnTimer(gameId)
+
         # save game on end turn
         # delay so that we don't block sending the step back to the players
         _.delay((()->

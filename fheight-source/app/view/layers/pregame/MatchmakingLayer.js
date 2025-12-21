@@ -162,21 +162,7 @@ const MatchmakingLayer = ParallaxLayer.extend({
         vsCrestHighlightSprite.setPosition(-30.0, 48.0);
         this._vsCrestNode.addChild(vsCrestHighlightSprite, 2);
 
-        const vsCrestBracketFriendlySprite = new BaseSprite(RSX.vs_crest_bracket_friendly.img);
-        this._vsCrestNode.addChild(vsCrestBracketFriendlySprite, 1);
-
-        const vsCrestBracketEnemySprite = new BaseSprite(RSX.vs_crest_bracket_enemy.img);
-        this._vsCrestNode.addChild(vsCrestBracketEnemySprite, 1);
-
-        if (myPlayerIsPlayer1) {
-          vsCrestBracketFriendlySprite.setFlippedX(true);
-          vsCrestBracketFriendlySprite.setPosition(-98.0, 0.0);
-          vsCrestBracketEnemySprite.setPosition(98.0, 0.0);
-        } else {
-          vsCrestBracketFriendlySprite.setPosition(98.0, 0.0);
-          vsCrestBracketEnemySprite.setFlippedX(true);
-          vsCrestBracketEnemySprite.setPosition(-98.0, 0.0);
-        }
+        // bracket_friendly and bracket_enemy sprites removed - using single VS image now
 
         // fire ring
         const fireRingSprite = FXFireRingSprite.create();

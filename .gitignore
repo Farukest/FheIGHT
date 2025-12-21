@@ -122,6 +122,7 @@ frontend/.vite/
 
 # Database
 *.db
+*.sql
 *.sqlite
 *.sqlite3
 
@@ -251,8 +252,6 @@ fhevm-contracts/dist/
 *.md
 !README.md
 
-# docs folder (will be on GitHub but ignored from tracking)
-docs/
 
 # Zama reference documents
 document/

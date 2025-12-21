@@ -93,14 +93,7 @@
       @include backgroundImage("resources/ui/highlight_red.png");
     }
 
-    .bracketed-text-content {
-      &:before {
-        @include backgroundImage("resources/ui/bracket_enemy.png");
-      }
-      &:after {
-        @include backgroundImage("resources/ui/bracket_enemy.png");
-      }
-    }
+    // bracket_enemy removed - using single VS image now
   }
 }
 

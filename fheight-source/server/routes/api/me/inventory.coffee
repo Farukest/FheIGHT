@@ -150,6 +150,29 @@ router.put "/spirit_orbs/opened/:booster_pack_id", (req, res, next) ->
     Logger.module("API").error "ERROR Unlocking Booster Pack for user #{user_id.blue}".red
     next(error)
 
+# FHE-verified marble opening
+# Client sends marbleId (bytes32) after completing blockchain reveal
+router.put "/spirit_orbs/fhe_opened/:booster_pack_id", (req, res, next) ->
+  result = t.validate(req.params.booster_pack_id, t.subtype(t.Str, (s) -> s.length == 20))
+  if not result.isValid()
+    return res.status(400).json(result.errors)
+
+  marbleId = req.body.marble_id
+  if not marbleId or not marbleId.startsWith('0x')
+    return res.status(400).json({ error: "Invalid marble_id - must be bytes32 hex" })
+
+  user_id = req.user.d.id
+  pack_id = result.value
+
+  Logger.module("API").debug "FHE Unlocking Booster Pack #{pack_id} with marble #{marbleId} for user #{user_id.blue}".magenta
+  InventoryModule.unlockBoosterPackWithFHE(user_id, pack_id, marbleId)
+  .then (value)->
+    Logger.module("API").debug "FHE UNLOCKED Booster Pack #{pack_id} for user #{user_id.blue}".cyan
+    res.status(200).json(value)
+  .catch (error) ->
+    Logger.module("API").error "ERROR FHE Unlocking Booster Pack for user #{user_id.blue}: #{error.message}".red
+    next(error)
+
 router.post "/gauntlet_tickets", (req, res, next) ->
   user_id = req.user.d.id
 

@@ -521,6 +521,107 @@ var InventoryManager = Manager.extend({
     }.bind(this));
   },
 
+  /**
+   * FHE ile booster pack aç
+   * 1. Contract'a drawRandoms TX
+   * 2. Decrypt + revealRandoms TX
+   * 3. Server'a API call (marbleId ile)
+   * 4. Server contract'tan verify, kartları hesaplar
+   *
+   * @param {string} boosterPackId - Server-side booster pack ID
+   * @param {number} cardSetId - Card set ID (1=Core, 2=Shimzar, etc.)
+   * @returns {Promise<{cards: number[]}>}
+   */
+  unlockBoosterPackWithFHE: function (boosterPackId, cardSetId) {
+    var self = this;
+    var FHEMarbleSession = require('app/sdk/fhe/fheMarbleSession');
+    var Wallet = require('app/common/wallet');
+
+    if (this.boosterPacksCollection.length === 0) {
+      return Promise.reject('No boosters to open.');
+    }
+
+    if (!boosterPackId) {
+      boosterPackId = this.boosterPacksCollection.at(0).get('id');
+    }
+
+    cardSetId = cardSetId || 1; // Default to Core set
+
+    var session = FHEMarbleSession.getInstance();
+    var contractAddress = '0x905cA0c59588d3F64cdad12534B5C450485206cc';
+
+    Logger.module('UI').log('InventoryManager::unlockBoosterPackWithFHE() starting FHE flow');
+
+    return session.connect(contractAddress)
+      .then(function() {
+        // Set booster pack ID for API call
+        session.setBoosterPackId(boosterPackId);
+
+        // Generate marble ID
+        var userAddress = Wallet.getAddress();
+        var marbleId = session.generateMarbleId(userAddress);
+
+        Logger.module('UI').log('InventoryManager::unlockBoosterPackWithFHE() marbleId:', marbleId);
+
+        // Step 1: Draw randoms (TX)
+        return session.drawRandoms(marbleId, cardSetId);
+      })
+      .then(function() {
+        Logger.module('UI').log('InventoryManager::unlockBoosterPackWithFHE() drawRandoms complete');
+
+        // Step 2: Reveal randoms (decrypt + TX + API call)
+        return session.revealRandoms();
+      })
+      .then(function(result) {
+        Logger.module('UI').log('InventoryManager::unlockBoosterPackWithFHE() revealRandoms complete');
+        Logger.module('UI').log('InventoryManager::unlockBoosterPackWithFHE() cards:', result.cards);
+
+        // Analytics
+        self._trackBoosterPackOpened(result.cards);
+
+        // Cleanup
+        session.disconnect();
+
+        return { cards: result.cards };
+      })
+      .catch(function(error) {
+        Logger.module('UI').error('InventoryManager::unlockBoosterPackWithFHE() error:', error);
+        session.disconnect();
+        throw error;
+      });
+  },
+
+  /**
+   * Track booster pack opened analytics
+   * @private
+   */
+  _trackBoosterPackOpened: function(cards) {
+    try {
+      var rarityIds = _.map(cards, function (cardId) {
+        var gameSession = SDK.GameSession.current();
+        var sdkCard = SDK.CardFactory.cardForIdentifier(cardId, gameSession);
+        if (!sdkCard) return 1;
+        return sdkCard.getRarityId();
+      });
+      rarityIds = rarityIds.sort();
+      var spiritValue = _.reduce(rarityIds, function (memo, rarityId) {
+        var rarity = SDK.RarityFactory.rarityForIdentifier(rarityId);
+        return memo + (rarity ? rarity.spiritCost : 0);
+      }, 0);
+
+      Analytics.track('opened spirit orb', {
+        category: Analytics.EventCategory.SpiritOrbs,
+        rarity_split: JSON.stringify(rarityIds),
+        spirit_value: spiritValue,
+        is_fhe: true,
+      });
+
+      NewPlayerManager.getInstance().setHasOpenedSpiritOrb(true);
+    } catch (e) {
+      console.error('_trackBoosterPackOpened error:', e);
+    }
+  },
+
   unlockBoosterPack: function (boosterPackId) {
     if (this.boosterPacksCollection.length > 0) {
       return new Promise(function (resolve, reject) {

@@ -1314,6 +1314,10 @@ onStep = (event) ->
           restartTurnTimer(gameId)
 
       else if action instanceof SDK.EndTurnAction
+        # IMPORTANT: Stop the turn timer immediately when end turn is triggered
+        # This prevents race condition where timer tick and manual end turn overlap
+        stopTurnTimer(gameId)
+
         # FHE MODE: Set turnDrawComplete = false BEFORE emit
         # This ensures StartTurnAction (which comes right after) will be held
         endingPlayerId = action.getOwnerId()

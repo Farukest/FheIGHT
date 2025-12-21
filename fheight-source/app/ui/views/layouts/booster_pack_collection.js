@@ -259,6 +259,15 @@ var BoosterPackCollectionLayout = Backbone.Marionette.LayoutView.extend({
       this._unlockedBoosterPackEl = this._draggingBoosterPackEl;
       var boosterPackId = this._unlockedBoosterPackEl.attr('id');
 
+      // Get cardSetId from element class (card-set-X)
+      var cardSetId = SDK.CardSet.Core; // default
+      var classList = this._unlockedBoosterPackEl.attr('class') || '';
+      var cardSetMatch = classList.match(/card-set-(\d+)/);
+      if (cardSetMatch) {
+        cardSetId = parseInt(cardSetMatch[1], 10);
+      }
+      Logger.module('UI').log('BoosterPackCollectionLayout::onBoosterPackDropped cardSetId:', cardSetId);
+
       this._unlockedBoosterPackEl.removeClass('booster-pack-over').addClass('booster-pack-unlocked');
       this.ui.$boosterPackUnlock.removeClass('booster-pack-over').addClass('booster-pack-unlocked');
 
@@ -266,15 +275,22 @@ var BoosterPackCollectionLayout = Backbone.Marionette.LayoutView.extend({
       NavigationManager.getInstance().requestUserTriggeredNavigationLocked(this._userNavLockId);
       this.setLocked(true);
 
-      // unlock pack immediately
+      // unlock pack - FHE or normal based on toggle
       var unlockedBoosterPackCards;
-      var requestUnlockPromise = InventoryManager.getInstance().unlockBoosterPack(boosterPackId)
+      var useFHE = ProfileManager.getInstance().get('fheTurnOnOff');
+      var requestUnlockPromise = useFHE
+        ? InventoryManager.getInstance().unlockBoosterPackWithFHE(boosterPackId, cardSetId)
+        : InventoryManager.getInstance().unlockBoosterPack(boosterPackId);
+
+      requestUnlockPromise = requestUnlockPromise
         .bind(this)
         .then(function (response) {
           var unlockedBoosterPackModel = new Backbone.Model(response);
           unlockedBoosterPackCards = unlockedBoosterPackModel.get('cards');
+          Logger.module('UI').log('BoosterPackCollectionLayout::unlock complete (FHE=' + useFHE + '), cards:', unlockedBoosterPackCards);
         })
         .catch(function (errorMessage) {
+          Logger.module('UI').error('BoosterPackCollectionLayout::unlock error:', errorMessage);
           EventBus.getInstance().trigger(EVENTS.ajax_error, errorMessage);
         });
 

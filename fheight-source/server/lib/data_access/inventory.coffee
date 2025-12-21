@@ -19,6 +19,9 @@ generatePushId = require '../../../app/common/generate_push_id'
 # SDK imports
 SDK = require '../../../app/sdk'
 
+# FHE Marble Verifier for blockchain verification
+FHEMarbleVerifier = require '../fhe_marble_verifier'
+
 class InventoryModule
   ###*
   # Maximum number of soft wipes allowed. Determines if a user is eligible for a wipe.
@@ -1552,6 +1555,99 @@ class InventoryModule
       Logger.module("InventoryModule").debug "unlockBoosterPack() -> user #{userId.blue} ".green+" unlocked cards #{util.inspect(@.boosterRow.cards)} from booster #{@.boosterRow.id}".green
 
       Logger.module("InventoryModule").timeEnd "unlockBoosterPack() -> user #{userId.blue} unlocked booster #{boosterPackId}.".green
+      # Kick off job to update acheivements based on spirit orbs opened
+      Jobs.create("update-user-achievements",
+        name: "Update User Spirit Orbs Achievements"
+        title: util.format("User %s :: Update Spirit Orbs Achievements", userId)
+        userId: userId
+        spiritOrbOpenedFromSet: @.boosterRow.card_set
+      ).removeOnComplete(true).save()
+
+      return Promise.resolve(@.boosterRow)
+
+  ###*
+  # Unlock a booster pack using FHE-verified random values from blockchain
+  # @public
+  # @param  {String}  userId        User ID for which to open the booster pack.
+  # @param  {String}  boosterPackId    Booster Pack ID to open.
+  # @param  {String}  marbleId      FHE marble ID from blockchain (bytes32 hex)
+  # @param  {Moment}  systemTime      Optional system time.
+  # @return  {Promise}            Promise that will post UNLOCKED BOOSTER PACK DATA on completion.
+  # Tag: openBoosterPackFHE unlockSpiritOrbFHE
+  ###
+  @unlockBoosterPackWithFHE: (userId, boosterPackId, marbleId, systemTime) ->
+
+    # userId must be defined
+    unless userId
+      Logger.module("InventoryModule").debug "unlockBoosterPackWithFHE() -> invalid user ID - #{userId.blue}.".red
+      return Promise.reject(new Error("Can not unlock booster pack: invalid user ID - #{userId}"))
+
+    unless marbleId
+      Logger.module("InventoryModule").debug "unlockBoosterPackWithFHE() -> invalid marble ID".red
+      return Promise.reject(new Error("Can not unlock booster pack: invalid marble ID"))
+
+    this_obj = {}
+
+    NOW_UTC_MOMENT = systemTime or moment.utc()
+
+    Logger.module("InventoryModule").time "unlockBoosterPackWithFHE() -> user #{userId.blue} unlocking booster #{boosterPackId} with FHE marble #{marbleId}.".green
+
+    txPromise = knex.transaction (tx)->
+
+      Promise.all([
+        tx('users').first('id').where('id',userId).forUpdate(),
+        tx('user_spirit_orbs').first().where('id',boosterPackId).forUpdate()
+      ])
+      .bind this_obj
+      .spread (userRow,boosterRow)->
+
+        if not boosterRow? or boosterRow.user_id != userId
+          return Promise.reject(new Errors.NotFoundError("The booster pack ID you provided does not exist or belong to you."))
+
+        # if none set assume card set is Core
+        boosterRow.card_set ?= SDK.CardSet.Core
+        @.cardSetId = boosterRow.card_set
+
+        # don't allow opening of non-existant or disabled card sets
+        cardSetData = SDK.CardSetFactory.cardSetForIdentifier(@.cardSetId)
+        if !cardSetData? or !cardSetData.enabled or cardSetData.isPreRelease
+          throw new Errors.BadRequestError("You cannot open this type of Spirit Orb yet.")
+
+        @.boosterRow = boosterRow
+
+        # Verify and get cards from FHE contract
+        return FHEMarbleVerifier.verifyAndCalculateCards(marbleId, @.cardSetId)
+
+      .then (new_cards) ->
+
+        @.new_cards = new_cards
+        @.boosterRow.cards = new_cards
+        @.boosterRow.opened_at = NOW_UTC_MOMENT.toDate()
+        @.boosterRow.fhe_marble_id = marbleId  # Track FHE marble ID
+        delete @.boosterRow.is_unread
+
+        return Promise.all([
+          knex("user_spirit_orbs").where('id',boosterPackId).delete().transacting(tx),
+          knex.insert(@.boosterRow).into("user_spirit_orbs_opened").transacting(tx),
+          InventoryModule.giveUserCards(txPromise,tx,userId,new_cards,"spirit orb",boosterPackId)
+        ])
+      .then ()-> return FHEIGHTFirebase.connect().getRootRef()
+      .then (fbRootRef) ->
+
+        boosters = fbRootRef.child("user-inventory").child(userId).child("spirit-orbs")
+        return FirebasePromises.remove(boosters.child(boosterPackId))
+
+      .then ()-> SyncModule._bumpUserTransactionCounter(tx,userId)
+      .then tx.commit
+      .catch tx.rollback
+      return
+
+    .bind this_obj
+    .then ()->
+
+      Logger.module("InventoryModule").debug "unlockBoosterPackWithFHE() -> user #{userId.blue} ".green+" unlocked cards #{util.inspect(@.boosterRow.cards)} from booster #{@.boosterRow.id} (FHE verified)".green
+
+      Logger.module("InventoryModule").timeEnd "unlockBoosterPackWithFHE() -> user #{userId.blue} unlocking booster #{boosterPackId} with FHE marble #{marbleId}.".green
       # Kick off job to update acheivements based on spirit orbs opened
       Jobs.create("update-user-achievements",
         name: "Update User Spirit Orbs Achievements"
