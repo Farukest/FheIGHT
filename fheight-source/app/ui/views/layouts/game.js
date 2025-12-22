@@ -387,7 +387,11 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
       // Contract'tan getHand() + userDecrypt() ile yeni karti ogren (TX YOK!)
       // DrawCardAction, EndTurnAction'in sub-action'i olarak gelebilir, bu yuzden
       // tum action tree'yi kontrol etmemiz lazim (getFlattenedActionTree)
-      if (CONFIG.fheEnabled && !this._fheDecrypting) {
+      // TUTORIAL MODE: FHE is DISABLED for tutorial challenges
+      var gameSession = SDK.GameSession.getInstance();
+      var isTutorial = gameSession.isTutorial && gameSession.isTutorial();
+      var fheEnabledForDraw = !isTutorial && CONFIG.fheEnabled;
+      if (fheEnabledForDraw && !this._fheDecrypting) {
         var myPlayerId = SDK.GameSession.getInstance().getMyPlayerId();
 
         // Tum action agacini kontrol et (ana action + sub-actions)
@@ -629,8 +633,10 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
       } else {
         // FHE MODE: Decrypt and populate hand BEFORE showing choose hand UI
         // Works for BOTH single player AND multiplayer (each player has own FHE session)
+        // TUTORIAL MODE: FHE is DISABLED for tutorial challenges (no initial hand setup, causes issues)
         var gameSession = SDK.GameSession.getInstance();
-        var fheEnabled = gameSession.fheEnabled || CONFIG.fheEnabled;
+        var isTutorial = gameSession.isTutorial && gameSession.isTutorial();
+        var fheEnabled = !isTutorial && (gameSession.fheEnabled || CONFIG.fheEnabled);
         var isDeveloperMode = gameSession.getIsDeveloperMode();
 
         if (fheEnabled && !isDeveloperMode) {
@@ -979,8 +985,10 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     var mulliganIndices = Scene.getInstance().getGameLayer().getMulliganIndices();
 
     // Check if FHE mode is enabled
+    // TUTORIAL MODE: FHE is DISABLED for tutorial challenges (no initial hand setup, causes issues)
     var gameSession = SDK.GameSession.getInstance();
-    var fheEnabled = gameSession.fheEnabled || CONFIG.fheEnabled;
+    var isTutorial = gameSession.isTutorial && gameSession.isTutorial();
+    var fheEnabled = !isTutorial && (gameSession.fheEnabled || CONFIG.fheEnabled);
     var isDeveloperMode = gameSession.getIsDeveloperMode();
 
     Logger.module('FHE_UI').log('=== showSubmitChosenHand FHE CHECK ===');
@@ -1082,8 +1090,10 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
       this.stopListening(SDK.GameSession.getInstance().getEventBus(), EVENTS.action, this.onDrawStartingHand);
 
       // Check if FHE mode is enabled
+      // TUTORIAL MODE: FHE is DISABLED for tutorial challenges (no initial hand setup, causes issues)
       var gameSession = SDK.GameSession.getInstance();
-      var fheEnabled = gameSession.fheEnabled || CONFIG.fheEnabled;
+      var isTutorial = gameSession.isTutorial && gameSession.isTutorial();
+      var fheEnabled = !isTutorial && (gameSession.fheEnabled || CONFIG.fheEnabled);
       var isDeveloperMode = gameSession.getIsDeveloperMode();
 
       Logger.module('FHE_UI').log('=== onDrawStartingHand FHE CHECK ===');

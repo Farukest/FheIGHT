@@ -159,7 +159,9 @@ var GameBottomBarCompositeView = Backbone.Marionette.CompositeView.extend({
       gameSession.getChallenge().challengeReset();
     } else if (gameLayer && gameLayer.getIsMyTurn() && !gameLayer.getPlayerSelectionLocked()) {
       // FHE MODE: Immediately show submitting state before decrypt starts
-      var fheEnabled = gameSession.fheEnabled || CONFIG.fheEnabled;
+      // TUTORIAL MODE: FHE is DISABLED for tutorial challenges
+      var isTutorial = gameSession.isTutorial && gameSession.isTutorial();
+      var fheEnabled = !isTutorial && (gameSession.fheEnabled || CONFIG.fheEnabled);
       if (fheEnabled && !gameSession.getIsDeveloperMode()) {
         this._fheSubmitting = true;
         this._setSubmitTurnButtonToSubmittingState();

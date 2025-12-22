@@ -172,8 +172,10 @@ GameSetup.addCardsToDeck = function(gameSession, player, playerData, playerCards
   // FHE MODE: Add cards to deck in ORIGINAL ORDER (no shuffle, no starting hand)
   // Per FLOW.MD: Server will populate hand after reading from blockchain
   // Check BOTH fhePlayer flag AND fhe_enabled from token (multiplayer passes fhe_enabled directly)
+  // TUTORIAL MODE: FHE is DISABLED for tutorial challenges (no initial hand setup, causes issues)
+  const isTutorial = gameSession.isTutorial && gameSession.isTutorial();
   const isFhePlayer = playerData.fhePlayer || playerData.fhe_enabled;
-  const isFheEnabled = gameSession.fheEnabled || playerData.fhe_enabled;
+  const isFheEnabled = !isTutorial && (gameSession.fheEnabled || playerData.fhe_enabled);
 
   if (isFheEnabled && isFhePlayer) {
     // Set fheEnabled on session if not already set (for multiplayer)

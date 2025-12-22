@@ -33,8 +33,10 @@ class DrawCardAction extends PutCardInHandAction {
 
     // Check FHE status from BOTH gameSession flag AND playerSetupData
     // Multiplayer: gameSession.fheEnabled may be undefined, but playerSetupData has fhe_enabled from token
+    // TUTORIAL MODE: FHE is DISABLED for tutorial challenges (no initial hand setup, causes issues)
     const playerSetupData = gameSession.getPlayerSetupDataForPlayerId && gameSession.getPlayerSetupDataForPlayerId(ownerId);
-    const isFheEnabled = gameSession.fheEnabled || (playerSetupData && playerSetupData.fhe_enabled);
+    const isTutorial = gameSession.isTutorial && gameSession.isTutorial();
+    const isFheEnabled = !isTutorial && (gameSession.fheEnabled || (playerSetupData && playerSetupData.fhe_enabled));
 
     if (isFheEnabled) {
       const aiPlayerId = gameSession.getAiPlayerId && gameSession.getAiPlayerId();
