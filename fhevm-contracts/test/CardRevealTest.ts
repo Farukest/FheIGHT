@@ -1,10 +1,10 @@
 /**
- * CardRevealTest - FHE Kart Reveal Testi
+ * CardRevealTest - FHE Card Reveal Test
  *
- * story.md'deki otel analojisini test eder:
- * 1. joinGame() - TX at, kutular olusur (ACL tanimlanir)
- * 2. getHandles() - Kutu numaralarini ogren
- * 3. userDecrypt() - KMS'ten kartlari al (popup yok)
+ * Tests the hotel analogy from story.md:
+ * 1. joinGame() - Send TX, boxes are created (ACL is defined)
+ * 2. getHandles() - Get box numbers
+ * 3. userDecrypt() - Get cards from KMS (no popup)
  */
 
 import { expect } from "chai";
@@ -35,8 +35,8 @@ describe("CardRevealTest", function () {
 
   describe("Join Game", function () {
     it("should allow player to join and create 5 encrypted card boxes", async function () {
-      // ADIM 1: joinGame TX at (otel analojisi: odalar olusur, ACL tanimlanir)
-      console.log("\n=== ADIM 1: joinGame TX ===");
+      // STEP 1: Send joinGame TX (hotel analogy: rooms are created, ACL is defined)
+      console.log("\n=== STEP 1: joinGame TX ===");
       console.log("Player1 address:", player1.address);
 
       const tx = await cardRevealTest.connect(player1).joinGame();
@@ -44,11 +44,11 @@ describe("CardRevealTest", function () {
 
       console.log("TX completed - 5 encrypted card boxes created");
 
-      // Oyuncu kayitli mi kontrol et
+      // Check if player is registered
       const isPlayer = await cardRevealTest.checkPlayer(player1.address);
       expect(isPlayer).to.be.true;
 
-      // El boyutu kontrol et
+      // Check hand size
       const handSize = await cardRevealTest.connect(player1).getHandSize();
       expect(handSize).to.equal(5);
 
@@ -66,13 +66,13 @@ describe("CardRevealTest", function () {
 
   describe("Get Handles", function () {
     beforeEach(async function () {
-      // Player1 oyuna katilsin
+      // Player1 joins the game
       await cardRevealTest.connect(player1).joinGame();
     });
 
     it("should return 5 handles for joined player", async function () {
-      // ADIM 2: getHandles view call (otel: resepsiyondan kutu numaralarini al)
-      console.log("\n=== ADIM 2: getHandles View Call ===");
+      // STEP 2: getHandles view call (hotel: get box numbers from reception)
+      console.log("\n=== STEP 2: getHandles View Call ===");
 
       const handles = await cardRevealTest.connect(player1).getHandles();
 
@@ -102,16 +102,16 @@ describe("CardRevealTest", function () {
     });
 
     it("should decrypt all 5 cards for the owner", async function () {
-      // ADIM 3: KMS'e git, kutulari ac (otel: gorevli kutulari getiriyor)
-      console.log("\n=== ADIM 3: User Decrypt ===");
+      // STEP 3: Go to KMS, open boxes (hotel: staff brings the boxes)
+      console.log("\n=== STEP 3: User Decrypt ===");
 
-      // Handle'lari al
+      // Get handles
       const handles = await cardRevealTest.connect(player1).getHandles();
 
       console.log("Requesting decrypt from KMS...");
       console.log("Player1 can decrypt because ACL allows it");
 
-      // Her handle icin decrypt yap
+      // Decrypt for each handle
       const decryptedCards: number[] = [];
 
       for (let i = 0; i < 5; i++) {
@@ -129,7 +129,7 @@ describe("CardRevealTest", function () {
         console.log(`  Card ${i}: ID ${decryptedCards[i]}`);
       }
 
-      // Tum kartlar 0-127 arasinda olmali (randEuint8(128) kullandik)
+      // All cards should be between 0-127 (we used randEuint8(128))
       for (const cardId of decryptedCards) {
         expect(cardId).to.be.gte(0);
         expect(cardId).to.be.lt(128);
@@ -137,25 +137,25 @@ describe("CardRevealTest", function () {
     });
 
     it("should fail decrypt for non-owner (ACL blocks)", async function () {
-      // Player2 oyuna katilmadi, ACL izni yok
+      // Player2 didn't join the game, no ACL permission
       console.log("\n=== ACL Block Test ===");
       console.log("Player2 trying to decrypt Player1's cards...");
 
       const handles = await cardRevealTest.connect(player1).getHandles();
 
-      // Player2 decrypt etmeye calisiyor - ACL engellemeli
+      // Player2 is trying to decrypt - ACL should block
       try {
         await fhevm.userDecryptEuint(
           FhevmType.euint8,
           handles[0],
           contractAddress,
-          player2 // Yanlis oyuncu!
+          player2 // Wrong player!
         );
-        // Buraya gelmemeli
+        // Should not reach here
         expect.fail("Should have thrown ACL error");
       } catch (error: any) {
         console.log("Expected error:", error.message);
-        // ACL hatasi bekleniyor - "not authorized" mesaji da ACL hatasidir
+        // ACL error expected - "not authorized" message is also an ACL error
         expect(error.message).to.match(/ACL|authorized/i);
       }
     });
@@ -165,7 +165,7 @@ describe("CardRevealTest", function () {
 
       const handles = await cardRevealTest.connect(player1).getHandles();
 
-      // Tek tek decrypt (batch API mock'ta farkli calisabiliyor)
+      // Decrypt one by one (batch API may work differently in mock)
       const clearValues: bigint[] = [];
       for (let i = 0; i < 5; i++) {
         const value = await fhevm.userDecryptEuint(
@@ -189,16 +189,16 @@ describe("CardRevealTest", function () {
       console.log("FULL FLOW TEST (Hotel Analogy)");
       console.log("========================================\n");
 
-      // 1. HAZIRLIK
-      console.log("1. HAZIRLIK");
-      console.log("   - Player1 cuzdan bagli");
-      console.log("   - Session key olusturuldu (test icin otomatik)");
+      // 1. PREPARATION
+      console.log("1. PREPARATION");
+      console.log("   - Player1 wallet connected");
+      console.log("   - Session key created (automatic for test)");
       console.log("");
 
       // 2. JOIN GAME (TX)
       console.log("2. JOIN GAME (TX - 1 popup)");
-      console.log("   - Otel sahibi (contract) kutulari olusturuyor");
-      console.log("   - Her kutunun ACL'ine player1 ekleniyor");
+      console.log("   - Hotel owner (contract) is creating boxes");
+      console.log("   - Adding player1 to each box's ACL");
 
       const tx = await cardRevealTest.connect(player1).joinGame();
       const receipt = await tx.wait();
@@ -206,22 +206,22 @@ describe("CardRevealTest", function () {
       console.log("   - Gas used:", receipt?.gasUsed.toString());
       console.log("");
 
-      // 3. GET HANDLES (View - popup yok)
-      console.log("3. GET HANDLES (View - popup yok)");
-      console.log("   - Resepsiyona soruyoruz: Kutularim hangileri?");
+      // 3. GET HANDLES (View - no popup)
+      console.log("3. GET HANDLES (View - no popup)");
+      console.log("   - Asking reception: Which boxes are mine?");
 
       const handles = await cardRevealTest.connect(player1).getHandles();
-      console.log("   - 5 kutu numarasi alindi");
+      console.log("   - 5 box numbers received");
       console.log("");
 
-      // 4. DECRYPT (KMS - popup yok)
-      console.log("4. DECRYPT (KMS - popup yok)");
-      console.log("   - KMS'e gidiyoruz: Bu kutulari getir");
-      console.log("   - KMS kontrol ediyor:");
-      console.log("     - Session key gecerli mi? EVET");
-      console.log("     - ACL izni var mi? EVET");
-      console.log("   - KMS kutulari aciyor, publicKey ile reencrypt ediyor");
-      console.log("   - Bize veriyor, privateKey ile aciyoruz");
+      // 4. DECRYPT (KMS - no popup)
+      console.log("4. DECRYPT (KMS - no popup)");
+      console.log("   - Going to KMS: Bring these boxes");
+      console.log("   - KMS is checking:");
+      console.log("     - Is session key valid? YES");
+      console.log("     - Is ACL permission granted? YES");
+      console.log("   - KMS opens boxes, reencrypts with publicKey");
+      console.log("   - Gives to us, we decrypt with privateKey");
 
       const cards = [];
       for (let i = 0; i < 5; i++) {

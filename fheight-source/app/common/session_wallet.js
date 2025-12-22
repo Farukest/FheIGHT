@@ -7,13 +7,13 @@ var Backbone = require('backbone');
 var EventBus = require('app/common/eventbus');
 var EVENTS = require('app/common/event_types');
 
-// Storage keys - SADECE address ve on-chain status kaydet, private key ASLA!
-// Key artik ana cüzdan adresine bagli: fheight_session_wallet_address_<mainWalletAddress>
+// Storage keys - ONLY save address and on-chain status, NEVER private key!
+// Key is now bound to main wallet address: fheight_session_wallet_address_<mainWalletAddress>
 var STORAGE_KEY_PREFIX = 'fheight_session_wallet_address_';
 
 /**
  * Get main wallet state from wallet.js module
- * wallet.js IIFE ile sayfa açılışında initialize oluyor
+ * wallet.js is initialized via IIFE on page load
  */
 function getMainWalletState() {
   var Wallet = require('app/common/wallet');
@@ -30,7 +30,7 @@ function getMainWallet() {
 
 /**
  * Get active RPC provider from wallet.js
- * Dinamik olarak aktif network'e gore RPC provider dondurur
+ * Dynamically returns RPC provider based on active network
  */
 function getActiveRpcProvider() {
   var Wallet = require('app/common/wallet');
@@ -39,8 +39,8 @@ function getActiveRpcProvider() {
 
 /**
  * Get storage key for current main wallet
- * Her ana cüzdan icin ayri session wallet
- * Ana cüzdan adresi wallet.js'den gelir (IIFE ile initialize edilmiş)
+ * Separate session wallet for each main wallet
+ * Main wallet address comes from wallet.js (initialized via IIFE)
  */
 function getStorageKey() {
   var state = getMainWalletState();
@@ -67,21 +67,21 @@ var WALLET_VAULT_ABI = [
 /**
  * Session Wallet Manager (FHE Version)
  *
- * ONEMLI: Private key ASLA localStorage'a kaydedilmez!
+ * IMPORTANT: Private key is NEVER saved to localStorage!
  *
- * Akis:
- * 1. createWallet() cagrilinca:
- *    - Random wallet olustur (memory'de)
- *    - Private key'i FHE ile sifrele
- *    - TX at ve WalletVault'a kaydet
- *    - Sadece ADDRESS localStorage'a kaydedilir
+ * Flow:
+ * 1. When createWallet() is called:
+ *    - Create random wallet (in memory)
+ *    - Encrypt private key with FHE
+ *    - Send TX and save to WalletVault
+ *    - ONLY ADDRESS is saved to localStorage
  *
- * 2. Private key gerektiginde:
- *    - userDecrypt ile blockchain'den al
- *    - Kullan ve unut (memory'de kalir, diske yazilmaz)
+ * 2. When private key is needed:
+ *    - Retrieve from blockchain via userDecrypt
+ *    - Use and forget (stays in memory, never written to disk)
  */
 var SessionWalletManager = function() {
-  this._wallet = null;  // Memory'de, localStorage'a YAZILMAZ
+  this._wallet = null;  // In memory, NEVER written to localStorage
   this._balance = '0.0000';
   this._balancePollingInterval = null;
   // _provider removed - all operations use Wallet.getActiveRpcProvider()
@@ -126,7 +126,7 @@ SessionWalletManager.prototype._getWalletVaultAddress = function() {
 
 /**
  * Check if wallet exists (only address in localStorage)
- * Her ana cüzdan icin ayri kontrol edilir
+ * Checked separately for each main wallet
  */
 SessionWalletManager.prototype.hasWallet = function() {
   var storageKey = getStorageKey();
@@ -135,7 +135,7 @@ SessionWalletManager.prototype.hasWallet = function() {
 
 /**
  * Get wallet address
- * Her ana cüzdan icin ayri adres döner
+ * Returns separate address for each main wallet
  */
 SessionWalletManager.prototype.getAddress = function() {
   var storageKey = getStorageKey();
@@ -154,14 +154,14 @@ SessionWalletManager.prototype.getBalance = function() {
 // This ensures fast, reliable Alchemy RPC for all TX and read operations
 
 /**
- * Create FHE Wallet - tek adimda wallet olustur ve blockchain'e kaydet
+ * Create FHE Wallet - create wallet and save to blockchain in one step
  *
- * AKIS:
- * 1. Random wallet olustur (memory)
- * 2. Private key'i FHE ile sifrele
- * 3. TX at -> WalletVault.storeKey()
- * 4. Sadece address'i localStorage'a kaydet
- * 5. Private key ASLA diske yazilmaz!
+ * FLOW:
+ * 1. Create random wallet (memory)
+ * 2. Encrypt private key with FHE
+ * 3. Send TX -> WalletVault.storeKey()
+ * 4. Save ONLY address to localStorage
+ * 5. Private key is NEVER written to disk!
  *
  * @returns {Promise<string>} Wallet address
  */
@@ -174,12 +174,12 @@ SessionWalletManager.prototype.createWallet = function() {
         return;
       }
 
-      // Ana wallet.js modülünden wallet state al
+      // Get wallet state from main wallet.js module
       var state = getMainWalletState();
       var walletManager = getMainWallet();
 
       if (!state.connected || !state.address) {
-        // Wallet bağlı değilse bağlanmayı dene
+        // Try to connect if wallet is not connected
         Logger.module('SESSION_WALLET').log('Main wallet not connected, attempting to connect...');
         walletManager.connect()
           .then(function() {
@@ -192,7 +192,7 @@ SessionWalletManager.prototype.createWallet = function() {
           .then(resolve)
           .catch(reject);
       } else {
-        // Wallet zaten bağlı, direkt devam et
+        // Wallet already connected, continue directly
         self._createWalletInternal(walletManager)
           .then(resolve)
           .catch(reject);
@@ -252,7 +252,7 @@ SessionWalletManager.prototype._createWalletInternal = function(walletManager) {
 
       initPromise
         .then(function() {
-          // FHEVM SDK config - wallet.js'den merkezi metodlar ile al
+          // FHEVM SDK config - get from wallet.js via centralized methods
           var Wallet = require('app/common/wallet');
           var activeRpcUrl = Wallet.getActiveRpcUrl();
           var chainId = Wallet.getActiveChainId();
@@ -316,14 +316,14 @@ SessionWalletManager.prototype._createWalletInternal = function(walletManager) {
           Logger.module('SESSION_WALLET').log('FHE wallet created and stored on-chain:', receipt.transactionHash);
 
           // Step 4: Save ONLY address to localStorage (NOT private key!)
-          // Key ana cüzdan adresine bagli
+          // Key is bound to main wallet address
           var storageKey = getStorageKey();
           localStorage.setItem(storageKey, address);
 
           // Keep wallet in memory for immediate use
           self._wallet = wallet;
 
-          // Private key artik memory'de, localStorage'a YAZILMADI!
+          // Private key is now in memory, NOT written to localStorage!
           Logger.module('SESSION_WALLET').log('Address saved to localStorage. Private key is FHE-encrypted on blockchain.');
 
           // Trigger global event for UI updates (unlock menus, remove overlay)
@@ -344,14 +344,14 @@ SessionWalletManager.prototype._createWalletInternal = function(walletManager) {
 
 /**
  * Retrieve private key from blockchain via FHE userDecrypt
- * Bu fonksiyon private key'i memory'e alir ama ASLA diske yazmaz!
+ * This function loads private key into memory but NEVER writes to disk!
  *
  * @returns {Promise<string>} The decrypted private key
  */
 SessionWalletManager.prototype.retrieveFromChain = function() {
   var self = this;
   return new Promise(function(resolve, reject) {
-    // Ana wallet.js modülünden wallet bilgilerini al
+    // Get wallet info from main wallet.js module
     var state = getMainWalletState();
     var walletManager = getMainWallet();
 
@@ -369,14 +369,14 @@ SessionWalletManager.prototype.retrieveFromChain = function() {
 
     Logger.module('SESSION_WALLET').log('Using wallet address from wallet.js:', userAddress);
 
-    // Devam et - wallet.js'den gelen bilgilerle
+    // Continue with info from wallet.js
     Promise.resolve()
       .then(function() {
 
         fheSession = self._getFHESession();
         vaultAddress = self._getWalletVaultAddress();
 
-        // GameSession adresini de al - session TUM gerekli contract'lari kapsamali
+        // Also get GameSession address - session should cover ALL required contracts
         var FHESession = require('app/common/fhe_session');
         var addresses = FHESession.getInstance().getContractAddresses();
         var gameSessionAddress = addresses.GameSession;
@@ -386,11 +386,11 @@ SessionWalletManager.prototype.retrieveFromChain = function() {
         Logger.module('SESSION_WALLET').log('Calling initializeSessionWithPIN with BOTH contracts...');
 
         // initializeSessionWithPIN:
-        // - Memory'de gecerli session varsa kullanir
-        // - Encrypted session varsa PIN sorar ve yukler
-        // - Yoksa yeni session olusturur (MetaMask imza + PIN olustur)
-        // ONEMLI: TUM contract adresleri dahil edilmeli (WalletVault + GameSession)
-        // Aksi halde GameSession'dan decrypt yapildiginda signature mismatch olur!
+        // - Uses valid session if it exists in memory
+        // - Asks for PIN and loads if encrypted session exists
+        // - Otherwise creates new session (MetaMask signature + create PIN)
+        // IMPORTANT: ALL contract addresses must be included (WalletVault + GameSession)
+        // Otherwise signature mismatch occurs when decrypting from GameSession!
         var allContracts = [vaultAddress];
         if (gameSessionAddress) {
           allContracts.push(gameSessionAddress);
@@ -448,7 +448,7 @@ SessionWalletManager.prototype.retrieveFromChain = function() {
 
         Logger.module('SESSION_WALLET').log('Key decrypted successfully (in memory only)');
 
-        // Reconstruct wallet IN MEMORY ONLY - localStorage'a YAZMA!
+        // Reconstruct wallet IN MEMORY ONLY - DO NOT write to localStorage!
         self._wallet = new window.ethers.Wallet(keyHex);
 
         resolve(keyHex);
@@ -462,7 +462,7 @@ SessionWalletManager.prototype.retrieveFromChain = function() {
 
 /**
  * Get private key (retrieves from chain via FHE userDecrypt)
- * ONEMLI: Bu fonksiyon private key'i ASLA localStorage'a yazmaz!
+ * IMPORTANT: This function NEVER writes private key to localStorage!
  *
  * @returns {Promise<string>} The private key
  */
@@ -539,8 +539,8 @@ SessionWalletManager.prototype.getSignerAsync = function() {
 
 /**
  * Send ETH from session wallet
- * ONEMLI: Session wallet'in kendi private key'i ile imzalar
- * Ana cüzdandan sign istenmez!
+ * IMPORTANT: Signs with session wallet's own private key
+ * No signature required from main wallet!
  * Uses Alchemy RPC for fast, reliable TX sending
  */
 SessionWalletManager.prototype.sendETH = function(toAddress, amount) {
@@ -672,7 +672,7 @@ SessionWalletManager.prototype.stopBalancePolling = function() {
 SessionWalletManager.prototype.clearWallet = function(clearOnChain) {
   var self = this;
   return new Promise(function(resolve, reject) {
-    // Clear localStorage (only address) - key ana cüzdan adresine bagli
+    // Clear localStorage (only address) - key is bound to main wallet address
     var storageKey = getStorageKey();
     localStorage.removeItem(storageKey);
     self._wallet = null;
@@ -712,7 +712,7 @@ SessionWalletManager.prototype.clearWallet = function(clearOnChain) {
 
 /**
  * Initialize - check if wallet exists and optionally load it
- * Her ana cüzdan icin ayri session wallet
+ * Separate session wallet for each main wallet
  */
 SessionWalletManager.prototype.initialize = function() {
   var self = this;
@@ -733,9 +733,9 @@ SessionWalletManager.prototype.initialize = function() {
 };
 
 /**
- * Sync with blockchain - login sonrasi cagrilir
- * Blockchain'de wallet varsa localStorage'a kaydeder
- * Ana wallet.js modülünden network ve adres bilgisi alır
+ * Sync with blockchain - called after login
+ * Saves to localStorage if wallet exists on blockchain
+ * Gets network and address info from main wallet.js module
  * @returns {Promise<string|null>} Session wallet address if exists, null otherwise
  */
 SessionWalletManager.prototype.syncWithBlockchain = function() {
@@ -744,7 +744,7 @@ SessionWalletManager.prototype.syncWithBlockchain = function() {
   self.trigger('syncStarted');
 
   return new Promise(function(resolve, reject) {
-    // Ana wallet.js modülünden state al (IIFE ile initialize edilmiş)
+    // Get state from main wallet.js module (initialized via IIFE)
     var state = getMainWalletState();
 
     if (!window.ethers) {
@@ -783,7 +783,7 @@ SessionWalletManager.prototype.syncWithBlockchain = function() {
     // Get read-only provider from centralized wallet.js
     var readOnlyProvider = getActiveRpcProvider();
 
-    // Get contract addresses for current network
+    // Get contract addresses for the current network
     var FHESession = require('app/common/fhe_session');
     var addresses = FHESession.DEPLOYED_CONTRACTS[networkName];
     var vaultAddress = addresses ? addresses.WalletVault : null;

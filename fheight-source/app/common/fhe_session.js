@@ -2,12 +2,12 @@
 
 /**
  * FHE Session Manager
- * ZAMA FHEVM session key ve decrypt yonetimi
+ * ZAMA FHEVM session key and decrypt management
  *
- * AKIS:
- * 1. generateKeypair() - Session key cifti olustur (tarayicida)
- * 2. createSessionSignature() - MetaMask ile imzala (1 popup)
- * 3. Artik popup'siz decrypt yapilabilir
+ * FLOW:
+ * 1. generateKeypair() - Create session key pair (in browser)
+ * 2. createSessionSignature() - Sign with MetaMask (1 popup)
+ * 3. Now decrypt can be done without popup
  */
 
 var Promise = require('bluebird');
@@ -125,7 +125,7 @@ function base64ToArrayBuffer(base64) {
 
 // ==================== END CRYPTO UTILITIES ====================
 
-// FHEVM Contract adresleri (Sepolia)
+// FHEVM Contract addresses (Sepolia)
 var DEPLOYED_CONTRACTS = {
   sepolia: {
     GameSession: '0x0Cc86698f008a6b86d1469Dcc8929E4FF7c28dBD', // v19 - FHE.allowThis() added for ACL permissions
@@ -148,7 +148,7 @@ var DEPLOYED_CONTRACTS = {
 // Session storage key
 var SESSION_STORAGE_KEY = 'fheight_fhe_session';
 
-// Session suresi (24 saat)
+// Session duration (24 hours)
 var SESSION_DURATION_DAYS = 1;
 
 /**
@@ -196,7 +196,7 @@ FHESessionManager.prototype.hasEncryptedSession = function() {
 };
 
 /**
- * Session'i localStorage'dan yukle (PIN ile decrypt)
+ * Load session from localStorage (decrypt with PIN)
  * @param {string} pin - User's PIN for decryption
  * @returns {Promise<boolean>} true if loaded successfully
  */
@@ -272,7 +272,7 @@ FHESessionManager.prototype.loadSession = function(pin) {
 FHESessionManager.prototype._loadSessionData = function(session) {
   Logger.module('FHE_SESSION').log('  Loading session data into memory...');
 
-  // Key format kontrolu - ML-KEM keyleri cok daha uzun
+  // Key format check - ML-KEM keys are much longer
   var pubKey = session.publicKey;
   var isValidKeyFormat = false;
 
@@ -315,7 +315,7 @@ FHESessionManager.prototype._loadSessionData = function(session) {
 };
 
 /**
- * Session'i localStorage'a kaydet (PIN ile sifrelenmis)
+ * Save session to localStorage (encrypted with PIN)
  * @param {string} pin - User's PIN for encryption
  * @returns {Promise}
  */
@@ -379,7 +379,7 @@ FHESessionManager.prototype.saveSessionLegacy = function() {
 };
 
 /**
- * Session'i temizle
+ * Clear session
  */
 FHESessionManager.prototype.clearSession = function() {
   localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -395,7 +395,7 @@ FHESessionManager.prototype.clearSession = function() {
 };
 
 /**
- * Session gecerli mi?
+ * Is session valid?
  */
 FHESessionManager.prototype.isSessionValid = function() {
   Logger.module('FHE_SESSION').log('=== isSessionValid CHECK ===');
@@ -419,17 +419,17 @@ FHESessionManager.prototype.isSessionValid = function() {
 };
 
 /**
- * Keypair olustur (ZAMA SDK ile - ML-KEM keypair)
- * SDK'nin generateKeypair fonksiyonu dogru formatta key cifti uretir
+ * Generate keypair (with ZAMA SDK - ML-KEM keypair)
+ * SDK's generateKeypair function generates key pair in correct format
  */
 FHESessionManager.prototype.generateKeypair = function() {
   var self = this;
 
   return new Promise(function(resolve, reject) {
-    // Oncelikle SDK instance'ini hazirla
+    // First prepare SDK instance
     self._initFhevmInstance()
       .then(function() {
-        // SDK instance varsa onun generateKeypair'ini kullan
+        // If SDK instance exists, use its generateKeypair
         if (self._fhevmInstance && typeof self._fhevmInstance.generateKeypair === 'function') {
           Logger.module('FHE_SESSION').log('Generating keypair using SDK instance...');
           var keypair = self._fhevmInstance.generateKeypair();
@@ -442,7 +442,7 @@ FHESessionManager.prototype.generateKeypair = function() {
           return;
         }
 
-        // Global SDK'da generateKeypair varsa kullan
+        // If generateKeypair exists in global SDK, use it
         var sdk = window.relayerSDK || window.fhevm;
         if (sdk && typeof sdk.generateKeypair === 'function') {
           Logger.module('FHE_SESSION').log('Generating keypair using global SDK...');
@@ -456,7 +456,7 @@ FHESessionManager.prototype.generateKeypair = function() {
           return;
         }
 
-        // SDK yoksa fallback - mock mode icin basit key
+        // If SDK is not available, fallback - simple key for mock mode
         Logger.module('FHE_SESSION').warn('SDK not available, using mock keypair (only works on local network)');
         var privateKeyBytes = new Uint8Array(32);
         window.crypto.getRandomValues(privateKeyBytes);
@@ -481,18 +481,18 @@ FHESessionManager.prototype.generateKeypair = function() {
 };
 
 /**
- * PublicKey'i privateKey'den turet
- * Not: Gercek implementasyonda secp256k1 kullanilir
+ * Derive publicKey from privateKey
+ * Note: In real implementation secp256k1 is used
  */
 FHESessionManager.prototype._derivePublicKey = function(privateKey) {
-  // Basitlesitirilmis - gercekte ethers.js SigningKey kullanilir
-  // Simdilik privateKey'in hash'ini publicKey olarak kullan
+  // Simplified - in reality ethers.js SigningKey is used
+  // For now use hash of privateKey as publicKey
   var hash = this._simpleHash(privateKey);
   return '0x04' + hash.slice(2); // 0x04 = uncompressed public key prefix
 };
 
 /**
- * Basit hash fonksiyonu
+ * Simple hash function
  */
 FHESessionManager.prototype._simpleHash = function(input) {
   var hash = 0;
@@ -505,21 +505,21 @@ FHESessionManager.prototype._simpleHash = function(input) {
 };
 
 /**
- * EIP-712 typed data olustur
+ * Create EIP-712 typed data
  */
 FHESessionManager.prototype.createEIP712TypedData = function(contractAddresses, userAddress) {
   var self = this;
-  // Wallet.js'den merkezi metod ile chainId al
+  // Get chainId with central method from Wallet.js
   var chainId = Wallet.getActiveChainId();
   Logger.module('FHE_SESSION').log('createEIP712TypedData - chainId:', chainId);
   var startTime = Math.floor(Date.now() / 1000);
-  var duration = SESSION_DURATION_DAYS * 24 * 60 * 60; // saniye cinsinden
+  var duration = SESSION_DURATION_DAYS * 24 * 60 * 60; // in seconds
 
-  // Contract adreslerini array'e cevir
+  // Convert contract addresses to array
   var contracts = Array.isArray(contractAddresses) ? contractAddresses : [contractAddresses];
 
   self.contractAddresses = contracts;
-  self.sessionStartTime = startTime * 1000; // ms cinsinden sakla
+  self.sessionStartTime = startTime * 1000; // store in ms
   self.sessionExpiry = (startTime + duration) * 1000;
 
   return {
@@ -554,9 +554,9 @@ FHESessionManager.prototype.createEIP712TypedData = function(contractAddresses, 
 };
 
 /**
- * Session signature al (MetaMask popup)
- * SDK'nin createEIP712 fonksiyonunu kullanarak dogru formatta signature olustur
- * @param {string|string[]} contractAddresses - Izin verilecek contract adresleri
+ * Get session signature (MetaMask popup)
+ * Create signature in correct format using SDK's createEIP712 function
+ * @param {string|string[]} contractAddresses - Contract addresses to grant permission
  * @returns {Promise<string>} signature
  */
 FHESessionManager.prototype.createSessionSignature = function(contractAddresses) {
@@ -582,7 +582,7 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
     var signer = null;
     var contracts = Array.isArray(contractAddresses) ? contractAddresses : [contractAddresses];
 
-    // Wallet modülünden hesap al
+    // Get account from Wallet module
     Wallet.getConnectedAccounts()
       .then(function(accounts) {
         if (!accounts || accounts.length === 0) {
@@ -591,14 +591,14 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
 
         userAddress = accounts[0];
 
-        // Wallet modülünden signer al
+        // Get signer from Wallet module
         signer = Wallet.getSigner();
 
-        // Timestamp ve duration - bunlar signature ile eslesmeli!
+        // Timestamp and duration - these must match with signature!
         var startTimeStamp = Math.floor(Date.now() / 1000).toString();
         var durationDays = SESSION_DURATION_DAYS.toString();
 
-        // SDK'nin createEIP712 fonksiyonunu kullan - DOKUMANTASYONA GORE
+        // Use SDK's createEIP712 function - ACCORDING TO DOCUMENTATION
         var eip712 = self._fhevmInstance.createEIP712(
           self.keypair.publicKey,
           contracts,
@@ -609,16 +609,16 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
         Logger.module('FHE_SESSION').log('Requesting session signature via SDK createEIP712...');
         Logger.module('FHE_SESSION').log('EIP712 params:', { startTimeStamp: startTimeStamp, durationDays: durationDays });
 
-        // Signature parametrelerini sakla - userDecrypt'te AYNI degerleri kullanmamiz lazim!
-        self.sessionStartTime = parseInt(startTimeStamp) * 1000; // ms cinsinden
+        // Save signature parameters - we need to use the SAME values in userDecrypt!
+        self.sessionStartTime = parseInt(startTimeStamp) * 1000; // in ms
         self.sessionDurationDays = durationDays;
-        self.sessionStartTimeStamp = startTimeStamp; // String olarak sakla
+        self.sessionStartTimeStamp = startTimeStamp; // Store as string
         self.contractAddresses = contracts;
-        // Expiry hesapla (ms cinsinden)
+        // Calculate expiry (in ms)
         var durationSeconds = parseInt(durationDays) * 24 * 60 * 60;
         self.sessionExpiry = (parseInt(startTimeStamp) + durationSeconds) * 1000;
 
-        // ethers.js v5 signer ile imzala - v5'te _signTypedData kullanilir
+        // Sign with ethers.js v5 signer - v5 uses _signTypedData
         return signer._signTypedData(
           eip712.domain,
           { UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification },
@@ -629,9 +629,9 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
         self.signature = signature;
         self.initialized = true;
 
-        // NOT: saveSession() artik PIN gerektiriyor
-        // Kaydetme islemi initializeSessionWithPIN() veya _createNewSessionWithPIN() tarafindan yapilacak
-        // Legacy initializeSession() kullaniliyorsa saveSessionLegacy() cagrilabilir
+        // NOTE: saveSession() now requires PIN
+        // Save operation will be done by initializeSessionWithPIN() or _createNewSessionWithPIN()
+        // If legacy initializeSession() is used, saveSessionLegacy() can be called
 
         Logger.module('FHE_SESSION').log('Session signature obtained via SDK');
         resolve(signature);
@@ -648,11 +648,11 @@ FHESessionManager.prototype.createSessionSignature = function(contractAddresses)
 };
 
 /**
- * Tam session baslatma akisi
- * 1. Keypair olustur
- * 2. Signature al
- * @param {string|string[]} contractAddresses - Gerekli contract adresleri
- * @param {boolean} forceNew - Mevcut session gecerli olsa bile yeni olustur (default: false)
+ * Complete session initialization flow
+ * 1. Generate keypair
+ * 2. Get signature
+ * @param {string|string[]} contractAddresses - Required contract addresses
+ * @param {boolean} forceNew - Create new even if existing session is valid (default: false)
  * @returns {Promise<object>} { publicKey, signature, fromCache }
  */
 FHESessionManager.prototype.initializeSession = function(contractAddresses, forceNew) {
@@ -663,21 +663,21 @@ FHESessionManager.prototype.initializeSession = function(contractAddresses, forc
   Logger.module('FHE_SESSION').log('  requiredContracts:', requiredContracts);
   Logger.module('FHE_SESSION').log('  forceNew:', forceNew);
 
-  // Helper: Mevcut session gerekli kontratları içeriyor mu?
+  // Helper: Does current session contain required contracts?
   function sessionHasRequiredContracts() {
     if (!self.contractAddresses || self.contractAddresses.length === 0) {
       return false;
     }
-    // Her gerekli kontrat session'da var mı?
+    // Is every required contract in session?
     var sessionContractsLower = self.contractAddresses.map(function(a) { return a.toLowerCase(); });
     return requiredContracts.every(function(addr) {
       return sessionContractsLower.indexOf(addr.toLowerCase()) !== -1;
     });
   }
 
-  // forceNew değilse mevcut session'ı dene
+  // If not forceNew, try existing session
   if (!forceNew) {
-    // Once memory'deki session'i kontrol et
+    // First check session in memory
     if (self.isSessionValid()) {
       if (sessionHasRequiredContracts()) {
         Logger.module('FHE_SESSION').log('Using existing valid session from memory (has required contracts)');
@@ -696,7 +696,7 @@ FHESessionManager.prototype.initializeSession = function(contractAddresses, forc
       }
     }
 
-    // Memory'de yoksa localStorage'dan yukle
+    // If not in memory, load from localStorage
     if (self.loadSession() && self.isSessionValid()) {
       if (sessionHasRequiredContracts()) {
         Logger.module('FHE_SESSION').log('Using existing valid session from storage (has required contracts)');
@@ -716,19 +716,19 @@ FHESessionManager.prototype.initializeSession = function(contractAddresses, forc
     }
   }
 
-  // Yeni session olustur
-  // NOT: Eski session'ı silmiyoruz! saveSession() üzerine yazacak.
-  // Eğer kullanıcı imza atmadan cancel ederse eski session kalır.
+  // Create new session
+  // NOTE: Not deleting old session! saveSession() will overwrite.
+  // If user cancels without signing, old session remains.
   Logger.module('FHE_SESSION').log('Creating new session for contracts:', requiredContracts);
   return self.generateKeypair()
     .then(function() {
       return self.createSessionSignature(requiredContracts);
     })
     .then(function(signature) {
-      // Legacy: PIN olmadan kaydet (backwards compatibility)
+      // Legacy: save without PIN (backwards compatibility)
       self.saveSessionLegacy();
 
-      // FHEVM instance'i yukle
+      // Load FHEVM instance
       return self._initFhevmInstance()
         .then(function() {
           return {
@@ -741,7 +741,7 @@ FHESessionManager.prototype.initializeSession = function(contractAddresses, forc
 };
 
 /**
- * FHEVM SDK instance'ini baslat
+ * Initialize FHEVM SDK instance
  * @private
  */
 FHESessionManager.prototype._initFhevmInstance = function() {
@@ -756,7 +756,7 @@ FHESessionManager.prototype._initFhevmInstance = function() {
       return;
     }
 
-    // Zaten varsa kullan
+    // If already exists, use it
     if (self._fhevmInstance) {
       resolve();
       return;
@@ -764,13 +764,13 @@ FHESessionManager.prototype._initFhevmInstance = function() {
 
     Logger.module('FHE_SESSION').log('Initializing FHEVM SDK instance...');
 
-    // Guncel network'u wallet'tan al (sync metod)
+    // Get current network from wallet (sync method)
     var network = Wallet.getCurrentNetwork();
     Logger.module('FHE_SESSION').log('SDK init - current network:', network);
 
     Promise.resolve()
       .then(function() {
-        // initSDK varsa cagir (WASM yukler)
+        // If initSDK exists, call it (loads WASM)
         var initPromise = (typeof sdk.initSDK === 'function')
           ? sdk.initSDK()
           : Promise.resolve();
@@ -780,7 +780,7 @@ FHESessionManager.prototype._initFhevmInstance = function() {
         });
       })
       .then(function(network) {
-        // Wallet.js'den merkezi metodlar ile al
+        // Get with central methods from Wallet.js
         var chainId = Wallet.getActiveChainId();
         var activeRpcUrl = Wallet.getActiveRpcUrl();
 
@@ -807,14 +807,14 @@ FHESessionManager.prototype._initFhevmInstance = function() {
       })
       .catch(function(err) {
         Logger.module('FHE_SESSION').error('Failed to init FHEVM SDK:', err);
-        // Hata olsa bile devam et, mock kullanilir
+        // Continue even if error, mock will be used
         resolve();
       });
   });
 };
 
 /**
- * FHEVM instance'i disaridan set et
+ * Set FHEVM instance from external source
  * @param {object} instance - SDK instance
  */
 FHESessionManager.prototype.setFhevmInstance = function(instance) {
@@ -823,10 +823,10 @@ FHESessionManager.prototype.setFhevmInstance = function(instance) {
 };
 
 /**
- * KMS'e decrypt istegi gonder
- * @param {string[]} handles - Encrypted deger handle'lari
- * @param {string} contractAddress - Contract adresi
- * @returns {Promise<any[]>} Decrypted degerler
+ * Send decrypt request to KMS
+ * @param {string[]} handles - Encrypted value handles
+ * @param {string} contractAddress - Contract address
+ * @returns {Promise<any[]>} Decrypted values
  */
 FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
   var self = this;
@@ -839,7 +839,7 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
 
     Logger.module('FHE_SESSION').log('Requesting decrypt...', { handles: handles.length });
 
-    // Mock mode icin (local Hardhat) - direkt contract'tan oku
+    // For mock mode (local Hardhat) - read directly from contract
     var currentNetwork = Wallet.getCurrentNetwork();
     if (currentNetwork === 'hardhat' || currentNetwork === 'localhost') {
       Logger.module('FHE_SESSION').log('Using mock decrypt (local network)');
@@ -849,8 +849,8 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
       return;
     }
 
-    // SDK'nin userDecrypt fonksiyonunu kullan
-    // SDK relayerUrl uzerinden decrypt yapar (https://relayer.testnet.zama.org)
+    // Use SDK's userDecrypt function
+    // SDK performs decrypt via relayerUrl (https://relayer.testnet.zama.org)
     var sdk = window.relayerSDK || window.fhevm;
 
     if (!sdk || !self._fhevmInstance) {
@@ -859,17 +859,17 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
       return;
     }
 
-    // Handles'i HandleContractPair formatina cevir
+    // Convert handles to HandleContractPair format
     var handlePairs = handles.map(function(h) {
       return { handle: h, contractAddress: contractAddress };
     });
 
-    // KRITIK: Signature olusturulurken kullanilan AYNI degerleri kullanmaliyiz!
-    // Yoksa signature dogrulamasi basarisiz olur ve 500 hatasi aliriz
+    // CRITICAL: We must use the SAME values used when creating signature!
+    // Otherwise signature verification will fail and we'll get 500 error
     var startTimestamp = self.sessionStartTimeStamp;
     var durationDays = self.sessionDurationDays;
 
-    // Eger kaydedilmemisse (eski session) yeni olustur - ama bu calismayacak!
+    // If not saved (old session) create new - but this won't work!
     if (!startTimestamp || !durationDays) {
       Logger.module('FHE_SESSION').warn('Session params missing - signature mismatch will occur!');
       Logger.module('FHE_SESSION').warn('Please clear session and reconnect wallet');
@@ -877,20 +877,20 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
       return;
     }
 
-    // Signature 0x prefix olmadan gitmeli - dokumantasyona gore
+    // Signature must go without 0x prefix - according to documentation
     var signatureWithoutPrefix = self.signature;
     if (signatureWithoutPrefix && signatureWithoutPrefix.startsWith('0x')) {
       signatureWithoutPrefix = signatureWithoutPrefix.slice(2);
     }
 
-    // Wallet modülünden hesap al
+    // Get account from Wallet module
     Wallet.getConnectedAccounts()
       .then(function(accounts) {
         if (!accounts || accounts.length === 0) {
           throw new Error('No wallet connected');
         }
 
-        // SDK checksum'li adres bekliyor - ethers.utils.getAddress ile normalize et
+        // SDK expects checksummed address - normalize with ethers.utils.getAddress
         var rawAddress = accounts[0];
         var userAddress = ethers.utils.getAddress(rawAddress);
 
@@ -909,23 +909,23 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
           self.keypair.privateKey,
           self.keypair.publicKey,
           signatureWithoutPrefix,
-          self.contractAddresses,  // Session'da kayıtlı contract adresleri
+          self.contractAddresses,  // Contract addresses registered in session
           userAddress,
           startTimestamp,
           durationDays
         );
       })
       .then(function(result) {
-        // SDK response formati: result = { [handle]: value, [handle]: value, ... }
-        // Dokumantasyona gore: const decryptedValue = result[ciphertextHandle];
+        // SDK response format: result = { [handle]: value, [handle]: value, ... }
+        // According to documentation: const decryptedValue = result[ciphertextHandle];
         Logger.module('FHE_SESSION').log('=== SDK userDecrypt RESPONSE ===');
         Logger.module('FHE_SESSION').log('Result type:', typeof result);
         Logger.module('FHE_SESSION').log('Result keys:', result ? Object.keys(result) : 'null');
 
-        // Handle string'lerini kullanarak degerleri cikar
+        // Extract values using handle strings
         var decrypted = [];
         if (result && typeof result === 'object') {
-          // handlePairs sirasina gore degerleri al
+          // Get values according to handlePairs order
           for (var i = 0; i < handlePairs.length; i++) {
             var handle = handlePairs[i].handle;
             var value = result[handle];
@@ -950,8 +950,8 @@ FHESessionManager.prototype.decrypt = function(handles, contractAddress) {
 };
 
 /**
- * Mock decrypt - Hardhat local network icin
- * FHE mock kullandiginda handle'lar aslinda plaintext deger icerir
+ * Mock decrypt - for Hardhat local network
+ * When using FHE mock, handles actually contain plaintext values
  * @private
  */
 FHESessionManager.prototype._mockDecrypt = function(handles, contractAddress) {
@@ -963,10 +963,10 @@ FHESessionManager.prototype._mockDecrypt = function(handles, contractAddress) {
       Logger.module('FHE_SESSION').log('[FHE MOCK] Contract:', contractAddress);
       Logger.module('FHE_SESSION').log('[FHE MOCK] Number of handles:', handles.length);
 
-      // Mock FHE'de handle aslinda encrypted degerin kendisidir
-      // Hardhat fhevm mock'u kullaniyor, handles direkt decode edilebilir
+      // In mock FHE, handle is actually the encrypted value itself
+      // Uses Hardhat fhevm mock, handles can be decoded directly
       var decrypted = handles.map(function(handle, idx) {
-        // Handle BigInt veya hex string olabilir
+        // Handle can be BigInt or hex string
         var bigIntValue;
         if (typeof handle === 'string') {
           bigIntValue = BigInt(handle);
@@ -976,8 +976,8 @@ FHESessionManager.prototype._mockDecrypt = function(handles, contractAddress) {
           bigIntValue = BigInt(handle.toString());
         }
 
-        // Mock'ta handle'in son 2 byte'i genellikle degeri icerir
-        // Veya tum handle decode edilir
+        // In mock, last 2 bytes of handle usually contain the value
+        // Or entire handle is decoded
         var value = Number(bigIntValue & BigInt(0xFFFF));
 
         Logger.module('FHE_SESSION').log('[FHE MOCK]   Handle[' + idx + ']: ' + handle.toString().slice(0, 20) + '... -> CardID=' + value);
@@ -998,32 +998,32 @@ FHESessionManager.prototype._mockDecrypt = function(handles, contractAddress) {
 };
 
 /**
- * PrivateKey ile decrypt (KMS'ten gelen reencrypted degeri ac)
- * Not: Gercek implementasyonda ECIES kullanilir
+ * Decrypt with privateKey (decrypt reencrypted value from KMS)
+ * Note: In real implementation ECIES is used
  */
 FHESessionManager.prototype._decryptWithPrivateKey = function(encryptedValue) {
-  // Basitlestirilmis - gercek ECIES decrypt
-  // KMS, publicKey ile sifrelemis, biz privateKey ile aciyoruz
-  // Simdilik direkt deger dondur (test icin)
+  // Simplified - real ECIES decrypt
+  // KMS encrypted with publicKey, we decrypt with privateKey
+  // For now return value directly (for testing)
   return encryptedValue;
 };
 
 /**
- * Network'e gore contract adreslerini al
- * Dinamik olarak wallet'in bagli oldugu network'u kullanir
+ * Get contract addresses according to network
+ * Dynamically uses the network wallet is connected to
  */
 FHESessionManager.prototype.getContractAddresses = function(network) {
   var self = this;
 
-  // Eger network verilmisse onu kullan
+  // If network is provided, use it
   if (network) {
     return DEPLOYED_CONTRACTS[network] || DEPLOYED_CONTRACTS.sepolia;
   }
 
-  // Wallet'tan guncel network'u al
+  // Get current network from wallet
   var currentNet = Wallet.getCurrentNetwork();
 
-  // Eger cached network varsa kullan
+  // If cached network exists, use it
   if (currentNet && DEPLOYED_CONTRACTS[currentNet]) {
     return DEPLOYED_CONTRACTS[currentNet];
   }
@@ -1033,14 +1033,14 @@ FHESessionManager.prototype.getContractAddresses = function(network) {
 };
 
 /**
- * Async olarak guncel network'e gore contract adreslerini al
+ * Get contract addresses according to current network asynchronously
  * @returns {Promise<object>}
  */
 FHESessionManager.prototype.getContractAddressesAsync = function() {
   var self = this;
 
   return Wallet.getInstance().getCurrentNetwork().then(function(network) {
-    // Cache'e kaydet
+    // Save to cache
     Wallet.setCurrentNetwork(network);
     Logger.module('FHE_SESSION').log('Detected network:', network);
 
@@ -1054,7 +1054,7 @@ FHESessionManager.prototype.getContractAddressesAsync = function() {
 };
 
 /**
- * GameSession contract adresi
+ * GameSession contract address
  */
 FHESessionManager.prototype.getGameSessionAddress = function() {
   var addresses = this.getContractAddresses();
@@ -1123,7 +1123,7 @@ FHESessionManager.prototype.initializeSessionWithPIN = function(contractAddresse
     }
   }
 
-  // Encrypted session var mi localStorage'da?
+  // Encrypted session exists in localStorage?
   if (self.hasEncryptedSession()) {
     Logger.module('FHE_SESSION').log('Encrypted session found, requesting PIN...');
 
@@ -1133,7 +1133,7 @@ FHESessionManager.prototype.initializeSessionWithPIN = function(contractAddresse
       })
       .then(function(loaded) {
         if (loaded && self.isSessionValid()) {
-          // Contract'ları kontrol et
+          // Check contracts
           var sessionContractsLower = (self.contractAddresses || []).map(function(a) { return a.toLowerCase(); });
           var hasRequired = requiredContracts.every(function(addr) {
             return sessionContractsLower.indexOf(addr.toLowerCase()) !== -1;
@@ -1146,24 +1146,24 @@ FHESessionManager.prototype.initializeSessionWithPIN = function(contractAddresse
             });
           }
         }
-        // Session yok veya contract'lar uyuşmuyor - yeni oluştur
+        // Session doesn't exist or contracts don't match - create new
         return self._createNewSessionWithPIN(requiredContracts);
       })
       .catch(function(err) {
         if (err.message === 'Wrong PIN') {
-          // PIN yanlış, tekrar dene
+          // PIN wrong, retry
           Logger.module('FHE_SESSION').warn('Wrong PIN, retrying...');
           return self.initializeSessionWithPIN(contractAddresses);
         }
         if (err.message === 'PIN entry cancelled') {
           throw err;
         }
-        // Diğer hatalar - yeni session oluştur
+        // Other errors - create new session
         return self._createNewSessionWithPIN(requiredContracts);
       });
   }
 
-  // Hiç session yok - yeni oluştur
+  // No session at all - create new
   Logger.module('FHE_SESSION').log('No session found, creating new...');
   return self._createNewSessionWithPIN(requiredContracts);
 };
@@ -1180,10 +1180,10 @@ FHESessionManager.prototype._createNewSessionWithPIN = function(contractAddresse
       return self.createSessionSignature(contractAddresses);
     })
     .then(function(signature) {
-      // PIN oluştur dialogu göster
+      // Show create PIN dialog
       return self.showPinDialog(true, 'Create a PIN to secure your session')
         .then(function(pin) {
-          // PIN ile şifreleyip kaydet
+          // Encrypt with PIN and save
           return self.saveSession(pin);
         })
         .then(function() {

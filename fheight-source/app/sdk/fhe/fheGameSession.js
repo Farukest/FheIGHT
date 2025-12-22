@@ -3,17 +3,17 @@
 /**
  * FHE Game Session - ZAMA FHEVM Single Player Integration
  *
- * Bu modul FLOW.MD'deki akisi implement eder:
- * - Contract sadece random index uretimi ve reveal islemlerini yonetir
- * - Oyun mantigi (board, hand, mana) server tarafinda tutulur
- * - Client kendi kartlarini kendisi hesaplar (server'a guvenmiyor)
+ * This module implements the flow described in FLOW.MD:
+ * - Contract only manages random index generation and reveal operations
+ * - Game logic (board, hand, mana) is kept on server side
+ * - Client calculates its own cards (doesn't trust server)
  *
  * FLOW:
- * 1. createSinglePlayerGame(gameId) - 40 FHE.rand uret
- * 2. getDrawHandles(count) - Sifreli handle'lari al
- * 3. SDK.publicDecrypt() - KMS ile decrypt
- * 4. revealDrawBatch(indices, proof) - Verify ve kaydet
- * 5. calculateCardsFromIndices() - Client kendi kartlarini hesaplar
+ * 1. createSinglePlayerGame(gameId) - Generate 40 FHE.rand
+ * 2. getDrawHandles(count) - Get encrypted handles
+ * 3. SDK.publicDecrypt() - Decrypt with KMS
+ * 4. revealDrawBatch(indices, proof) - Verify and store
+ * 5. calculateCardsFromIndices() - Client calculates its own cards
  */
 
 var Promise = require('bluebird');
@@ -23,8 +23,8 @@ var SessionWallet = require('app/common/session_wallet');
 var ethers = require('ethers');
 
 // ============ CONTRACT ABI ============
-// Otomatik olarak Hardhat artifact'tan import edilir
-// npx hardhat compile sonrasi guncellenir
+// Automatically imported from Hardhat artifact
+// Updated after npx hardhat compile
 var GameSessionArtifact = require('../../../../fhevm-contracts/artifacts/contracts/GameSession.sol/GameSession.json');
 var GAME_SESSION_ABI = GameSessionArtifact.abi;
 
@@ -35,10 +35,10 @@ var INITIAL_HAND_SIZE = 5;
 /**
  * FHE Game Session Manager
  *
- * FLOW.MD'deki akisi yonetir:
- * - Contract ile iletisim (TX ve VIEW)
- * - Index reveal ve kart hesaplama
- * - Deck state takibi
+ * Manages the flow described in FLOW.MD:
+ * - Communication with contract (TX and VIEW)
+ * - Index reveal and card calculation
+ * - Deck state tracking
  */
 function FHEGameSession() {
   this.contract = null;
@@ -49,14 +49,14 @@ function FHEGameSession() {
   this.network = 'sepolia';
   this.sessionWallet = SessionWallet;
 
-  // Deck ve kart state (client-side)
-  this.deck = [];              // 40 kartlik deste (server'dan gelir)
-  this.remainingDeck = [];     // Kalan kartlar (cekildikce azalir)
-  this.myHand = [];            // Elde olan kartlar
-  this.revealedIndices = [];   // Reveal edilmis tum indexler
+  // Deck and card state (client-side)
+  this.deck = [];              // 40-card deck (comes from server)
+  this.remainingDeck = [];     // Remaining cards (decreases as cards are drawn)
+  this.myHand = [];            // Cards in hand
+  this.revealedIndices = [];   // All revealed indices
   this.currentTurn = 0;        // Current turn number
 
-  // SDK instance (publicDecrypt icin)
+  // SDK instance (for publicDecrypt)
   this._fhevmInstance = null;
 
   // Socket reference for server notifications (FLOW.MD)
@@ -111,8 +111,8 @@ FHEGameSession.prototype._notifyServer = function(eventName, data) {
 // ============ CONNECTION ============
 
 /**
- * Contract'a baglan
- * @param {string} contractAddress - GameSession contract adresi
+ * Connect to contract
+ * @param {string} contractAddress - GameSession contract address
  * @returns {Promise<void>}
  */
 FHEGameSession.prototype.connect = function(contractAddress) {
@@ -139,7 +139,7 @@ FHEGameSession.prototype.connect = function(contractAddress) {
 };
 
 /**
- * Baglanti kes ve state temizle
+ * Disconnect and clear state
  */
 FHEGameSession.prototype.disconnect = function() {
   if (this.contract) {
@@ -161,11 +161,11 @@ FHEGameSession.prototype.disconnect = function() {
 // ============ GAME CREATION (FLOW Step 5) ============
 
 /**
- * Yeni single player oyun olustur
+ * Create new single player game
  * FLOW Step 5: CLIENT → CONTRACT: createSinglePlayerGame(gameId)
  *
- * @param {number|string} gameId - Server'dan gelen unique game ID
- * @param {number[]} deck - 40 kartlik deste (server'dan gelir, client saklar)
+ * @param {number|string} gameId - Unique game ID from server
+ * @param {number[]} deck - 40-card deck (comes from server, client stores)
  * @returns {Promise<void>}
  */
 FHEGameSession.prototype.createSinglePlayerGame = function(gameId, deck) {
@@ -177,7 +177,7 @@ FHEGameSession.prototype.createSinglePlayerGame = function(gameId, deck) {
       return;
     }
 
-    // Deck'i kaydet (kart hesaplamasi icin)
+    // Save deck (for card calculation)
     self.deck = deck.slice();
     self.remainingDeck = deck.slice();
     self.myHand = [];
@@ -191,7 +191,7 @@ FHEGameSession.prototype.createSinglePlayerGame = function(gameId, deck) {
     var iface = new ethers.utils.Interface(GAME_SESSION_ABI);
     var data = iface.encodeFunctionData('createSinglePlayerGame', [gameId]);
 
-    // Session wallet ile TX gonder
+    // Send TX with session wallet
     self.sessionWallet.signTransaction({
       to: self.contractAddress,
       data: data,
@@ -212,8 +212,8 @@ FHEGameSession.prototype.createSinglePlayerGame = function(gameId, deck) {
       // Store blockchain gameId
       self.blockchainGameId = gameId;
 
-      // NOTE: fhe_game_created event game.js showNextStepInGameSetup'da gönderiliyor
-      // Çünkü bu noktada socket henüz bağlanmamış oluyor
+      // NOTE: fhe_game_created event is sent in game.js showNextStepInGameSetup
+      // Because at this point the socket is not yet connected
 
       // IMPORTANT: Return the gameId so caller can use it!
       resolve(self.gameId);
@@ -228,13 +228,13 @@ FHEGameSession.prototype.createSinglePlayerGame = function(gameId, deck) {
 // ============ INITIAL HAND (FLOW Steps 7-13) ============
 
 /**
- * Ilk eli cek ve reveal et (5 kart)
- * FLOW Steps 7-13: Handle al -> Decrypt -> Reveal -> Kart hesapla
+ * Draw and reveal initial hand (5 cards)
+ * FLOW Steps 7-13: Get handle -> Decrypt -> Reveal -> Calculate cards
  *
  * If blockchain operations were successful but server failed,
  * use retryNotifyServer() instead to avoid "Exceeds allowed reveals" error.
  *
- * @returns {Promise<number[]>} 5 kartlik ilk el
+ * @returns {Promise<number[]>} Initial hand of 5 cards
  */
 FHEGameSession.prototype.revealInitialHand = function() {
   var self = this;
@@ -257,8 +257,8 @@ FHEGameSession.prototype.revealInitialHand = function() {
 
     Logger.module('FHE_GAME').log('=== REVEAL INITIAL HAND ===');
 
-    // ZAMA infrastructure'ın ACL'yi index'lemesi için bekle
-    // 10 saniye - ACL indexing zaman alabilir (Sepolia'da)
+    // Wait for ZAMA infrastructure to index ACL
+    // 10 seconds - ACL indexing can take time (on Sepolia)
     Logger.module('FHE_GAME').log('Waiting for ZAMA ACL indexing (10 seconds)...');
 
     var waitForACL = new Promise(function(res) {
@@ -268,7 +268,7 @@ FHEGameSession.prototype.revealInitialHand = function() {
     waitForACL
     .then(function() {
       Logger.module('FHE_GAME').log('ACL wait complete, proceeding...');
-      // Step 7: getAllowedReveals kontrolu
+      // Step 7: Check getAllowedReveals
       return self._getAllowedReveals();
     })
       .then(function(allowed) {
@@ -290,7 +290,7 @@ FHEGameSession.prototype.revealInitialHand = function() {
       .then(function(result) {
         Logger.module('FHE_GAME').log('Decrypted indices:', result.clearIndices);
 
-        // Step 10: clearIndices sakla
+        // Step 10: Store clearIndices
         self.revealedIndices = result.clearIndices.slice();
 
         // Step 11: revealDrawBatch TX (pass all params from SDK response)
@@ -301,7 +301,7 @@ FHEGameSession.prototype.revealInitialHand = function() {
         );
       })
       .then(function() {
-        // Step 12: Kartlari hesapla
+        // Step 12: Calculate cards
         self.myHand = self._calculateCards(self.revealedIndices);
 
         Logger.module('FHE_GAME').log('=== INITIAL HAND READY ===');
@@ -314,7 +314,7 @@ FHEGameSession.prototype.revealInitialHand = function() {
         };
         Logger.module('FHE_GAME').log('Cached hand data for potential retry');
 
-        // FLOW Step 14: Server'a bildir ve RESPONSE BEKLE!
+        // FLOW Step 14: Notify server and WAIT FOR RESPONSE!
         return self._notifyServerInitialHand();
       })
       .then(function(serverCardIndices) {
@@ -433,7 +433,7 @@ FHEGameSession.prototype.clearCachedHandData = function() {
 // ============ TURN INCREMENT (FLOW Step 29) ============
 
 /**
- * Turn'u artir
+ * Increment turn
  * FLOW Step 29: CLIENT → CONTRACT: incrementTurn(gameId)
  *
  * @returns {Promise<void>}
@@ -481,10 +481,10 @@ FHEGameSession.prototype.incrementTurn = function() {
 // ============ DRAW CARD (FLOW Steps 31-36) ============
 
 /**
- * Yeni kart cek (turn sonunda)
- * FLOW Steps 31-36: Handle al -> Decrypt -> Reveal -> Kart hesapla
+ * Draw new card (at end of turn)
+ * FLOW Steps 31-36: Get handle -> Decrypt -> Reveal -> Calculate card
  *
- * @returns {Promise<number>} Cekilen kart ID'si
+ * @returns {Promise<number>} Drawn card ID
  */
 FHEGameSession.prototype.revealDrawCard = function() {
   var self = this;
@@ -497,7 +497,7 @@ FHEGameSession.prototype.revealDrawCard = function() {
 
     Logger.module('FHE_GAME').log('=== REVEAL DRAW CARD ===');
 
-    // FLOW.MD Step 29: incrementTurn - allowedReveals artır
+    // FLOW.MD Step 29: incrementTurn - increase allowedReveals
     self.incrementTurn()
       .then(function() {
         // Step 31: getDrawHandles(1)
@@ -512,7 +512,7 @@ FHEGameSession.prototype.revealDrawCard = function() {
       .then(function(result) {
         Logger.module('FHE_GAME').log('Decrypted index:', result.clearIndices[0]);
 
-        // Step 33: Index sakla
+        // Step 33: Store index
         self.revealedIndices.push(result.clearIndices[0]);
 
         // Step 34: revealDrawBatch TX (pass all params from SDK response)
@@ -523,15 +523,15 @@ FHEGameSession.prototype.revealDrawCard = function() {
         );
       })
       .then(function() {
-        // Step 35: Karti hesapla
+        // Step 35: Calculate card
         var newIndex = self.revealedIndices[self.revealedIndices.length - 1];
         var pos = newIndex % self.remainingDeck.length;
         var drawnCard = self.remainingDeck[pos];
 
-        // Remaining deck'ten cikar
+        // Remove from remaining deck
         self.remainingDeck.splice(pos, 1);
 
-        // Ele ekle
+        // Add to hand
         self.myHand.push(drawnCard);
 
         Logger.module('FHE_GAME').log('=== CARD DRAWN ===');
@@ -539,8 +539,8 @@ FHEGameSession.prototype.revealDrawCard = function() {
         Logger.module('FHE_GAME').log('Hand size:', self.myHand.length);
         Logger.module('FHE_GAME').log('Deck remaining:', self.remainingDeck.length);
 
-        // FLOW Step 37: Server'a bildir "Kart çekme tamamlandı" ve response bekle
-        // Server response'unda cardIndex olacak - bunu client'ta kullanacağız
+        // FLOW Step 37: Notify server "Card draw completed" and wait for response
+        // Server response will have cardIndex - we'll use it on client
         self._socket.emit('fhe_card_drawn', {
           gameId: self.serverGameId,
           turn: self.currentTurn,
@@ -548,7 +548,7 @@ FHEGameSession.prototype.revealDrawCard = function() {
         });
         Logger.module('FHE_GAME').log('Server notified: fhe_card_drawn');
 
-        // Server response'unu bekle - cardIndex ve burned bilgisini al
+        // Wait for server response - get cardIndex and burned info
         self._socket.once('fhe_card_drawn_response', function(response) {
           Logger.module('FHE_GAME').log('Server response:', JSON.stringify(response));
           if (response.success) {
@@ -574,12 +574,12 @@ FHEGameSession.prototype.revealDrawCard = function() {
 // ============ CARD CALCULATION (FLOW Step 12, 35) ============
 
 /**
- * Indexlerden kartlari hesapla
- * Client kendi deck'i + clearIndices ile kartlari hesaplar
+ * Calculate cards from indices
+ * Client calculates cards using its own deck + clearIndices
  *
  * @private
- * @param {number[]} indices - Clear index'ler
- * @returns {number[]} Kart ID'leri
+ * @param {number[]} indices - Clear indices
+ * @returns {number[]} Card IDs
  */
 FHEGameSession.prototype._calculateCards = function(indices) {
   var self = this;
@@ -593,15 +593,15 @@ FHEGameSession.prototype._calculateCards = function(indices) {
     remaining.splice(pos, 1);
   }
 
-  // remainingDeck guncelle
+  // Update remainingDeck
   self.remainingDeck = remaining;
 
   return cards;
 };
 
 /**
- * Elden kart cikar (oynandiginda)
- * @param {number} handIndex - Eldeki kart indexi
+ * Remove card from hand (when played)
+ * @param {number} handIndex - Card index in hand
  */
 FHEGameSession.prototype.removeCardFromHand = function(handIndex) {
   if (handIndex >= 0 && handIndex < this.myHand.length) {
@@ -629,7 +629,7 @@ FHEGameSession.prototype._getDrawHandles = function(count) {
 };
 
 /**
- * Oyun bilgilerini al
+ * Get game info
  * @returns {Promise<object>}
  */
 FHEGameSession.prototype.getGameInfo = function() {
@@ -648,7 +648,7 @@ FHEGameSession.prototype.getGameInfo = function() {
 };
 
 /**
- * Verified draw order al (server kullanir)
+ * Get verified draw order (used by server)
  * @returns {Promise<number[]>}
  */
 FHEGameSession.prototype.getVerifiedDrawOrder = function() {
@@ -694,7 +694,7 @@ FHEGameSession.prototype._revealDrawBatch = function(clearIndices, abiEncodedCle
 };
 
 /**
- * Oyunu sonlandir
+ * End game
  * @returns {Promise<void>}
  */
 FHEGameSession.prototype.endGame = function() {
@@ -738,9 +738,9 @@ FHEGameSession.prototype.completeMulligan = function(mulliganSlots) {
 // ============ DECRYPT (KMS) ============
 
 /**
- * publicDecrypt - KMS ile decrypt
+ * publicDecrypt - Decrypt with KMS
  * @private
- * @param {number[]|BigInt[]} handles - Sifreli handle'lar
+ * @param {number[]|BigInt[]} handles - Encrypted handles
  * @returns {Promise<{clearIndices: number[], proof: string}>}
  */
 FHEGameSession.prototype._publicDecrypt = function(handles) {
@@ -748,7 +748,7 @@ FHEGameSession.prototype._publicDecrypt = function(handles) {
   var currentNetwork = Wallet.getCurrentNetwork();
 
   return new Promise(function(resolve, reject) {
-    // Handle'lari hex string'e cevir
+    // Convert handles to hex string
     var handleStrings = handles.map(function(h, idx) {
       var result;
       if (typeof h === 'bigint') {
@@ -770,7 +770,7 @@ FHEGameSession.prototype._publicDecrypt = function(handles) {
     if (currentNetwork === 'hardhat' || currentNetwork === 'localhost') {
       Logger.module('FHE_GAME').log('[MOCK] Using mock decrypt');
 
-      // Mock'ta handle degerleri direkt index
+      // In mock mode, handle values are direct indices
       var clearIndices = handles.map(function(h) {
         if (typeof h === 'bigint') return Number(h) % 256;
         if (typeof h === 'number') return h % 256;
@@ -844,7 +844,7 @@ FHEGameSession.prototype._publicDecrypt = function(handles) {
 };
 
 /**
- * FHEVM SDK instance al
+ * Get FHEVM SDK instance
  * @private
  */
 FHEGameSession.prototype._getFhevmInstance = function() {
@@ -893,7 +893,7 @@ FHEGameSession.prototype._getFhevmInstance = function() {
 // ============ GETTERS ============
 
 /**
- * Eldeki kartlari al
+ * Get cards in hand
  * @returns {number[]}
  */
 FHEGameSession.prototype.getHand = function() {
@@ -901,7 +901,7 @@ FHEGameSession.prototype.getHand = function() {
 };
 
 /**
- * Kalan deck boyutunu al
+ * Get remaining deck size
  * @returns {number}
  */
 FHEGameSession.prototype.getRemainingDeckSize = function() {
@@ -909,7 +909,7 @@ FHEGameSession.prototype.getRemainingDeckSize = function() {
 };
 
 /**
- * Game ID al
+ * Get Game ID
  * @returns {number|null}
  */
 FHEGameSession.prototype.getGameId = function() {
@@ -917,7 +917,7 @@ FHEGameSession.prototype.getGameId = function() {
 };
 
 /**
- * Session wallet adresini al
+ * Get session wallet address
  * @returns {string}
  */
 FHEGameSession.prototype.getSessionWalletAddress = function() {
@@ -925,7 +925,7 @@ FHEGameSession.prototype.getSessionWalletAddress = function() {
 };
 
 /**
- * Current turn al
+ * Get current turn
  * @returns {number}
  */
 FHEGameSession.prototype.getCurrentTurn = function() {
@@ -933,7 +933,7 @@ FHEGameSession.prototype.getCurrentTurn = function() {
 };
 
 /**
- * Server game ID al
+ * Get server game ID
  * @returns {string|null}
  */
 FHEGameSession.prototype.getServerGameId = function() {
@@ -941,7 +941,7 @@ FHEGameSession.prototype.getServerGameId = function() {
 };
 
 /**
- * Blockchain game ID al
+ * Get blockchain game ID
  * @returns {number|null}
  */
 FHEGameSession.prototype.getBlockchainGameId = function() {

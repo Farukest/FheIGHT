@@ -138,7 +138,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     this.listenTo(NetworkManager.getInstance().spectators, 'remove', this.onSpectatorLeft);
   },
 
- // GameLayout gösterilince (oyun başlangıcı)
+ // GameLayout shown (game start)
   onShow: function () {
     // listen to game events
     this.listenTo(SDK.GameSession.getInstance().getEventBus(), EVENTS.status, this.onGameStatusChanged);
@@ -162,7 +162,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     // listen to global events
     this.listenTo(EventBus.getInstance(), EVENTS.resize, this.onResize);
 
-    // oyun başında ilk İlk çağrı
+    // initial call at game start
     this.showNextStepInGameSetup();
 
     this.onResize();
@@ -383,10 +383,10 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     if (step != null) {
       var action = step.getAction();
 
-      // FHE MODE: DrawCardAction tetiklendiginde kart cek
-      // Contract'tan getHand() + userDecrypt() ile yeni karti ogren (TX YOK!)
-      // DrawCardAction, EndTurnAction'in sub-action'i olarak gelebilir, bu yuzden
-      // tum action tree'yi kontrol etmemiz lazim (getFlattenedActionTree)
+      // FHE MODE: Draw card when DrawCardAction is triggered
+      // Learn the new card from contract via getHand() + userDecrypt() (NO TX!)
+      // DrawCardAction can come as a sub-action of EndTurnAction, so
+      // we need to check the entire action tree (getFlattenedActionTree)
       // TUTORIAL MODE: FHE is DISABLED for tutorial challenges
       var gameSession = SDK.GameSession.getInstance();
       var isTutorial = gameSession.isTutorial && gameSession.isTutorial();
@@ -394,7 +394,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
       if (fheEnabledForDraw && !this._fheDecrypting) {
         var myPlayerId = SDK.GameSession.getInstance().getMyPlayerId();
 
-        // Tum action agacini kontrol et (ana action + sub-actions)
+        // Check entire action tree (main action + sub-actions)
         var allActions = action.getFlattenedActionTree();
         var myDrawCardActions = allActions.filter(function(a) {
           return a instanceof SDK.DrawCardAction && a.getOwnerId() === myPlayerId;
@@ -443,9 +443,9 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
                   this._addFHECardToHand(cardData.cardId, cardData.cardIndex);
                 } else {
                   Logger.module('FHE').log('[DRAW] FHE card drawn:', cardData.cardId, 'index:', cardData.cardIndex);
-                  // SDK'ya karti ekle - server'dan gelen cardIndex'i kullan
+                  // Add card to SDK - use cardIndex from server
                   this._addFHECardToHand(cardData.cardId, cardData.cardIndex);
-                  // UI refresh icin event tetikle (only if not burned)
+                  // Trigger event for UI refresh (only if not burned)
                   EventBus.getInstance().trigger(EVENTS.fhe_card_drawn, { cardId: cardData.cardId });
                 }
               } else {
@@ -627,7 +627,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
         }
       }
 
-      // show starting or choose hand // başlangıçta 5 kart çekme yer. 5 cards. ilk el
+      // show starting or choose hand // initial hand draw location. 5 cards. starting hand
       if (SDK.GameSession.current().getMyPlayer().getHasStartingHand()) {
         return this.showStartingHand();
       } else {
@@ -651,9 +651,9 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
               fheGameSession.setServerGameId(gameSession.getGameId());
               Logger.module('FHE_UI').log('[FHE] Socket set for server notifications');
 
-              // CRITICAL: Socket bağlandıktan sonra fhe_game_created event'i gönder
-              // createSinglePlayerGame TX sırasında socket henüz yoktu, şimdi yeniden gönder
-              // Bu event server'da games[gameId].fhe state'ini oluşturuyor
+              // CRITICAL: Send fhe_game_created event after socket connection
+              // Socket didn't exist during createSinglePlayerGame TX, resend now
+              // This event creates games[gameId].fhe state on server
               if (fheGameSession.blockchainGameId) {
                 var fheEventData = {
                   gameId: gameSession.getGameId(),
@@ -1002,9 +1002,9 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
 
       var fheGameSession = FHEGameSession.getInstance();
 
-      // SINGLE PLAYER MODE: Contract zaten mulligan'i atladi (createSinglePlayerGame)
-      // Oyun direkt InProgress durumunda, completeMulligan cagirmaya gerek yok
-      // Sadece SDK tarafini sync edelim
+      // SINGLE PLAYER MODE: Contract already skipped mulligan (createSinglePlayerGame)
+      // Game is directly in InProgress state, no need to call completeMulligan
+      // Just sync the SDK side
       var isSinglePlayerGame = gameSession.isSinglePlayer() || gameSession.isBossBattle() || gameSession.isChallenge() || gameSession.isSandbox();
       Logger.module('FHE_UI').log('[FHE] isSinglePlayerGame:', isSinglePlayerGame);
       Logger.module('FHE_UI').log('[FHE] fheGameSession.gameId:', fheGameSession.gameId);
@@ -1106,8 +1106,8 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
         // FHE Mode: Get hand from contract and decrypt
         var fheGameSession = FHEGameSession.getInstance();
 
-        // SINGLE PLAYER MODE: Contract islemleri basarisiz olabilir, SDK hand kullan
-        // gameId 0 ise TX basarisiz olmus demektir
+        // SINGLE PLAYER MODE: Contract operations may fail, use SDK hand
+        // If gameId is 0, TX has failed
         var isSinglePlayerGame = gameSession.isSinglePlayer() || gameSession.isBossBattle() || gameSession.isChallenge() || gameSession.isSandbox();
         var hasValidGameId = fheGameSession.gameId !== null && fheGameSession.gameId > 0;
 
@@ -1115,9 +1115,9 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
         Logger.module('FHE_UI').log('[FHE] fheGameSession.gameId:', fheGameSession.gameId);
         Logger.module('FHE_UI').log('[FHE] hasValidGameId:', hasValidGameId);
 
-        // FHE MODE: Kartlar zaten showNextStepInGameSetup'ta populate edildi
-        // Burada tekrar decrypt/populate yapmaya GEREK YOK
-        // Sadece UI'ı güncelle ve devam et
+        // FHE MODE: Cards were already populated in showNextStepInGameSetup
+        // NO NEED to decrypt/populate again here
+        // Just update the UI and continue
         Logger.module('FHE_UI').log('[FHE] Cards already populated in showNextStepInGameSetup, skipping re-populate');
         Scene.getInstance().getGameLayer().showDrawStartingHand(action.mulliganIndices).then(function () {
           self.showNextStepInGameSetup();
@@ -1206,7 +1206,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
       Logger.module('FHE_UI').log('[FHE] Deck remaining:', currentRemaining - 1);
     }
 
-    // UI UPDATE: bindCardNodeAtIndex ile UI'ya karti bagla
+    // UI UPDATE: bind card to UI with bindCardNodeAtIndex
     var gameLayer = Scene.getInstance().getGameLayer();
     if (gameLayer && gameLayer.bottomDeckLayer) {
       gameLayer.bottomDeckLayer.bindCardNodeAtIndex(emptySlot);
@@ -1246,17 +1246,17 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     Logger.module('FHE_UI').log('[FHE] Current deck hand (should be empty):', deck.hand.slice());
     Logger.module('FHE_UI').log('[FHE] fheEnabled on gameSession:', gameSession.fheEnabled);
 
-    // FHE modda deck bos geliyor - direkt kart olustur ve ekle
+    // In FHE mode deck comes empty - directly create and add cards
     var addedCount = 0;
     for (var i = 0; i < decryptedCardIds.length; i++) {
       var fheCardId = decryptedCardIds[i];
 
-      // BigInt ise number'a cevir
+      // Convert BigInt to number if needed
       if (typeof fheCardId === 'bigint') {
         fheCardId = Number(fheCardId);
       }
 
-      // FHE kartini olustur
+      // Create FHE card
       var fheCard = CardFactory.cardForIdentifier(fheCardId, gameSession);
       if (!fheCard) {
         Logger.module('FHE_UI').error('[FHE] Failed to create card for ID:', fheCardId);
@@ -1278,14 +1278,14 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
       fheCard.setOwner(myPlayer);
       gameSession.cardsByIndex[cardIndex] = fheCard;
 
-      // Eli guncelle - bu slot'a kart ekle
+      // Update hand - add card to this slot
       deck.hand[i] = cardIndex;
 
       Logger.module('FHE_UI').log('[FHE] Slot ' + i + ': ' + fheCard.getName() + ' (ID: ' + fheCardId + ', index: ' + cardIndex + ')');
       addedCount++;
     }
 
-    // Cache'leri temizle
+    // Clear caches
     deck.flushCachedCardsInHand();
 
     // FHE mode: Set deck remaining from blockchain (passed as parameter from getPlayerInfo)
@@ -1296,7 +1296,7 @@ var GameLayout = Backbone.Marionette.LayoutView.extend({
     Logger.module('FHE_UI').log('[FHE] === POPULATE COMPLETE ===');
     Logger.module('FHE_UI').log('[FHE] Added ' + addedCount + ' FHE cards to empty deck');
 
-    // Dogrulama: Eli logla
+    // Verification: Log the hand
     var newHand = deck.getCardsInHandExcludingMissing();
     Logger.module('FHE_UI').log('[FHE] Verified hand after populate:');
     for (var k = 0; k < newHand.length; k++) {

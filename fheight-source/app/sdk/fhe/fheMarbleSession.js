@@ -3,17 +3,17 @@
 /**
  * FHE Marble Session - ZAMA FHEVM Morphic Marbles (Booster Pack) Integration
  *
- * Bu modul FLOW-MARBLES.MD'deki akisi implement eder:
- * - Contract 15 encrypted random uretir (5 kart x 3 random)
- * - Client decrypt edip reveal eder
- * - Server contracttan verify edip kartlari DB'ye yazar
+ * This module implements the flow from FLOW-MARBLES.MD:
+ * - Contract generates 15 encrypted randoms (5 cards x 3 random values)
+ * - Client decrypts and reveals
+ * - Server verifies from contract and writes cards to DB
  *
  * FLOW:
- * 1. drawRandoms(marbleId, cardSetId) - 15 FHE.rand uret
- * 2. getRandomHandles(marbleId) - Sifreli handle'lari al
- * 3. SDK.publicDecrypt() - KMS ile decrypt
- * 4. revealRandoms(marbleId, clearValues, proof) - Verify ve kaydet
- * 5. Server getVerifiedRandoms() - Contract'tan oku, kartlari hesapla
+ * 1. drawRandoms(marbleId, cardSetId) - Generate 15 FHE.rand values
+ * 2. getRandomHandles(marbleId) - Get encrypted handles
+ * 3. SDK.publicDecrypt() - Decrypt with KMS
+ * 4. revealRandoms(marbleId, clearValues, proof) - Verify and save
+ * 5. Server getVerifiedRandoms() - Read from contract, calculate cards
  */
 
 var Promise = require('bluebird');
@@ -34,10 +34,10 @@ var TOTAL_RANDOMS = 15;   // 5 * 3
 /**
  * FHE Marble Session Manager
  *
- * Marble acma islemlerini yonetir:
- * - Contract ile iletisim (TX ve VIEW)
- * - Random reveal ve KMS decrypt
- * - Server bildirim
+ * Manages marble opening operations:
+ * - Communication with contract (TX and VIEW)
+ * - Random reveal and KMS decrypt
+ * - Server notification
  */
 function FHEMarbleSession() {
   this.contract = null;
@@ -47,7 +47,7 @@ function FHEMarbleSession() {
   this.network = 'sepolia';
   this.sessionWallet = SessionWallet;
 
-  // SDK instance (publicDecrypt icin)
+  // SDK instance (for publicDecrypt)
   this._fhevmInstance = null;
 
   // Socket reference for server notifications (deprecated, using API now)
@@ -79,8 +79,8 @@ FHEMarbleSession.prototype.setNetwork = function(network) {
 // ============ CONNECTION ============
 
 /**
- * Contract'a baglan
- * @param {string} contractAddress - MarbleRandoms contract adresi
+ * Connect to contract
+ * @param {string} contractAddress - MarbleRandoms contract address
  * @returns {Promise<void>}
  */
 FHEMarbleSession.prototype.connect = function(contractAddress) {
@@ -107,7 +107,7 @@ FHEMarbleSession.prototype.connect = function(contractAddress) {
 };
 
 /**
- * Baglanti kes ve state temizle
+ * Disconnect and clear state
  */
 FHEMarbleSession.prototype.disconnect = function() {
   if (this.contract) {
@@ -140,7 +140,7 @@ FHEMarbleSession.prototype.getBoosterPackId = function() {
 // ============ MARBLE OPENING FLOW ============
 
 /**
- * Marble acma basla - 15 encrypted random uret
+ * Start marble opening - generate 15 encrypted randoms
  * FLOW Step 1: CLIENT → CONTRACT: drawRandoms(marbleId, cardSetId)
  *
  * @param {string} marbleId - Unique marble ID (bytes32 hex string)
@@ -165,7 +165,7 @@ FHEMarbleSession.prototype.drawRandoms = function(marbleId, cardSetId) {
     var iface = new ethers.utils.Interface(MARBLE_RANDOMS_ABI);
     var data = iface.encodeFunctionData('drawRandoms', [marbleId, cardSetId]);
 
-    // Session wallet ile TX gonder
+    // Send TX with session wallet
     self.sessionWallet.signTransaction({
       to: self.contractAddress,
       data: data,
@@ -193,8 +193,8 @@ FHEMarbleSession.prototype.drawRandoms = function(marbleId, cardSetId) {
 };
 
 /**
- * Random'lari decrypt ve reveal et
- * FLOW Steps 2-4: Handle al -> Decrypt -> Reveal
+ * Decrypt and reveal randoms
+ * FLOW Steps 2-4: Get handles -> Decrypt -> Reveal
  *
  * @returns {Promise<object>} { rarity: uint8[5], index: uint8[5], prismatic: uint8[5] }
  */
@@ -218,7 +218,7 @@ FHEMarbleSession.prototype.revealRandoms = function() {
 
     Logger.module('FHE_MARBLE').log('=== REVEAL RANDOMS ===');
 
-    // ZAMA infrastructure'ın ACL'yi index'lemesi için bekle
+    // Wait for ZAMA infrastructure to index the ACL
     Logger.module('FHE_MARBLE').log('Waiting for ZAMA ACL indexing (10 seconds)...');
 
     var waitForACL = new Promise(function(res) {
@@ -447,9 +447,9 @@ FHEMarbleSession.prototype._revealRandomsTx = function(clearValues, abiEncodedCl
 // ============ DECRYPT (KMS) ============
 
 /**
- * publicDecrypt - KMS ile decrypt
+ * publicDecrypt - Decrypt with KMS
  * @private
- * @param {bytes32[]} handles - Sifreli handle'lar (15 adet)
+ * @param {bytes32[]} handles - Encrypted handles (15 items)
  * @returns {Promise<{clearValues: number[], proof: string}>}
  */
 FHEMarbleSession.prototype._publicDecrypt = function(handles) {
@@ -457,7 +457,7 @@ FHEMarbleSession.prototype._publicDecrypt = function(handles) {
   var currentNetwork = Wallet.getCurrentNetwork();
 
   return new Promise(function(resolve, reject) {
-    // Handle'lari hex string'e cevir
+    // Convert handles to hex strings
     var handleStrings = handles.map(function(h, idx) {
       var result;
       if (typeof h === 'bigint') {
@@ -527,7 +527,7 @@ FHEMarbleSession.prototype._publicDecrypt = function(handles) {
 };
 
 /**
- * FHEVM SDK instance al
+ * Get FHEVM SDK instance
  * @private
  */
 FHEMarbleSession.prototype._getFhevmInstance = function() {
@@ -606,7 +606,7 @@ FHEMarbleSession.prototype.getContractAddress = function() {
 };
 
 /**
- * Session wallet adresini al
+ * Get session wallet address
  * @returns {string}
  */
 FHEMarbleSession.prototype.getSessionWalletAddress = function() {

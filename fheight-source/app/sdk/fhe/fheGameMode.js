@@ -3,14 +3,14 @@
 /**
  * FHE Game Mode
  *
- * Oyun baslatilirken FHE modunu etkinlestirir.
- * Mevcut GameSession ile entegre olur.
+ * Enables FHE mode when starting a game.
+ * Integrates with existing GameSession.
  *
- * AKIS:
- * 1. Oyun olusturulurken FHE modu kontrol edilir
- * 2. FHE aktifse, contract'ta oyun olusturulur
- * 3. Kart islemleri FHE uzerinden yapilir
- * 4. El kartlari KMS ile decrypt edilir
+ * FLOW:
+ * 1. FHE mode is checked when game is created
+ * 2. If FHE is active, game is created on contract
+ * 3. Card operations are performed via FHE
+ * 4. Hand cards are decrypted with KMS
  */
 
 var Promise = require('bluebird');
@@ -47,10 +47,10 @@ function FHEGameMode() {
 }
 
 /**
- * FHE modunu baslat
- * Oyun olusturulmadan once cagirilmali
+ * Start FHE mode
+ * Must be called before game is created
  *
- * @param {string} contractAddress - GameSession contract adresi
+ * @param {string} contractAddress - GameSession contract address
  * @returns {Promise}
  */
 FHEGameMode.prototype.initialize = function(contractAddress) {
@@ -67,12 +67,12 @@ FHEGameMode.prototype.initialize = function(contractAddress) {
 
     Logger.module('FHE_MODE').log('Initializing FHE mode with contract:', contractAddress);
 
-    // FHE Session'i baslat (session key + signature)
+    // Start FHE Session (session key + signature)
     self.fheSession = FHESession.getInstance();
 
-    // TUM gerekli contract adreslerini dahil et (GameSession + WalletVault)
-    // Aksi halde session sadece GameSession icerirse, session wallet
-    // private key decrypt'i icin ayri bir session/signature gerekir
+    // Include ALL required contract addresses (GameSession + WalletVault)
+    // Otherwise if session only contains GameSession, session wallet
+    // would require separate session/signature for private key decrypt
     var addresses = self.fheSession.getContractAddresses();
     var allContracts = [contractAddress]; // GameSession
     if (addresses.WalletVault && allContracts.indexOf(addresses.WalletVault) === -1) {
@@ -86,12 +86,12 @@ FHEGameMode.prototype.initialize = function(contractAddress) {
           fromCache: sessionInfo.fromCache
         });
 
-        // FHE Game Session'i baslat
+        // Start FHE Game Session
         self.fheGameSession = FHEGameSession.getInstance();
         return self.fheGameSession.connect(contractAddress);
       })
       .then(function() {
-        // Card Handler'i baslat
+        // Start Card Handler
         self.cardHandler = FHECardHandler.getInstance();
 
         self.state = FHEModeState.ACTIVE;
@@ -108,10 +108,10 @@ FHEGameMode.prototype.initialize = function(contractAddress) {
 };
 
 /**
- * Yeni FHE oyunu olustur (Multiplayer)
+ * Create new FHE game (Multiplayer)
  *
- * @param {number} generalCardId - General kart ID
- * @param {number[]} deckCardIds - 40 kartlik deste
+ * @param {number} generalCardId - General card ID
+ * @param {number[]} deckCardIds - 40 card deck
  * @returns {Promise<number>} gameId
  */
 FHEGameMode.prototype.createGame = function(generalCardId, deckCardIds) {
@@ -130,7 +130,7 @@ FHEGameMode.prototype.createGame = function(generalCardId, deckCardIds) {
         self.gameId = gameId;
         self.playerIndex = 0;
 
-        // Card handler'i etkinlestir
+        // Enable card handler
         return self.cardHandler.enable(self.contractAddress, gameId);
       })
       .then(function() {
@@ -143,11 +143,11 @@ FHEGameMode.prototype.createGame = function(generalCardId, deckCardIds) {
 };
 
 /**
- * Yeni Single Player FHE oyunu olustur
- * joinGame gerektirmez, oyun direkt baslar
+ * Create new Single Player FHE game
+ * Does not require joinGame, game starts directly
  *
- * @param {number} generalCardId - General kart ID
- * @param {number[]} deckCardIds - 40 kartlik deste
+ * @param {number} generalCardId - General card ID
+ * @param {number[]} deckCardIds - 40 card deck
  * @returns {Promise<number>} gameId
  */
 FHEGameMode.prototype.createSinglePlayerGame = function(generalCardId, deckCardIds) {
@@ -169,7 +169,7 @@ FHEGameMode.prototype.createSinglePlayerGame = function(generalCardId, deckCardI
         self.gameId = gameId;
         self.playerIndex = 0;
 
-        // Card handler'i etkinlestir
+        // Enable card handler
         return self.cardHandler.enable(self.contractAddress, gameId);
       })
       .then(function() {
@@ -182,11 +182,11 @@ FHEGameMode.prototype.createSinglePlayerGame = function(generalCardId, deckCardI
 };
 
 /**
- * Mevcut FHE oyununa katil
+ * Join existing FHE game
  *
- * @param {number} gameId - Oyun ID
- * @param {number} generalCardId - General kart ID
- * @param {number[]} deckCardIds - 40 kartlik deste
+ * @param {number} gameId - Game ID
+ * @param {number} generalCardId - General card ID
+ * @param {number[]} deckCardIds - 40 card deck
  * @returns {Promise}
  */
 FHEGameMode.prototype.joinGame = function(gameId, generalCardId, deckCardIds) {
@@ -205,7 +205,7 @@ FHEGameMode.prototype.joinGame = function(gameId, generalCardId, deckCardIds) {
         self.gameId = gameId;
         self.playerIndex = 1;
 
-        // Card handler'i etkinlestir
+        // Enable card handler
         return self.cardHandler.enable(self.contractAddress, gameId);
       })
       .then(function() {
@@ -218,9 +218,9 @@ FHEGameMode.prototype.joinGame = function(gameId, generalCardId, deckCardIds) {
 };
 
 /**
- * El kartlarini decrypt et
+ * Decrypt hand cards
  *
- * @returns {Promise<number[]>} Decrypt edilmis kart ID'leri
+ * @returns {Promise<number[]>} Decrypted card IDs
  */
 FHEGameMode.prototype.decryptHand = function() {
   var self = this;
@@ -238,14 +238,14 @@ FHEGameMode.prototype.decryptHand = function() {
 };
 
 /**
- * Cached decrypt edilmis eli al
+ * Get cached decrypted hand
  */
 FHEGameMode.prototype.getDecryptedHand = function() {
   return this._decryptedHand;
 };
 
 /**
- * Kart cek
+ * Draw card
  */
 FHEGameMode.prototype.drawCard = function() {
   var self = this;
@@ -262,7 +262,7 @@ FHEGameMode.prototype.drawCard = function() {
 };
 
 /**
- * Kart oyna
+ * Play card
  */
 FHEGameMode.prototype.playCard = function(handSlot, x, y) {
   if (this.state !== FHEModeState.ACTIVE || !this.cardHandler) {
@@ -273,7 +273,7 @@ FHEGameMode.prototype.playCard = function(handSlot, x, y) {
 };
 
 /**
- * Kart degistir
+ * Replace card
  */
 FHEGameMode.prototype.replaceCard = function(handSlot) {
   var self = this;
@@ -290,7 +290,7 @@ FHEGameMode.prototype.replaceCard = function(handSlot) {
 };
 
 /**
- * Mulligan tamamla
+ * Complete mulligan
  */
 FHEGameMode.prototype.completeMulligan = function(mulliganSlots) {
   var self = this;
@@ -307,7 +307,7 @@ FHEGameMode.prototype.completeMulligan = function(mulliganSlots) {
 };
 
 /**
- * Turu bitir
+ * End turn
  */
 FHEGameMode.prototype.endTurn = function() {
   if (this.state !== FHEModeState.ACTIVE || !this.fheGameSession) {
@@ -318,7 +318,7 @@ FHEGameMode.prototype.endTurn = function() {
 };
 
 /**
- * Birim hareket ettir
+ * Move unit
  */
 FHEGameMode.prototype.moveUnit = function(fromX, fromY, toX, toY) {
   if (this.state !== FHEModeState.ACTIVE || !this.fheGameSession) {
@@ -329,7 +329,7 @@ FHEGameMode.prototype.moveUnit = function(fromX, fromY, toX, toY) {
 };
 
 /**
- * Saldir
+ * Attack
  */
 FHEGameMode.prototype.attack = function(attackerX, attackerY, targetX, targetY) {
   if (this.state !== FHEModeState.ACTIVE || !this.fheGameSession) {
@@ -340,7 +340,7 @@ FHEGameMode.prototype.attack = function(attackerX, attackerY, targetX, targetY) 
 };
 
 /**
- * Teslim ol
+ * Resign
  */
 FHEGameMode.prototype.resign = function() {
   if (this.state !== FHEModeState.ACTIVE || !this.fheGameSession) {
@@ -351,7 +351,7 @@ FHEGameMode.prototype.resign = function() {
 };
 
 /**
- * Oyun durumunu al
+ * Get game state
  */
 FHEGameMode.prototype.getGameState = function() {
   if (this.state !== FHEModeState.ACTIVE || !this.fheGameSession) {
@@ -362,7 +362,7 @@ FHEGameMode.prototype.getGameState = function() {
 };
 
 /**
- * Oyuncu bilgilerini al
+ * Get player info
  */
 FHEGameMode.prototype.getPlayerInfo = function(playerIndex) {
   if (this.state !== FHEModeState.ACTIVE || !this.fheGameSession) {
@@ -373,7 +373,7 @@ FHEGameMode.prototype.getPlayerInfo = function(playerIndex) {
 };
 
 /**
- * Board unit bilgisi al
+ * Get board unit info
  */
 FHEGameMode.prototype.getBoardUnit = function(x, y) {
   if (this.state !== FHEModeState.ACTIVE || !this.fheGameSession) {
@@ -384,28 +384,28 @@ FHEGameMode.prototype.getBoardUnit = function(x, y) {
 };
 
 /**
- * FHE modu aktif mi?
+ * Is FHE mode active?
  */
 FHEGameMode.prototype.isActive = function() {
   return this.state === FHEModeState.ACTIVE;
 };
 
 /**
- * Mevcut state
+ * Current state
  */
 FHEGameMode.prototype.getState = function() {
   return this.state;
 };
 
 /**
- * Hata mesaji
+ * Error message
  */
 FHEGameMode.prototype.getError = function() {
   return this.error;
 };
 
 /**
- * FHE modunu kapat
+ * Shutdown FHE mode
  */
 FHEGameMode.prototype.shutdown = function() {
   if (this.cardHandler) {
