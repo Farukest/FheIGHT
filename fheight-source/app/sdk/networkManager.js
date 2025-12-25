@@ -78,23 +78,33 @@ var NetworkManager = (function() {
           // Use secure WebSockets in staging and production.
           const env = process.env.NODE_ENV || 'development';
           const protocol = env === 'development' ? 'ws' : 'wss';
-  
+
           // Determine which WebSocket host to use.
           // Use the assigned game server if one was provided.
           const host = (gameServerAddress != null) ? gameServerAddress : window.location.hostname;
-  
-          // Determine which WebSocket port to use.
-          // SP (single player) modes use port from env (default 8000); MP (multiplayer) modes use port from env (default 8001).
-          const spPort = parseInt(process.env.SP_PORT, 10) || 8000;
-          const gamePort = parseInt(process.env.GAME_PORT, 10) || 8001;
-          const port = GameType.isSinglePlayerGameType(gameType) ? spPort : gamePort;
-  
-          // Format the WebSocket URL.
-          const websocketUrl = `${protocol}://${host}:${port}`;
-          Logger.module("SDK").warn(`NetworkManager: connecting to game server ${websocketUrl}`);
-  
+
+          // Format the WebSocket URL and path.
+          // In production, use Nginx reverse proxy paths (/sp/, /game-ws/) to avoid Cloudflare port restrictions
+          // In development, use direct ports (8000, 8001)
+          let websocketUrl;
+          let socketPath = '/socket.io/'; // Default socket.io path
+          if (env === 'development') {
+            const spPort = parseInt(process.env.SP_PORT, 10) || 8000;
+            const gamePort = parseInt(process.env.GAME_PORT, 10) || 8001;
+            const port = GameType.isSinglePlayerGameType(gameType) ? spPort : gamePort;
+            websocketUrl = `${protocol}://${host}:${port}`;
+          } else {
+            // Production: use Nginx proxy paths on port 443
+            // Socket.IO needs the path to include the proxy prefix
+            const proxyPath = GameType.isSinglePlayerGameType(gameType) ? '/sp' : '/game-ws';
+            websocketUrl = `${protocol}://${host}`;
+            socketPath = `${proxyPath}/socket.io/`;
+          }
+          Logger.module("SDK").warn(`NetworkManager: connecting to game server ${websocketUrl} with path ${socketPath}`);
+
           // connect using socket.io manager
           this.socketManager = new io.Manager(websocketUrl, {
+            path: socketPath,
             auth: {token: `Bearer ${token}`},
             timeout: 20000,
             reconnection: true,

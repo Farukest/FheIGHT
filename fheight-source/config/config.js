@@ -9,11 +9,14 @@ const path = require('path');
 const url = require('url');
 const convict = require('convict');
 
+// Get NODE_ENV at build time via envify, fallback to 'development'
+const BUILD_ENV = process.env.NODE_ENV || 'development';
+
 const config = convict({
   env: {
     doc: 'The applicaton environment.',
     // format: ["development", "production", "staging"],
-    default: 'development',
+    default: BUILD_ENV,
     env: 'NODE_ENV',
     arg: 'env',
   },

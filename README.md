@@ -5,53 +5,45 @@
 FHEIGHT is a tactical board game where players command characters, execute actions, and engage in strategic combat using card-based abilities. The game supports both **multiplayer PvP** and **singleplayer vs AI** modes, with Fully Homomorphic Encryption (FHE) securing all randomness - card draws, ability outcomes, AI difficulty scaling, and combat results remain encrypted until legitimately revealed, preventing any prediction or manipulation.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue)](https://opensource.org/licenses/MIT)
-[![Built with FHEVM](https://img.shields.io/badge/Built%20with-Zama%20FHEVM-yellow.svg)]([https://docs.zama.ai/fhevm](https://docs.zama.org/protocol/protocol/overview))
+[![Built with FHEVM](https://img.shields.io/badge/Built%20with-Zama%20FHEVM-yellow.svg)](https://docs.zama.ai/fhevm)
 [![React](https://img.shields.io/badge/React-18.x-61DAFB?logo=react)](https://reactjs.org/)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?logo=solidity)](https://soliditylang.org/)
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0000,50:FFCC00,100:FFCC0000&height=6&section=header" width="100%"></p>
 
-### Built with Zama fhEVM
+### ▎Built with Zama fhEVM
 
-This is a production-ready fhEVM implementation showcasing encrypted tactical gameplay with private card draws, character actions, combat resolution, and verifiable randomness through gateway-based decryption. The system ensures neither players nor the server can predict or manipulate game outcomes.
+▸ This is a production-ready fhEVM implementation showcasing encrypted tactical gameplay with private card draws, character actions, combat resolution, and verifiable randomness through gateway-based decryption. The system ensures neither players nor the server can predict or manipulate game outcomes.
 
 **Technical Deep Dive:** [FHEVM_INTEGRATION.md](./docs/FHEVM_INTEGRATION.md) - Complete guide on encryption workflows, smart contract patterns, client-side decryption, session wallet security, and privacy architecture.
 
 **Game Features Guide:** [GAME_FEATURES.md](./docs/GAME_FEATURES.md) - Complete guide on play modes, social features, collection system, quests, codex lore, and all customization options.
 
 
-### GAME PREVIEW
+### ▎GAME PREVIEW
 
 <img width="1176" height="671" alt="YOUTUBE2" src="https://github.com/user-attachments/assets/fb2aa3d7-ca08-457f-8087-2c98f01fbb5c" />
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Table of Contents
+<p align="left"><img src="https://img.shields.io/badge/-Table%20of%20Contents-1a1a2e?style=for-the-badge" height="45" width="280"></p>
 
-1. [Overview](#overview)
-2. [Game Features](#game-features)
-3. [Directory Structure](#directory-structure)
-4. [System Architecture](#system-architecture)
-5. [FHE Session Security](#fhe-session-security)
-6. [Smart Contract Architecture](#smart-contract-architecture)
-7. [FHE Game Flow](#fhe-game-flow)
-8. [Server as Observer](#server-as-observer)
-9. [Marble System](#marble-system)
-10. [Technology Stack](#technology-stack)
-11. [Installation](#installation)
-12. [Project Status](#project-status)
-13. [Contributing](#contributing)
-14. [License](#license)
-15. [Acknowledgments](#acknowledgments)
-16. [Contact & Support](#contact--support)
+| | | |
+|:--|:--|:--|
+| [1. Overview](#overview) | [7. FHE Game Flow](#fhe-game-flow) | [13. Contributing](#contributing) |
+| [2. Game Features](#game-features) | [8. Server as Observer](#server-as-observer) | [14. License](#license) |
+| [3. Directory Structure](#directory-structure) | [9. Marble System](#marble-system) | [15. Acknowledgments](#acknowledgments) |
+| [4. System Architecture](#system-architecture) | [10. Technology Stack](#technology-stack) | [16. Contact & Support](#contact--support) |
+| [5. FHE Session Security](#fhe-session-security) | [11. Installation](#installation) | |
+| [6. Smart Contract Architecture](#smart-contract-architecture) | [12. Project Status](#project-status) | |
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Overview
+<p align="left"><img src="https://img.shields.io/badge/-Overview-1a1a2e?style=for-the-badge" height="45" width="140"></p>
 
-FHEIGHT solves the fundamental problem of randomness in blockchain-based card games. Traditional approaches either rely on trusted servers (centralization) or commit-reveal schemes (vulnerable to front-running). FHEIGHT uses Zama's fhEVM to generate and process encrypted random values that remain hidden until both players are ready to reveal.
+▸ FHEIGHT solves the fundamental problem of randomness in blockchain-based card games. Traditional approaches either rely on trusted servers (centralization) or commit-reveal schemes (vulnerable to front-running). FHEIGHT uses Zama's fhEVM to generate and process encrypted random values that remain hidden until both players are ready to reveal.
 
-### Key Features
+### ▎Key Features
 
 **Game Modes**
 - Multiplayer PvP: Real-time competitive matches with server synchronization
@@ -81,38 +73,36 @@ FHEIGHT solves the fundamental problem of randomness in blockchain-based card ga
 | Handle Convert | `FHE.toBytes32()` | Convert encrypted value to handle for gateway |
 | Proof Verify | `FHE.checkSignatures()` | Verify decryption proof from gateway |
 
-**Encryption Flow: Draw → Decrypt → Reveal → Verify**
+### ▎Encryption Flow: Draw → Decrypt → Reveal → Verify
 
 ```
 1. DRAW        Contract generates euint8 via FHE.randEuint8()
                Value encrypted, stored on-chain as handle
                               |
-                              |
                               v
 2. DECRYPT     Client requests decryption from Zama Gateway
                Gateway returns plaintext only to authorized wallet
                               |
-                              |
                               v
 3. REVEAL      Client submits decrypted value + proof to contract
                Contract verifies proof matches original handle
-                              |
                               |
                               v
 4. VERIFY      Server reads verified value from contract
                Calculates game outcome, updates state
 ```
 
-**Privacy Architecture**
-- Encrypted Card Draws: Card selection encrypted until player reveals - opponents cannot predict
-- Encrypted Combat Results: Damage rolls and ability outcomes computed on encrypted values
-- Encrypted AI Behavior: AI decisions derived from on-chain encrypted randomness
-- Client-Side Decryption: Zama Gateway decrypts values only for authorized session wallet
-- On-Chain Verification: Contract verifies decryption proof before accepting revealed value
+### ▎Privacy Architecture
 
-**Card Abilities with FHE**
+- **Encrypted Card Draws:** Card selection encrypted until player reveals - opponents cannot predict
+- **Encrypted Combat Results:** Damage rolls and ability outcomes computed on encrypted values
+- **Encrypted AI Behavior:** AI decisions derived from on-chain encrypted randomness
+- **Client-Side Decryption:** Zama Gateway decrypts values only for authorized session wallet
+- **On-Chain Verification:** Contract verifies decryption proof before accepting revealed value
 
-All card abilities that involve randomness use on-chain FHE:
+### ▎Card Abilities with FHE
+
+▸ All card abilities that involve randomness use on-chain FHE:
 
 | Ability Type | FHE Integration | Examples |
 |--------------|-----------------|----------|
@@ -122,19 +112,20 @@ All card abilities that involve randomness use on-chain FHE:
 | Put Card in Hand | FHE random selects from pool | Dying Wish abilities |
 | Transform Hand | FHE randoms for each new card | Mnemovore-style effects |
 
-**Security Model**
-- Session Wallets: Burnable encrypted keys for gasless, secure gameplay
-- On-Chain Card Registry: Card metadata and attributes stored immutably on blockchain
-- Server as Observer: Server syncs players and verifies chain state - never generates randomness
-- Provably Fair: All randomness generated by Zama fhEVM coprocessor, verifiable on-chain
+### ▎Security Model
 
----
+- **Session Wallets:** Burnable encrypted keys for gasless, secure gameplay
+- **On-Chain Card Registry:** Card metadata and attributes stored immutably on blockchain
+- **Server as Observer:** Server syncs players and verifies chain state - never generates randomness
+- **Provably Fair:** All randomness generated by Zama fhEVM coprocessor, verifiable on-chain
 
-## Game Features
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-FHEIGHT offers a complete tactical card game experience. For detailed documentation, see [GAME_FEATURES.md](./docs/GAME_FEATURES.md).
+<p align="left"><img src="https://img.shields.io/badge/-Game%20Features-1a1a2e?style=for-the-badge" height="45" width="220"></p>
 
-### Play Modes
+▸ FHEIGHT offers a complete tactical card game experience. For detailed documentation, see [GAME_FEATURES.md](./docs/GAME_FEATURES.md).
+
+### ▎Play Modes
 
 | Mode | Type | Description |
 |------|------|-------------|
@@ -147,7 +138,7 @@ FHEIGHT offers a complete tactical card game experience. For detailed documentat
 | **Sandbox** | Singleplayer | Play as both P1 and P2 for deck testing |
 | **Developer Sandbox** | Singleplayer | Shuffle-free, mulligan-free mode (admin only) |
 
-### Social Features
+### ▎Social Features
 
 | Feature | Description |
 |---------|-------------|
@@ -158,7 +149,7 @@ FHEIGHT offers a complete tactical card game experience. For detailed documentat
 | Player Profiles | View rank, hero progress, monthly history |
 | Match Replay | Rewatch any game with playback controls |
 
-### Collection & Customization
+### ▎Collection & Customization
 
 | Feature | Description |
 |---------|-------------|
@@ -168,7 +159,7 @@ FHEIGHT offers a complete tactical card game experience. For detailed documentat
 | Mystery Crates | FHE-secured random card packs |
 | Battle Maps | 6 unique battlefield themes |
 
-### Watch
+### ▎Watch
 
 | Feature | Description |
 |---------|-------------|
@@ -176,7 +167,7 @@ FHEIGHT offers a complete tactical card game experience. For detailed documentat
 | Rank Filtering | Filter streams by player rank |
 | Spectator Mode | Watch friends with P1/P2 perspective toggle |
 
-### Quests & Progression
+### ▎Quests & Progression
 
 | Feature | Description |
 |---------|-------------|
@@ -184,7 +175,7 @@ FHEIGHT offers a complete tactical card game experience. For detailed documentat
 | Daily Boss Challenges | Rotating boss with unique rules |
 | Game Templates | Standard, Draft, Sealed, Brawl modes |
 
-### Codex
+### ▎Codex
 
 | Feature | Description |
 |---------|-------------|
@@ -192,7 +183,7 @@ FHEIGHT offers a complete tactical card game experience. For detailed documentat
 | Voice Narration | Professional voice acting for all entries |
 | Unlock System | Progress through gameplay and quests |
 
-### Settings
+### ▎Settings
 
 | Category | Options |
 |----------|---------|
@@ -201,9 +192,9 @@ FHEIGHT offers a complete tactical card game experience. For detailed documentat
 | **Account** | Do Not Disturb, Block Spectators, Change Username, Redeem Codes |
 | **Audio** | Master, Music, Voice, Effects Volume |
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Directory Structure
+<p align="left"><img src="https://img.shields.io/badge/-Directory%20Structure-1a1a2e?style=for-the-badge" height="45" width="310"></p>
 
 ```
 FHEIGHT/
@@ -240,9 +231,9 @@ FHEIGHT/
 └── document/                      # Zama fhEVM reference docs
 ```
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## System Architecture
+<p align="left"><img src="https://img.shields.io/badge/-System%20Architecture-1a1a2e?style=for-the-badge" height="45" width="310"></p>
 
 ```
 +------------------------------------------------------------------------------------------------+
@@ -255,26 +246,19 @@ FHEIGHT/
 |   +------------------+       +------------------------+       +--------------------+           |
 |            |                            ^                              |                       |
 |            |                            |                              |                       |
-|            |                            |                              |                       |
 |            |                 +----------+----------+                   |                       |
-|            |                 |                     |                   |                       |
 |            |                 |                     |                   |                       |
 |            |        +--------+--------+   +--------+--------+          |                       |
 |            |        | Wallet Manager  |   | Encrypted Store |          |                       |
 |            |        | (MetaMask/WC)   |   | (LocalStorage)  |          |                       |
 |            |        +-----------------+   +-----------------+          |                       |
 |            |                 |                     |                   |                       |
-|            |                 |                     |                   |                       |
 |            |                 | AES-256 Encrypt     | TTL Expiry        |                       |
 |            |                 | with User PIN       | Auto-Refresh      |                       |
 |            |                 |                     |                   |                       |
-|            |                 |                     |                   |                       |
 |            +-----------------+---------------------+-------------------+                       |
 |                                        |                                                       |
-|                                        |                                                       |
 +------------------------------------------------------------------------------------------------+
-                                         |
-                                         |
                                          |
                                          | Socket.IO + HTTPS
                                          v
@@ -286,7 +270,6 @@ FHEIGHT/
 |   |   Game Server    |       |     API Server         |       |   FHE Verifier     |           |
 |   |   (Socket.IO)    |       |     (Express)          |       |   (Read-Only)      |           |
 |   +------------------+       +------------------------+       +--------------------+           |
-|            |                            |                              |                       |
 |            |                            |                              |                       |
 |   +--------+----------------------------+------------------------------+-------+               |
 |   |                           SERVER RESPONSIBILITIES                          |               |
@@ -303,7 +286,6 @@ FHEIGHT/
 |   |                                                                            |               |
 |   +----------------------------------------------------------------------------+               |
 |            |                            |                              |                       |
-|            |                            |                              |                       |
 |            v                            v                              v                       |
 |   +------------------+       +----------------------+       +----------------------+           |
 |   |      Redis       |       |      PostgreSQL      |       |      Firebase        |           |
@@ -311,7 +293,6 @@ FHEIGHT/
 |   +------------------+       +----------------------+       +----------------------+           |
 |                                                                                                |
 +------------------------------------------------------------------------------------------------+
-                                         |
                                          |
                                          | JSON-RPC (Read + Write TX)
                                          v
@@ -324,16 +305,13 @@ FHEIGHT/
 |   |                    (Session Wallet Custody & ETH)                      |                   |
 |   +----------------------------------+------------------------------------+                    |
 |                                      |                                                         |
-|                                      |                                                         |
 |              +-----------------------+-----------------------+                                 |
-|              |                       |                       |                                 |
 |              |                       |                       |                                 |
 |              v                       v                       v                                 |
 |   +-------------------+   +-------------------+   +-------------------+                        |
 |   |   CardRegistry    |   |   GameSession     |   |   MarbleRandoms   |                        |
 |   | (Card Metadata)   |   | (FHE Card Draws)  |   | (FHE Pack Open)   |                        |
 |   +-------------------+   +-------------------+   +-------------------+                        |
-|              |                       |                       |                                 |
 |              |                       |                       |                                 |
 |              v                       v                       v                                 |
 |   +-------------------+   +-------------------+   +-------------------+                        |
@@ -344,20 +322,20 @@ FHEIGHT/
 +------------------------------------------------------------------------------------------------+
 ```
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## FHE Session Security
+<p align="left"><img src="https://img.shields.io/badge/-FHE%20Session%20Security-1a1a2e?style=for-the-badge" height="45" width="330"></p>
 
-The FHE session system secures the Zama reencryption keypair - used for Gateway communication and decrypt operations.
+▸ The FHE session system secures the Zama reencryption keypair - used for Gateway communication and decrypt operations.
 
-### What is the Reencryption Keypair?
+### ▎What is the Reencryption Keypair?
 
 This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated by fhevmjs SDK specifically for:
 - Requesting decryption from Zama Gateway
 - Proving authorization to decrypt specific encrypted values
 - Signed once with MetaMask, then reused without popups
 
-### Key Generation and Storage Flow
+### ▎Key Generation and Storage Flow
 
 ```
 +------------------+                  +----------------------+                  +------------------+
@@ -365,36 +343,27 @@ This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated 
 |  (MetaMask/WC)   |                  | (Reencryption Key)   |                  | (LocalStorage)   |
 +--------+---------+                  +----------+-----------+                  +--------+---------+
          |                                       |                                       |
-         |                                       |                                       |
          | 1. User connects wallet               |                                       |
          +-------------------------------------->|                                       |
          |                                       |                                       |
-         |                                       |                                       |
          |                                       | 2. fhevmjs.generateKeypair()          |
          |                                       |    (ML-KEM reencryption keypair)      |
-         |                                       |                                       |
          |                                       +-------+                               |
-         |                                       |       |                               |
          |                                       |       |                               |
          |                                       |<------+                               |
          |                                       |                                       |
          |                                       | 3. Create EIP712 typed data           |
          |                                       |    Sign with MetaMask (1 popup)       |
-         |                                       |                                       |
          |<--------------------------------------+                                       |
-         |                                       |                                       |
          |                                       |                                       |
          | 4. User signs EIP712                  |                                       |
          +-------------------------------------->|                                       |
          |                                       |                                       |
-         |                                       |                                       |
          | 5. Request PIN from user              |                                       |
          |<--------------------------------------+                                       |
          |                                       |                                       |
-         |                                       |                                       |
          | 6. User enters PIN                    |                                       |
          +-------------------------------------->|                                       |
-         |                                       |                                       |
          |                                       |                                       |
          |                                       | 7. AES-256-GCM encrypt:               |
          |                                       |    - reencryption keypair             |
@@ -402,18 +371,14 @@ This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated 
          |                                       |    - contract addresses               |
          |                                       +-------------------------------------->|
          |                                       |                                       |
-         |                                       |                                       |
          |                                       |                         8. Store with |
          |                                       |                            TTL expiry |
          |                                       |                                       |
          | 9. FHE session ready                  |                                       |
          |<--------------------------------------+                                       |
-         |                                       |                                       |
-         |                                       |                                       |
-         |                                       |                                       |
 ```
 
-### Security Properties
+### ▎Security Properties
 
 | Property | Implementation |
 |----------|----------------|
@@ -424,23 +389,19 @@ This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated 
 | Memory Only | Decrypted keypair exists only in runtime memory |
 | One-Time Sign | MetaMask popup only on first session creation |
 
-### On Game Start Flow
+### ▎On Game Start Flow
 
 ```
 +------------------+                  +----------------------+                  +------------------+
 |   Game Engine    |                  |   FHE Session Mgr    |                  | Encrypted Store  |
 +--------+---------+                  +----------+-----------+                  +--------+---------+
          |                                       |                                       |
-         |                                       |                                       |
          | 1. Game start request                 |                                       |
          +-------------------------------------->|                                       |
          |                                       |                                       |
-         |                                       |                                       |
          |                                       | 2. Check if reencryption keypair      |
          |                                       |    in memory                          |
-         |                                       |                                       |
          |                                       +-------+                               |
-         |                                       |       |                               |
          |                                       |       |                               |
          |                                       |<------+                               |
          |                                       |                                       |
@@ -448,39 +409,32 @@ This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated 
          |                                       |    Read encrypted blob (ML-KEM)       |
          |                                       +-------------------------------------->|
          |                                       |                                       |
-         |                                       |                                       |
          |                                       |                    4. Return blob     |
          |                                       |                       + TTL status    |
          |                                       |<--------------------------------------+
          |                                       |                                       |
-         |                                       |                                       |
          |                                       | 5. If expired:                        |
          |                                       |    Request PIN again                  |
          |<--------------------------------------+                                       |
-         |                                       |                                       |
          |                                       |                                       |
          | 6. User enters PIN                    |                                       |
          +-------------------------------------->|                                       |
          |                                       |                                       |
          |                                       | 7. Decrypt ML-KEM keypair             |
          |                                       |    and load to memory                 |
-         |                                       |                                       |
          |                                       +-------+                               |
-         |                                       |       |                               |
          |                                       |       |                               |
          |                                       |<------+                               |
          |                                       |                                       |
-         |                                       |                                       |
          | 8. Ready for Gateway decrypt          |                                       |
          |<--------------------------------------+                                       |
-         |                                       |                                       |
 ```
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Smart Contract Architecture
+<p align="left"><img src="https://img.shields.io/badge/-Smart%20Contract%20Architecture-1a1a2e?style=for-the-badge" height="45" width="440"></p>
 
-### Contract Hierarchy
+### ▎Contract Hierarchy
 
 ```
                               +---------------------------+
@@ -491,12 +445,9 @@ This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated 
                               | - Authorize session keys  |
                               +-------------+-------------+
                                             |
-                                            |
                                             | owns/authorizes
                                             |
-                                            |
           +---------------------------------+---------------------------------+
-          |                                 |                                 |
           |                                 |                                 |
           v                                 v                                 v
 +-------------------+             +-------------------+             +-------------------+
@@ -506,7 +457,6 @@ This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated 
 | - Card attributes |             | - Draw/reveal     |             | - 15 randoms/pack |
 | - Rarity info     |             | - Game state      |             | - Rarity calc     |
 +--------+----------+             +--------+----------+             +--------+----------+
-         |                                 |                                 |
          |                                 |                                 |
          | references                      | game rewards                    | mints cards
          v                                 v                                 v
@@ -519,7 +469,7 @@ This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated 
 +-------------------+             +-------------------+             +-------------------+
 ```
 
-### Contract Details (Sepolia)
+### ▎Contract Details (Sepolia)
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
@@ -530,7 +480,7 @@ This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated 
 | GameGold | `0xdB1274A736812A28b782879128f237f35fed7B81` | ERC-20 in-game currency, rewards distribution |
 | MarbleRandoms | `0x905cA0c59588d3F64cdad12534B5C450485206cc` | FHE-encrypted marble (booster pack) opening |
 
-### Contract Details (Hardhat Local)
+### ▎Contract Details (Hardhat Local)
 
 | Contract | Address |
 |----------|---------|
@@ -541,9 +491,9 @@ This is NOT an Ethereum wallet keypair. It's a special ML-KEM keypair generated 
 | WalletVault | `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9` |
 | MarbleRandoms | `0x5FC8d32690cc91D4c39d9d3abcBD16989F875707` |
 
-### CardRegistry Integration
+### ▎CardRegistry Integration
 
-The CardRegistry contract stores all card metadata on-chain, ensuring card attributes cannot be tampered with:
+▸ The CardRegistry contract stores all card metadata on-chain, ensuring card attributes cannot be tampered with:
 
 ```
 +-------------------+
@@ -577,55 +527,45 @@ The CardRegistry contract stores all card metadata on-chain, ensuring card attri
 +-------------------+
 ```
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## FHE Game Flow
+<p align="left"><img src="https://img.shields.io/badge/-FHE%20Game%20Flow-1a1a2e?style=for-the-badge" height="45" width="220"></p>
 
-### In-Game Card Draw (Core Gameplay)
+### ▎In-Game Card Draw (Core Gameplay)
 
-The server acts as an **observer only** - it never generates randomness, only verifies on-chain results.
+▸ The server acts as an **observer only** - it never generates randomness, only verifies on-chain results.
 
 ```
 +---------+      +----------+      +-------------+      +-----------+      +----------+
 | Player  |      |  Client  |      | GameSession |      | Zama FHE  |      |  Server  |
 +---------+      +----------+      +-------------+      +-----------+      +----------+
      |                |                   |                   |                 |
-     |                |                   |                   |                 |
      | Draw Card      |                   |                   |                 |
      +--------------->|                   |                   |                 |
-     |                |                   |                   |                 |
      |                |                   |                   |                 |
      |                | 1. drawCard(gameId, playerId)         |                 |
      |                +------------------>|                   |                 |
      |                |                   |                   |                 |
-     |                |                   |                   |                 |
      |                |                   | 2. FHE.randEuint8()                 |
      |                |                   +------------------>|                 |
-     |                |                   |                   |                 |
      |                |                   |                   |                 |
      |                |                   |    euint8 handle  |                 |
      |                |                   |<------------------+                 |
      |                |                   |                   |                 |
-     |                |                   |                   |                 |
      |                | 3. getCardHandle()|                   |                 |
      |                +------------------>|                   |                 |
-     |                |                   |                   |                 |
      |                |                   |                   |                 |
      |                |     handle        |                   |                 |
      |                |<------------------+                   |                 |
      |                |                   |                   |                 |
-     |                |                   |                   |                 |
      |                | 4. Gateway.decrypt(handle)            |                 |
      |                +-------------------------------------->|                 |
-     |                |                   |                   |                 |
      |                |                   |                   |                 |
      |                |              decrypted value + proof  |                 |
      |                |<--------------------------------------+                 |
      |                |                   |                   |                 |
-     |                |                   |                   |                 |
      |                | 5. revealCard(value, proof)           |                 |
      |                +------------------>|                   |                 |
-     |                |                   |                   |                 |
      |                |                   |                   |                 |
      |                |                   | 6. Verify proof   |                 |
      |                |                   | 7. Store result   |                 |
@@ -639,14 +579,11 @@ The server acts as an **observer only** - it never generates randomness, only ve
      |                |                   |                   |                 |
      | Card Revealed  |                   |                   |                 |
      |<---------------+                   |                   |                 |
-     |                |                   |                   |                 |
-     |                |                   |                   |                 |
-     |                |                   |                   |                 |
 ```
 
-### Server Observer Role
+### ▎Server Observer Role
 
-The server's role is strictly limited to observation and verification:
+▸ The server's role is strictly limited to observation and verification:
 
 | Server Action | Description |
 |---------------|-------------|
@@ -662,35 +599,28 @@ The server's role is strictly limited to observation and verification:
 |   (Blockchain)    |                              |   (Observer)      |
 +-------------------+                              +-------------------+
          |                                                  |
-         |                                                  |
          | emit CardRevealed(gameId, playerId, cardId)      |
          +------------------------------------------------->|
-         |                                                  |
          |                                                  |
          |                                    1. Receive event
          |                                    2. getVerifiedCard(gameId)
          |<-------------------------------------------------+
          |                                                  |
-         |                                                  |
          | return { cardId, proof, timestamp }              |
          +------------------------------------------------->|
-         |                                                  |
          |                                                  |
          |                                    3. Verify data matches
          |                                    4. Update game state DB
          |                                    5. Broadcast to players
-         |                                                  |
-         |                                                  |
-         |                                                  |
 ```
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Server as Observer + Sync
+<p align="left"><img src="https://img.shields.io/badge/-Server%20as%20Observer%20%2B%20Sync-1a1a2e?style=for-the-badge" height="45" width="380"></p>
 
-The server has two distinct roles: **Synchronization** (coordinating players) and **Observation** (verifying blockchain state).
+▸ The server has two distinct roles: **Synchronization** (coordinating players) and **Observation** (verifying blockchain state).
 
-### Dual Role Architecture
+### ▎Dual Role Architecture
 
 ```
 +--------------------------------------------------------------------------------------+
@@ -701,63 +631,47 @@ The server has two distinct roles: **Synchronization** (coordinating players) an
 |   |        SYNC (Coordinator)        |     |       OBSERVE (Verifier)         |      |
 |   +----------------------------------+     +----------------------------------+      |
 |   |                                  |     |                                  |      |
-|   |                                  |     |                                  |      |
 |   |  Player A  <---->  Server  <---->  Player B     Blockchain                |      |
 |   |     |                            |     |             |                    |      |
 |   |     |   Turn Order               |     |             |                    |      |
 |   |     |   Game State               |     |    Events   |                    |      |
 |   |     |   Actions                  |     |<------------+                    |      |
-|   |     |                            |     |             |                    |      |
-|   |     |                            |     |             |                    |      |
+|   |                                  |     |                                  |      |
 |   +----------------------------------+     +----------------------------------+      |
 |                                                                                      |
 +--------------------------------------------------------------------------------------+
 ```
 
-### Player Synchronization Flow
+### ▎Player Synchronization Flow
 
 ```
 +------------+                    +------------+                    +------------+
 |  Player A  |                    |   Server   |                    |  Player B  |
 +-----+------+                    +-----+------+                    +-----+------+
       |                                 |                                 |
-      |                                 |                                 |
       | 1. Play card action             |                                 |
       +-------------------------------->|                                 |
       |                                 |                                 |
       |                                 | 2. Validate action              |
       |                                 |    (timing, rules)              |
-      |                                 |                                 |
-      |                                 |                                 |
       |                                 +-------+                         |
       |                                 |       |                         |
-      |                                 |       |                         |
       |                                 |<------+                         |
-      |                                 |                                 |
       |                                 |                                 |
       |                                 | 3. Broadcast to opponent        |
       |                                 +-------------------------------->|
       |                                 |                                 |
       |                                 | 4. Update game state            |
-      |                                 |                                 |
-      |                                 |                                 |
       |                                 +-------+                         |
-      |                                 |       |                         |
       |                                 |       |                         |
       |                                 |<------+                         |
       |                                 |                                 |
-      |                                 |                                 |
       | 5. Confirm action               |                                 |
       |<--------------------------------+                                 |
-      |                                 |                                 |
-      |                                 |                                 |
       |                                 |                 6. Render card  |
-      |                                 |                                 |
-      |                                 |                                 |
-      |                                 |                                 |
 ```
 
-### Trust Model
+### ▎Trust Model
 
 ```
 +------------------+     +------------------+     +------------------+
@@ -772,27 +686,20 @@ The server has two distinct roles: **Synchronization** (coordinating players) an
 |                  |     | - NO randomness  |     |                  |
 +------------------+     +------------------+     +------------------+
          |                        |                        |
-         |                        |                        |
          |   Game Actions         |                        |
          +----------------------->|                        |
-         |                        |                        |
          |                        |                        |
          |   TX (FHE ops)         |                        |
          +----------------------------------------------->|
          |                        |                        |
-         |                        |                        |
          |                        |    Events/State        |
          |                        |<-----------------------+
          |                        |                        |
-         |                        |                        |
          |   Sync State           |                        |
          |<-----------------------+                        |
-         |                        |                        |
-         |                        |                        |
-         |                        |                        |
 ```
 
-### Why Server Cannot Cheat
+### ▎Why Server Cannot Cheat
 
 | Attack Vector | Prevention |
 |---------------|------------|
@@ -803,73 +710,59 @@ The server has two distinct roles: **Synchronization** (coordinating players) an
 | Desync game state | Both clients verify against blockchain |
 | Fake opponent actions | Actions signed by session wallet |
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Marble System
+<p align="left"><img src="https://img.shields.io/badge/-Marble%20System-1a1a2e?style=for-the-badge" height="45" width="220"></p>
 
-Marbles (booster packs) use FHE for provably fair card pack opening.
+▸ Marbles (booster packs) use FHE for provably fair card pack opening.
 
-### Marble Opening Flow
+### ▎Marble Opening Flow
 
 ```
 +---------+      +----------+      +---------------+      +-----------+      +----------+
 | Player  |      |  Client  |      | MarbleRandoms |      | Zama FHE  |      |  Server  |
 +---------+      +----------+      +---------------+      +-----------+      +----------+
      |                |                    |                    |                 |
-     |                |                    |                    |                 |
      | Open Pack      |                    |                    |                 |
      +--------------->|                    |                    |                 |
      |                |                    |                    |                 |
-     |                |                    |                    |                 |
      |                | 1. drawRandoms(marbleId)                |                 |
      |                +------------------->|                    |                 |
-     |                |                    |                    |                 |
      |                |                    |                    |                 |
      |                |                    | 2. Generate 15 euint8                |
      |                |                    | (5 rarity, 5 index, 5 prismatic)     |
      |                |                    +------------------->|                 |
      |                |                    |                    |                 |
-     |                |                    |                    |                 |
      |                |                    |   15 handles       |                 |
      |                |                    |<-------------------+                 |
-     |                |                    |                    |                 |
      |                |                    |                    |                 |
      |                | 3. getRandomHandles()                   |                 |
      |                +------------------->|                    |                 |
      |                |                    |                    |                 |
-     |                |                    |                    |                 |
      |                |    handles[15]     |                    |                 |
      |                |<-------------------+                    |                 |
-     |                |                    |                    |                 |
      |                |                    |                    |                 |
      |                | 4. Decrypt all handles via Gateway      |                 |
      |                +--------------------------------------->|                  |
      |                |                    |                    |                 |
-     |                |                    |                    |                 |
      |                |              values[15] + proofs        |                 |
      |                |<---------------------------------------+                  |
-     |                |                    |                    |                 |
      |                |                    |                    |                 |
      |                | 5. revealRandoms(values, proofs)        |                 |
      |                +------------------->|                    |                 |
      |                |                    |                    |                 |
-     |                |                    |                    |                 |
      |                |                    | 6. Verify all      |                 |
      |                |                    | 7. Store verified  |                 |
      |                |                    |                    |                 |
-     |                |                    |                    |                 |
      |                | 8. Notify server   |                    |                 |
      |                +---------------------------------------------------------->|
-     |                |                    |                    |                 |
      |                |                    |                    |                 |
      |                |                    |                    |        9. Read  |
      |                |                    |                    |        contract |
      |                |                    |<-------------------------------------+
      |                |                    |                    |                 |
-     |                |                    |                    |                 |
      |                |                    | getVerifiedRandoms()                 |
      |                |                    +------------------------------------->|
-     |                |                    |                    |                 |
      |                |                    |                    |                 |
      |                |                    |                    |    10. Calculate|
      |                |                    |                    |        cards    |
@@ -877,12 +770,9 @@ Marbles (booster packs) use FHE for provably fair card pack opening.
      |                |                    |                    |                 |
      | Cards Revealed |                    |                    |                 |
      |<---------------+                    |                    |                 |
-     |                |                    |                    |                 |
-     |                |                    |                    |                 |
-     |                |                    |                    |                 |
 ```
 
-### Random Value Layout
+### ▎Random Value Layout
 
 | Index | Purpose | Description |
 |-------|---------|-------------|
@@ -890,7 +780,7 @@ Marbles (booster packs) use FHE for provably fair card pack opening.
 | 5-9 | Card Index | Selects specific card from pool |
 | 10-14 | Prismatic | Determines prismatic variant |
 
-### Rarity Thresholds (0-255)
+### ▎Rarity Thresholds (0-255)
 
 | Range | Rarity | Probability |
 |-------|--------|-------------|
@@ -899,11 +789,11 @@ Marbles (booster packs) use FHE for provably fair card pack opening.
 | 226-250 | Epic | 10% |
 | 251-255 | Legendary | 2% |
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Technology Stack
+<p align="left"><img src="https://img.shields.io/badge/-Technology%20Stack-1a1a2e?style=for-the-badge" height="45" width="260"></p>
 
-### Frontend
+### ▎Frontend
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
@@ -912,7 +802,7 @@ Marbles (booster packs) use FHE for provably fair card pack opening.
 | fhevmjs | 0.9.x | FHE client operations |
 | ethers.js | 5.x | Blockchain interaction |
 
-### Backend
+### ▎Backend
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
@@ -923,7 +813,7 @@ Marbles (booster packs) use FHE for provably fair card pack opening.
 | PostgreSQL | 14.x | Persistent data storage |
 | Redis | 7.x | Session and matchmaking cache |
 
-### Blockchain
+### ▎Blockchain
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
@@ -932,37 +822,56 @@ Marbles (booster packs) use FHE for provably fair card pack opening.
 | Zama fhEVM | 0.9.x | FHE operations |
 | OpenZeppelin | 5.x | Standard implementations |
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Installation
+<p align="left"><img src="https://img.shields.io/badge/-Installation-1a1a2e?style=for-the-badge" height="45" width="200"></p>
 
-### Prerequisites
+### ▎Prerequisites
 
 - Node.js 18.x or higher
 - PostgreSQL 14.x
 - Redis 7.x
 - Git
 
-### Quick Start
+### ▎Quick Start
 
 ```bash
-# Clone repository
 git clone https://github.com/Farukest/FHEIGHT.git
+#      ↑                    ↑
+#      │                    └── Repository URL
+#      │
+#      └── Clone the repository
+
 cd FHEIGHT
+#     ↑
+#     └── Enter project directory
 
-# Install dependencies
 cd fheight-source && npm install
-cd ../fhevm-contracts && npm install
+#        ↑               ↑
+#        │               └── Install frontend/server dependencies
+#        │
+#        └── Game source directory
 
-# Start development servers (Windows)
+cd ../fhevm-contracts && npm install
+#          ↑                  ↑
+#          │                  └── Install smart contract dependencies
+#          │
+#          └── Contracts directory
+
 powershell -ExecutionPolicy Bypass -File start-servers.ps1
+#              ↑                            ↑
+#              │                            └── Script that builds and starts all servers
+#              │
+#              └── Bypass execution policy for script
 ```
 
----
+↳ **What you get:** Local development environment with API server, game server, and Redis running.
 
-## Project Status
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-### Completed Features
+<p align="left"><img src="https://img.shields.io/badge/-Project%20Status-1a1a2e?style=for-the-badge" height="45" width="230"></p>
+
+### ▎Completed Features
 
 | Category | Feature |
 |----------|---------|
@@ -979,7 +888,7 @@ powershell -ExecutionPolicy Bypass -File start-servers.ps1
 | **UI/UX** | FHE status indicators and decrypt flow |
 | **UI/UX** | Multi-language localization system |
 
-### Planned Features
+### ▎Planned Features
 
 | Category | Feature |
 |----------|---------|
@@ -999,13 +908,13 @@ powershell -ExecutionPolicy Bypass -File start-servers.ps1
 | **Mobile** | iOS and Android native clients |
 | **Mobile** | Mobile-optimized FHE session flow |
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Contributing
+<p align="left"><img src="https://img.shields.io/badge/-Contributing-1a1a2e?style=for-the-badge" height="45" width="200"></p>
 
-We welcome contributions to FHEIGHT. Please follow these guidelines:
+▸ We welcome contributions to FHEIGHT. Please follow these guidelines:
 
-### Development Setup
+### ▎Development Setup
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
@@ -1013,7 +922,7 @@ We welcome contributions to FHEIGHT. Please follow these guidelines:
 4. Test your changes locally with `start-servers.ps1`
 5. Submit a pull request with a clear description
 
-### Areas for Contribution
+### ▎Areas for Contribution
 
 | Area | Description |
 |------|-------------|
@@ -1023,24 +932,24 @@ We welcome contributions to FHEIGHT. Please follow these guidelines:
 | **Documentation** | Guides, tutorials, API docs |
 | **Testing** | Unit tests, integration tests |
 
-### Code Standards
+### ▎Code Standards
 
 - Solidity: Follow Zama fhEVM patterns from `document/` folder
 - Server: CoffeeScript with existing lib patterns
 - Client: JavaScript ES6+ with Backbone.js structure
 - All FHE operations must use `FHE.*` methods (not TFHE)
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## License
+<p align="left"><img src="https://img.shields.io/badge/-License-1a1a2e?style=for-the-badge" height="45" width="130"></p>
 
 Proprietary - All Rights Reserved
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Acknowledgments
+<p align="left"><img src="https://img.shields.io/badge/-Acknowledgments-1a1a2e?style=for-the-badge" height="45" width="250"></p>
 
-FHEIGHT is built with the following technologies:
+▸ FHEIGHT is built with the following technologies:
 
 | Technology | Provider | Usage |
 |------------|----------|-------|
@@ -1053,23 +962,25 @@ FHEIGHT is built with the following technologies:
 | **Redis** | [Redis](https://redis.io/) | Session and matchmaking cache |
 | **PostgreSQL** | [PostgreSQL](https://www.postgresql.org/) | Persistent data storage |
 
-Special thanks to the Zama team for fhEVM and the fhevmjs SDK that makes encrypted on-chain randomness possible.
+↳ Special thanks to the Zama team for fhEVM and the fhevmjs SDK that makes encrypted on-chain randomness possible.
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-## Contact & Support
+<p align="left"><img src="https://img.shields.io/badge/-Contact%20%26%20Support-1a1a2e?style=for-the-badge" height="45" width="280"></p>
 
 - **Issues**: [GitHub Issues](https://github.com/Farukest/FHEIGHT/issues)
 - **Twitter**: [@0xflydev](https://twitter.com/0xflydev)
 - **GitHub**: [@Farukest](https://github.com/Farukest)
 
----
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0020,50:FFCC0060,100:FFCC0020&height=4&section=header" width="100%"></p>
 
-Built with Zama fhEVM, Cocos2d-JS, and Solidity
-
----
-
-## Documentation
+<p align="left"><img src="https://img.shields.io/badge/-Documentation-1a1a2e?style=for-the-badge" height="45" width="220"></p>
 
 - [FHE Integration Guide](./docs/FHEVM_INTEGRATION.md)
 - [Game Features Guide](./docs/GAME_FEATURES.md)
+
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0000,50:FFCC00,100:FFCC0000&height=6&section=header" width="100%"></p>
+
+**Built with Zama FHEVM, Cocos2d-JS, and Solidity**
+
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0:FFCC0000,50:FFCC00,100:FFCC0000&height=6&section=header" width="100%"></p>
