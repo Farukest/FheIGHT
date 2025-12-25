@@ -4,8 +4,8 @@
 
 FHEIGHT is a tactical board game where players command characters, execute actions, and engage in strategic combat using card-based abilities. The game supports both **multiplayer PvP** and **singleplayer vs AI** modes, with Fully Homomorphic Encryption (FHE) securing all randomness - card draws, ability outcomes, AI difficulty scaling, and combat results remain encrypted until legitimately revealed, preventing any prediction or manipulation.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Built with FHEVM](https://img.shields.io/badge/Built%20with-Zama%20FHEVM-blue)](https://docs.zama.ai/fhevm)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue)](https://opensource.org/licenses/MIT)
+[![Built with FHEVM](https://img.shields.io/badge/Built%20with-Zama%20FHEVM-yellow.svg)]([https://docs.zama.ai/fhevm](https://docs.zama.org/protocol/protocol/overview))
 [![React](https://img.shields.io/badge/React-18.x-61DAFB?logo=react)](https://reactjs.org/)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?logo=solidity)](https://soliditylang.org/)
 
